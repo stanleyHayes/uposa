@@ -1,0 +1,58 @@
+import { Request, Response } from 'express';
+import { createProjectSchema, updateProjectSchema } from './projects.validation';
+import {
+  listProjects,
+  getOngoingProjects,
+  getCompletedProjects,
+  getProjectBySlug,
+  createProject,
+  updateProject,
+  deleteProject,
+} from './projects.service';
+import { successResponse, errorResponse } from '../../utils/response.utils';
+
+export async function listProjectsHandler(req: Request, res: Response): Promise<void> {
+  const result = await listProjects(req.query as Record<string, string | undefined>);
+  successResponse(res, 'Projects retrieved', result.data, 200, result.meta);
+}
+
+export async function getOngoingProjectsHandler(req: Request, res: Response): Promise<void> {
+  const result = await getOngoingProjects(req.query as Record<string, string | undefined>);
+  successResponse(res, 'Ongoing projects retrieved', result.data, 200, result.meta);
+}
+
+export async function getCompletedProjectsHandler(req: Request, res: Response): Promise<void> {
+  const result = await getCompletedProjects(req.query as Record<string, string | undefined>);
+  successResponse(res, 'Completed projects retrieved', result.data, 200, result.meta);
+}
+
+export async function getProjectBySlugHandler(req: Request, res: Response): Promise<void> {
+  const { slug } = req.params;
+  const project = await getProjectBySlug(slug);
+  successResponse(res, 'Project retrieved', project);
+}
+
+export async function createProjectHandler(req: Request, res: Response): Promise<void> {
+  if (!req.admin) {
+    errorResponse(res, 'Unauthorized', 401);
+    return;
+  }
+  const parsed = createProjectSchema.parse({ body: req.body });
+  const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+  const project = await createProject(req.admin.id, parsed.body, imageUrl);
+  successResponse(res, 'Project created successfully', project, 201);
+}
+
+export async function updateProjectHandler(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const parsed = updateProjectSchema.parse({ body: req.body });
+  const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+  const project = await updateProject(id, parsed.body, imageUrl);
+  successResponse(res, 'Project updated successfully', project);
+}
+
+export async function deleteProjectHandler(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const result = await deleteProject(id);
+  successResponse(res, result.message);
+}

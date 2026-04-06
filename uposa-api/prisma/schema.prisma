@@ -1,0 +1,530 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  SEPARATED
+  DIVORCED
+  WIDOWED
+}
+
+enum Programme {
+  GENERAL_ARTS
+  BUSINESS
+  HOME_ECONOMICS
+  VISUAL_ARTS
+  SCIENCE
+}
+
+enum House {
+  ACKAH
+  DENSU
+  TANO
+  NKRUMAH
+  PRA
+  VOLTA
+}
+
+enum EmploymentType {
+  RETIRED
+  STUDENT
+  UNEMPLOYED
+  SELF_EMPLOYED
+  GOVERNMENT_WORKER
+  PRIVATE_WORKER
+}
+
+enum WillingnessToVolunteer {
+  YES
+  NO
+  MAYBE
+}
+
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  MODERATOR
+}
+
+enum EventStatus {
+  UPCOMING
+  ONGOING
+  PAST
+  CANCELLED
+}
+
+enum ProjectStatus {
+  ONGOING
+  COMPLETED
+  PAUSED
+}
+
+enum NewsCategory {
+  ANNOUNCEMENT
+  BLOG
+  REPORT
+  MEETING_SUMMARY
+}
+
+enum DonationChannel {
+  MOMO
+  BANK
+  PAYPAL
+  CASH
+  OTHER
+}
+
+enum DonationStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+enum DueStatus {
+  PAID
+  PENDING
+  OVERDUE
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  VOLUNTEER
+  INTERNSHIP
+}
+
+enum MentorshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  COMPLETED
+}
+
+enum ForumCategory {
+  GENERAL
+  ANNOUNCEMENTS
+  CAREERS
+  EDUCATION
+  WELFARE
+}
+
+enum PollStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum ElectionStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Member {
+  id                    String                 @id @default(cuid())
+  // Personal
+  fullName              String
+  gender                Gender?
+  dateOfBirth           DateTime?
+  maritalStatus         MaritalStatus?
+  photoUrl              String?
+  // Auth
+  email                 String                 @unique
+  password              String
+  isVerified            Boolean                @default(false)
+  verificationToken     String?
+  resetToken            String?
+  resetTokenExpiry      DateTime?
+  // Contact
+  mobileNumber          String?
+  altPhoneNumber        String?
+  residentialAddress    String?
+  city                  String?
+  country               String?
+  // Academic
+  yearGroup             Int?
+  programme             Programme?
+  house                 House?
+  // Professional
+  employmentType        EmploymentType?
+  occupation            String?
+  organization          String?
+  areaOfExpertise       String[]
+  // Emergency / NOK
+  emergencyContactNumber   String?
+  emergencyRelationship    String?
+  nextOfKinName            String?
+  nextOfKinContact         String?
+  nextOfKinRelationship    String?
+  // Mentorship
+  isAvailableAsMentor      Boolean               @default(false)
+  mentorBio                String?
+  // Engagement
+  isWhatsAppMember         Boolean               @default(false)
+  willingToVolunteer       WillingnessToVolunteer?
+  preferredContributions   String[]
+  // Status
+  membershipStatus         MembershipStatus      @default(PENDING)
+  isApproved               Boolean               @default(false)
+  approvedAt               DateTime?
+  consentGiven             Boolean               @default(false)
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+
+  // Relations
+  donations            Donation[]
+  dues                 Due[]
+  jobs                 Job[]
+  jobApplications      JobApplication[]
+  mentorRequests       MentorshipRequest[]    @relation("MentorRequests")
+  menteeRequests       MentorshipRequest[]    @relation("MenteeRequests")
+  forumPosts           ForumPost[]
+  forumComments        ForumComment[]
+  pollVotes            PollVote[]
+  electionVotes        ElectionVote[]
+  eventRsvps           EventRsvp[]
+
+  @@map("members")
+}
+
+model Admin {
+  id        String    @id @default(cuid())
+  fullName  String
+  email     String    @unique
+  password  String
+  role      AdminRole @default(ADMIN)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  events       Event[]
+  projects     Project[]
+  news         News[]
+  polls        Poll[]
+  elections    Election[]
+  galleryItems GalleryItem[]
+
+  @@map("admins")
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  description String
+  imageUrl    String?
+  date        DateTime
+  endDate     DateTime?
+  location    String?
+  rsvpLink    String?
+  status      EventStatus @default(UPCOMING)
+  isFeatured  Boolean     @default(false)
+  createdById String
+  createdBy   Admin       @relation(fields: [createdById], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  rsvps       EventRsvp[]
+  gallery     GalleryItem[]
+
+  @@map("events")
+}
+
+model EventRsvp {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  memberId  String?
+  member    Member?  @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  name      String
+  email     String
+  phone     String?
+  createdAt DateTime @default(now())
+
+  @@map("event_rsvps")
+}
+
+model Project {
+  id           String        @id @default(cuid())
+  title        String
+  slug         String        @unique
+  description  String
+  imageUrl     String?
+  goalAmount   Float         @default(0)
+  raisedAmount Float         @default(0)
+  status       ProjectStatus @default(ONGOING)
+  isFeatured   Boolean       @default(false)
+  startDate    DateTime?
+  endDate      DateTime?
+  createdById  String
+  createdBy    Admin         @relation(fields: [createdById], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  donations    Donation[]
+
+  @@map("projects")
+}
+
+model News {
+  id          String       @id @default(cuid())
+  title       String
+  slug        String       @unique
+  content     String
+  excerpt     String?
+  imageUrl    String?
+  category    NewsCategory @default(ANNOUNCEMENT)
+  authorName  String?
+  isFeatured  Boolean      @default(false)
+  isPublished Boolean      @default(false)
+  publishedAt DateTime?
+  createdById String
+  createdBy   Admin        @relation(fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("news")
+}
+
+model Donation {
+  id             String          @id @default(cuid())
+  memberId       String?
+  member         Member?         @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  donorName      String
+  donorEmail     String
+  amount         Float
+  currency       String          @default("GHS")
+  channel        DonationChannel @default(CASH)
+  purpose        String?
+  transactionRef String?
+  projectId      String?
+  project        Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  status         DonationStatus  @default(PENDING)
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("donations")
+}
+
+model Due {
+  id             String    @id @default(cuid())
+  memberId       String
+  member         Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  amount         Float
+  year           Int
+  status         DueStatus @default(PENDING)
+  transactionRef String?
+  paidAt         DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("dues")
+}
+
+model Job {
+  id           String   @id @default(cuid())
+  title        String
+  description  String
+  company      String
+  location     String?
+  jobType      JobType  @default(FULL_TIME)
+  contactEmail String?
+  externalUrl  String?
+  postedById   String
+  postedBy     Member   @relation(fields: [postedById], references: [id], onDelete: Cascade)
+  isApproved   Boolean  @default(false)
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  applications JobApplication[]
+
+  @@map("jobs")
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  SHORTLISTED
+  REJECTED
+}
+
+model JobApplication {
+  id          String            @id @default(cuid())
+  jobId       String
+  job         Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  applicantId String
+  applicant   Member            @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  coverLetter String?
+  resumeUrl   String?
+  status      ApplicationStatus @default(PENDING)
+  notes       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([jobId, applicantId])
+  @@map("job_applications")
+}
+
+model MentorshipRequest {
+  id             String           @id @default(cuid())
+  mentorId       String
+  mentor         Member           @relation("MentorRequests", fields: [mentorId], references: [id], onDelete: Cascade)
+  menteeId       String
+  mentee         Member           @relation("MenteeRequests", fields: [menteeId], references: [id], onDelete: Cascade)
+  status         MentorshipStatus @default(PENDING)
+  message        String?
+  mentorResponse String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@map("mentorship_requests")
+}
+
+model ForumPost {
+  id        String        @id @default(cuid())
+  title     String
+  slug      String        @unique
+  content   String
+  category  ForumCategory @default(GENERAL)
+  authorId  String
+  author    Member        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  viewCount Int           @default(0)
+  isPinned  Boolean       @default(false)
+  isLocked  Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  comments  ForumComment[]
+
+  @@map("forum_posts")
+}
+
+model ForumComment {
+  id        String    @id @default(cuid())
+  postId    String
+  post      ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    Member    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  parentId  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("forum_comments")
+}
+
+model Poll {
+  id          String     @id @default(cuid())
+  question    String
+  description String?
+  options     Json
+  allowMultiple Boolean  @default(false)
+  createdById String
+  createdBy   Admin      @relation(fields: [createdById], references: [id])
+  status      PollStatus @default(ACTIVE)
+  endsAt      DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  votes       PollVote[]
+
+  @@map("polls")
+}
+
+model PollVote {
+  id              String   @id @default(cuid())
+  pollId          String
+  poll            Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  selectedOptions Int[]
+  createdAt       DateTime @default(now())
+
+  @@unique([pollId, memberId])
+  @@map("poll_votes")
+}
+
+model Election {
+  id          String          @id @default(cuid())
+  title       String
+  description String?
+  position    String
+  candidates  Json
+  status      ElectionStatus  @default(UPCOMING)
+  startDate   DateTime
+  endDate     DateTime
+  createdById String
+  createdBy   Admin           @relation(fields: [createdById], references: [id])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  votes       ElectionVote[]
+
+  @@map("elections")
+}
+
+model ElectionVote {
+  id          String   @id @default(cuid())
+  electionId  String
+  election    Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  candidateId String
+  voterId     String
+  voter       Member   @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([electionId, voterId])
+  @@map("election_votes")
+}
+
+model ContactMessage {
+  id        String    @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  isRead    Boolean   @default(false)
+  repliedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("contact_messages")
+}
+
+model GalleryItem {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String
+  category    String?
+  eventId     String?
+  event       Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  createdById String
+  createdBy   Admin    @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@map("gallery_items")
+}
