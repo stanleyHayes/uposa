@@ -1,6 +1,7 @@
 {
   "name": "@uposa/admin",
   "private": true,
+  "engines": { "node": "20.x" },
   "version": "0.0.1",
   "type": "module",
   "scripts": {
