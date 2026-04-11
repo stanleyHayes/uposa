@@ -1,0 +1,25 @@
+{
+  "name": "uposa-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "UPOSA - University Practice Old Students Association Monorepo",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:marketing": "npm run dev -w apps/marketing",
+    "dev:admin": "npm run dev -w apps/admin",
+    "dev:alumni": "npm run dev -w apps/alumni",
+    "dev:api": "npm run dev -w apps/api",
+    "build:marketing": "npm run build -w apps/marketing",
+    "build:admin": "npm run build -w apps/admin",
+    "build:alumni": "npm run build -w apps/alumni",
+    "build:api": "npm run build -w apps/api",
+    "build": "npm run build:marketing && npm run build:admin && npm run build:alumni && npm run build:api",
+    "dev": "concurrently \"npm run dev:marketing\" \"npm run dev:admin\" \"npm run dev:alumni\" \"npm run dev:api\"",
+    "seed": "npm run seed -w apps/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

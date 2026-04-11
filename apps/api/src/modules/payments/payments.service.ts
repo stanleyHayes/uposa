@@ -1,0 +1,256 @@
+// @ts-nocheck
+import crypto from 'crypto';
+import { getRepos } from '../../repositories';
+import { env } from '../../config/env';
+import { getPaymentProvider } from '../../providers/payment.registry';
+import { WebhookEvent } from '../../providers/payment.types';
+import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
+import { InitializePaymentInput } from './payments.validation';
+
+function generateReference(): string {
+  return `UPOSA-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+}
+
+// Convert amount to smallest currency unit (pesewas, kobo, cents)
+function toSmallestUnit(amount: number, currency: string): number {
+  const zeroDecimalCurrencies = ['JPY', 'KRW', 'VND'];
+  if (zeroDecimalCurrencies.includes(currency.toUpperCase())) return Math.round(amount);
+  return Math.round(amount * 100);
+}
+
+export async function initializePayment(data: InitializePaymentInput, memberId?: string) {
+  const { payments, paymentMethods, donations, dues } = getRepos();
+
+  // Check the provider is enabled
+  const method = await paymentMethods.findOne({ provider: data.provider });
+  if (!method || !method.isEnabled) {
+    throw Object.assign(new Error(`${data.provider} payment is not currently available`), { statusCode: 400 });
+  }
+
+  // Validate the linked record exists
+  if (data.purpose === 'DONATION' && data.donationId) {
+    const donation = await donations.findById(data.donationId);
+    if (!donation) throw Object.assign(new Error('Donation not found'), { statusCode: 404 });
+  }
+  if (data.purpose === 'DUES' && data.dueId) {
+    const due = await dues.findById(data.dueId);
+    if (!due) throw Object.assign(new Error('Due not found'), { statusCode: 404 });
+    if (due.status === 'PAID') throw Object.assign(new Error('This due has already been paid'), { statusCode: 400 });
+  }
+
+  const reference = generateReference();
+  const callbackUrl = data.callbackUrl || `${env.PAYMENT_CALLBACK_BASE_URL}/payment/callback`;
+
+  const provider = getPaymentProvider(data.provider);
+  const result = await provider.initialize({
+    email: data.email,
+    amount: toSmallestUnit(data.amount, data.currency),
+    currency: data.currency,
+    reference,
+    callbackUrl,
+    customerName: data.name,
+    metadata: {
+      purpose: data.purpose,
+      donationId: data.donationId,
+      dueId: data.dueId,
+      memberId,
+      ...data.metadata,
+    },
+  });
+
+  // Store payment record
+  const payment = await payments.create({
+    provider: data.provider,
+    purpose: data.purpose,
+    amount: data.amount,
+    currency: data.currency,
+    status: 'PENDING',
+    providerRef: result.providerRef || null,
+    providerData: null,
+    callbackUrl,
+    donationId: data.donationId || null,
+    dueId: data.dueId || null,
+    memberId: memberId || null,
+    payerEmail: data.email,
+    payerName: data.name || null,
+    metadata: data.metadata || null,
+  });
+
+  return {
+    paymentId: payment.id,
+    reference: result.reference,
+    authorizationUrl: result.authorizationUrl,
+    provider: data.provider,
+  };
+}
+
+export async function verifyPayment(reference: string) {
+  const { payments } = getRepos();
+
+  const payment = await payments.findOne({
+    $or: [
+      { providerRef: reference },
+      ...(reference.length === 24 ? [{ _id: reference }] : []),
+    ],
+  });
+
+  if (!payment) {
+    throw Object.assign(new Error('Payment not found'), { statusCode: 404 });
+  }
+
+  if (payment.status === 'SUCCESS') {
+    return payment;
+  }
+
+  const provider = getPaymentProvider(payment.provider);
+  const result = await provider.verify(reference);
+
+  if (result.success) {
+    return finalizePayment(payment.id, result.providerRef, result.rawData);
+  }
+
+  // Update as failed
+  const updated = await payments.updateById(payment.id, { status: 'FAILED', providerData: result.rawData });
+  return updated;
+}
+
+export async function handleWebhookEvent(providerName: string, event: WebhookEvent) {
+  if (!event.success) return;
+  const { payments } = getRepos();
+
+  const payment = await payments.findOne({
+    provider: providerName,
+    $or: [
+      { providerRef: event.providerRef },
+      { providerRef: event.reference },
+    ],
+  });
+
+  if (!payment || payment.status === 'SUCCESS') return;
+
+  await finalizePayment(payment.id, event.providerRef, event.rawData);
+}
+
+async function finalizePayment(
+  paymentId: string,
+  providerRef: string,
+  rawData: Record<string, unknown>,
+) {
+  const { payments, donations, projects, dues } = getRepos();
+
+  const payment = await payments.updateById(paymentId, { status: 'SUCCESS', providerRef, providerData: rawData });
+  if (!payment) return null;
+
+  // Update the linked donation
+  if (payment.purpose === 'DONATION' && payment.donationId) {
+    const donation = await donations.updateById(payment.donationId, {
+      status: 'CONFIRMED',
+      transactionRef: providerRef,
+      channel: payment.provider,
+    });
+
+    // Update project raisedAmount if linked
+    if (donation?.projectId) {
+      await projects.incrementById(donation.projectId, 'raisedAmount', donation.amount);
+    }
+  }
+
+  // Update the linked due
+  if (payment.purpose === 'DUES' && payment.dueId) {
+    await dues.updateById(payment.dueId, {
+      status: 'PAID',
+      paidAt: new Date(),
+      transactionRef: providerRef,
+    });
+  }
+
+  return payment;
+}
+
+export async function getPaymentByReference(reference: string) {
+  const { payments, donations, dues } = getRepos();
+
+  const payment = await payments.findOne({
+    $or: [
+      { providerRef: reference },
+      ...(reference.length === 24 ? [{ _id: reference }] : []),
+    ],
+  });
+
+  if (!payment) {
+    throw Object.assign(new Error('Payment not found'), { statusCode: 404 });
+  }
+
+  const result = payment as Record<string, any>;
+
+  // Attach donation info
+  if (payment.donationId) {
+    const d = await donations.findById(payment.donationId, {
+      projection: { id: 1, donorName: 1, amount: 1, purpose: 1 },
+    });
+    result.donation = d ? { id: d.id, donorName: d.donorName, amount: d.amount, purpose: d.purpose } : null;
+  }
+
+  // Attach due info
+  if (payment.dueId) {
+    const d = await dues.findById(payment.dueId, {
+      projection: { id: 1, year: 1, amount: 1 },
+    });
+    result.due = d ? { id: d.id, year: d.year, amount: d.amount } : null;
+  }
+
+  return result;
+}
+
+export async function adminListPayments(query: Record<string, string | undefined>) {
+  const { page, limit, skip } = getPaginationParams(query);
+  const { status, provider, purpose, search } = query;
+  const { payments, members, donations, dues } = getRepos();
+
+  const where: Record<string, unknown> = {};
+  if (status) where.status = status.toUpperCase();
+  if (provider) where.provider = provider.toUpperCase();
+  if (purpose) where.purpose = purpose.toUpperCase();
+  if (search) {
+    where.$or = [
+      { payerEmail: { $regex: search, $options: 'i' } },
+      { payerName: { $regex: search, $options: 'i' } },
+      { providerRef: { $regex: search, $options: 'i' } },
+    ];
+  }
+
+  const [rawData, total] = await Promise.all([
+    payments.findMany(where, { sort: { createdAt: -1 }, skip, limit }),
+    payments.count(where),
+  ]);
+
+  // Attach member, donation, due info
+  const memberIds = [...new Set(rawData.map(d => d.memberId).filter(Boolean))];
+  const donationIds = [...new Set(rawData.map(d => d.donationId).filter(Boolean))];
+  const dueIds = [...new Set(rawData.map(d => d.dueId).filter(Boolean))];
+
+  const [memberDocs, donationDocs, dueDocs] = await Promise.all([
+    memberIds.length > 0
+      ? members.findMany({ _id: { $in: memberIds } }, { projection: { id: 1, fullName: 1, email: 1 } })
+      : [],
+    donationIds.length > 0
+      ? donations.findMany({ _id: { $in: donationIds } }, { projection: { id: 1, donorName: 1, purpose: 1 } })
+      : [],
+    dueIds.length > 0
+      ? dues.findMany({ _id: { $in: dueIds } }, { projection: { id: 1, year: 1 } })
+      : [],
+  ]);
+
+  const memberMap = new Map(memberDocs.map(m => [m.id, { id: m.id, fullName: m.fullName, email: m.email }]));
+  const donationMap = new Map(donationDocs.map(d => [d.id, { id: d.id, donorName: d.donorName, purpose: d.purpose }]));
+  const dueMap = new Map(dueDocs.map(d => [d.id, { id: d.id, year: d.year }]));
+
+  const data = rawData.map(p => ({
+    ...p,
+    member: p.memberId ? memberMap.get(p.memberId) || null : null,
+    donation: p.donationId ? donationMap.get(p.donationId) || null : null,
+    due: p.dueId ? dueMap.get(p.dueId) || null : null,
+  }));
+
+  return { data, meta: buildPaginationMeta(page, limit, total) };
+}

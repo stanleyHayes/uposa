@@ -1,0 +1,170 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: uposa --default;
+}
+
+@plugin "daisyui/theme" {
+  name: "uposa";
+  default: true;
+  color-scheme: light;
+  --color-primary: #001B50;
+  --color-primary-content: #FFF8DC;
+  --color-secondary: #D4AF37;
+  --color-secondary-content: #001B50;
+  --color-accent: #002870;
+  --color-accent-content: #FFF8DC;
+  --color-neutral: #1a1a2e;
+  --color-neutral-content: #FFF8DC;
+  --color-base-100: #FFFDF5;
+  --color-base-200: #FFF8DC;
+  --color-base-300: #E8DFC0;
+  --color-base-content: #001B50;
+  --color-info: #3b82f6;
+  --color-info-content: #ffffff;
+  --color-success: #22c55e;
+  --color-success-content: #001B50;
+  --color-warning: #f59e0b;
+  --color-warning-content: #001B50;
+  --color-error: #ef4444;
+  --color-error-content: #ffffff;
+}
+
+@font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Light.ttf') format('truetype'); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Light Italic.ttf') format('truetype'); font-weight: 300; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Italic.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Medium.ttf') format('truetype'); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Medium Italic.ttf') format('truetype'); font-weight: 500; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A SemiBold.ttf') format('truetype'); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A SemiBold Italic.ttf') format('truetype'); font-weight: 600; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Bold Italic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
+
+* {
+  font-family: 'Euclid Circular A', sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.form-control .input,
+.form-control .select,
+.form-control .textarea {
+  width: 100%;
+  display: flex;
+}
+
+.input,
+.select,
+.textarea {
+  border: 1px solid var(--color-base-300);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 15%, transparent);
+}
+
+.join .input {
+  display: flex;
+}
+
+/* Ensure icons inside input wrappers don't block input clicks */
+.form-control .relative > .absolute {
+  z-index: 10;
+  pointer-events: none;
+}
+.form-control .relative > input.input,
+.form-control .relative > select.select {
+  position: relative;
+  z-index: 0;
+}
+
+/* ─── Custom Card Shape ──────────────────────────────────── */
+.card {
+  border-radius: 20px 4px 20px 4px;
+  position: relative;
+}
+
+/* Gold corner fold accent */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(225deg, var(--color-secondary) 0%, var(--color-secondary) 50%, transparent 50%);
+  border-radius: 0 4px 0 8px;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+/* Accent strip follows the card shape */
+.card > .card-accent-strip {
+  border-radius: 20px 4px 0 0;
+}
+
+/* Modal cards stay rectangular */
+.modal .card,
+dialog .card {
+  border-radius: 16px;
+}
+
+.modal .card::before,
+dialog .card::before {
+  display: none;
+}
+
+/* ─── Gradient Buttons ─────────────────────────────────────── */
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 50%, color-mix(in oklab, var(--color-primary) 70%, #1E3A8A) 100%) !important;
+  border: none !important;
+  box-shadow: 0 4px 14px color-mix(in oklab, var(--color-primary) 25%, transparent);
+  transition: all 0.2s ease;
+}
+.btn-primary:hover {
+  box-shadow: 0 6px 20px color-mix(in oklab, var(--color-primary) 35%, transparent);
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: scale(0.97) translateY(0);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, var(--color-secondary) 0%, color-mix(in oklab, var(--color-secondary) 85%, #000) 100%) !important;
+  border: none !important;
+  color: var(--color-secondary-content) !important;
+  box-shadow: 0 4px 14px color-mix(in oklab, var(--color-secondary) 25%, transparent);
+  transition: all 0.2s ease;
+}
+.btn-secondary:hover {
+  box-shadow: 0 6px 20px color-mix(in oklab, var(--color-secondary) 35%, transparent);
+  transform: translateY(-1px);
+}
+.btn-secondary:active {
+  transform: scale(0.97) translateY(0);
+}
+
+.btn-accent {
+  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-primary) 100%) !important;
+  border: none !important;
+  box-shadow: 0 4px 14px color-mix(in oklab, var(--color-accent) 25%, transparent);
+  transition: all 0.2s ease;
+}
+.btn-accent:hover {
+  box-shadow: 0 6px 20px color-mix(in oklab, var(--color-accent) 35%, transparent);
+  transform: translateY(-1px);
+}
+.btn-accent:active {
+  transform: scale(0.97) translateY(0);
+}
