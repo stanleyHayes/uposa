@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm install --install-strategy=nested",
+  "installCommand": "npm install && npm rebuild @tailwindcss/oxide",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
