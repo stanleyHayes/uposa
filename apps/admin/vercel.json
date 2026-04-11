@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm install --install-strategy=nested",
+  "installCommand": "npm install --no-package-lock",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]

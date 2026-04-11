@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm install && npm rebuild @tailwindcss/oxide",
+  "installCommand": "npm install --no-package-lock",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
