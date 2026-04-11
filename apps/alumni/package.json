@@ -1,7 +1,7 @@
 {
   "name": "@uposa/alumni",
   "private": true,
-  "engines": { "node": "20.x" },
+  "engines": { "node": "22.x" },
   "version": "0.0.0",
   "type": "module",
   "scripts": {

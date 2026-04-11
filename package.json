@@ -20,7 +20,7 @@
     "seed": "npm run seed -w apps/api"
   },
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
