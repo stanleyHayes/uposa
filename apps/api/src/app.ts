@@ -37,6 +37,11 @@ import schoolLeadersRoutes, { adminSchoolLeadersRouter } from './modules/school-
 
 const app = express();
 
+// Behind a reverse proxy (Render). Trust the first proxy hop so
+// X-Forwarded-For is honored by middleware that needs accurate client IPs
+// (e.g. express-rate-limit).
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },

@@ -5,6 +5,8 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   adminLoginSchema,
+  changePasswordSchema,
+  refreshTokenSchema,
 } from './auth.validation';
 import {
   registerMember,
@@ -14,6 +16,8 @@ import {
   forgotPassword,
   resetPassword,
   getMe,
+  changeMemberPassword,
+  refreshMemberSession,
 } from './auth.service';
 import { successResponse, errorResponse } from '../../utils/response.utils';
 import { uploadToCloudinary } from '../../utils/cloudinary.utils';
@@ -52,6 +56,31 @@ export async function login(req: Request, res: Response): Promise<void> {
     token: result.accessToken,
     refreshToken: result.refreshToken,
     member: result.member,
+  });
+}
+
+export async function refreshTokenHandler(req: Request, res: Response): Promise<void> {
+  const parsed = refreshTokenSchema.parse({ body: req.body });
+  let result;
+  try {
+    result = await refreshMemberSession(parsed.body.refreshToken);
+  } catch (err: any) {
+    errorResponse(res, err?.message || 'Invalid or expired refresh token', 401);
+    return;
+  }
+
+  res.cookie('accessToken', result.accessToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 15 * 60 * 1000,
+  });
+  res.cookie('refreshToken', result.refreshToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  successResponse(res, 'Token refreshed', {
+    token: result.accessToken,
+    refreshToken: result.refreshToken,
   });
 }
 
@@ -109,6 +138,16 @@ export async function getMeHandler(req: Request, res: Response): Promise<void> {
     return;
   }
   errorResponse(res, 'Not authenticated', 401);
+}
+
+export async function changePasswordHandler(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    errorResponse(res, 'Not authenticated', 401);
+    return;
+  }
+  const parsed = changePasswordSchema.parse({ body: req.body });
+  const result = await changeMemberPassword(req.user.id, parsed.body);
+  successResponse(res, result.message);
 }
 
 export function logout(_req: Request, res: Response): void {

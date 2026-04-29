@@ -4,6 +4,7 @@ import SplashScreen from './components/ui/SplashScreen'
 import DashboardLayout from './components/layout/DashboardLayout'
 import AuthLayout from './components/layout/AuthLayout'
 import ProtectedRoute from './components/auth/ProtectedRoute'
+import ErrorBoundary from './components/common/ErrorBoundary'
 
 // Auth pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'))
@@ -36,6 +37,7 @@ const MemberProfilePage = lazy(() => import('./pages/members/MemberProfilePage')
 const ContactPage = lazy(() => import('./pages/contact/ContactPage'))
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
 const RequestsPage = lazy(() => import('./pages/requests/RequestsPage'))
+const GalleryPage = lazy(() => import('./pages/gallery/GalleryPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 function PageLoader() {
@@ -45,47 +47,50 @@ function PageLoader() {
 export default function App() {
   return (
     <Suspense fallback={<PageLoader />}>
-      <Routes>
-        {/* Auth routes */}
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
-        </Route>
+      <ErrorBoundary>
+        <Routes>
+          {/* Auth routes */}
+          <Route element={<AuthLayout />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+          </Route>
 
-        {/* Protected dashboard routes */}
-        <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/events" element={<EventsPage />} />
-          <Route path="/events/:slug" element={<EventDetailPage />} />
-          <Route path="/news" element={<NewsPage />} />
-          <Route path="/news/:slug" element={<NewsDetailPage />} />
-          <Route path="/projects" element={<ProjectsPage />} />
-          <Route path="/projects/:slug" element={<ProjectDetailPage />} />
-          <Route path="/donations" element={<DonationsPage />} />
-          <Route path="/dues" element={<DuesPage />} />
-          <Route path="/jobs" element={<JobsPage />} />
-          <Route path="/jobs/:id" element={<JobDetailPage />} />
-          <Route path="/mentorship" element={<MentorshipPage />} />
-          <Route path="/mentorship/requests" element={<MyRequestsPage />} />
-          <Route path="/forum" element={<ForumPage />} />
-          <Route path="/forum/:slug" element={<ForumPostPage />} />
-          <Route path="/polls" element={<PollsPage />} />
-          <Route path="/elections" element={<ElectionsPage />} />
-          <Route path="/members" element={<MembersPage />} />
-          <Route path="/members/:id" element={<MemberProfilePage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/requests" element={<RequestsPage />} />
-        </Route>
+          {/* Protected dashboard routes */}
+          <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/events" element={<EventsPage />} />
+            <Route path="/events/:slug" element={<EventDetailPage />} />
+            <Route path="/news" element={<NewsPage />} />
+            <Route path="/news/:slug" element={<NewsDetailPage />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/:slug" element={<ProjectDetailPage />} />
+            <Route path="/donations" element={<DonationsPage />} />
+            <Route path="/dues" element={<DuesPage />} />
+            <Route path="/jobs" element={<JobsPage />} />
+            <Route path="/jobs/:id" element={<JobDetailPage />} />
+            <Route path="/mentorship" element={<MentorshipPage />} />
+            <Route path="/mentorship/requests" element={<MyRequestsPage />} />
+            <Route path="/forum" element={<ForumPage />} />
+            <Route path="/forum/:slug" element={<ForumPostPage />} />
+            <Route path="/polls" element={<PollsPage />} />
+            <Route path="/elections" element={<ElectionsPage />} />
+            <Route path="/members" element={<MembersPage />} />
+            <Route path="/members/:id" element={<MemberProfilePage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/requests" element={<RequestsPage />} />
+            <Route path="/gallery" element={<GalleryPage />} />
+          </Route>
 
-        {/* Redirects */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+          {/* Redirects */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </ErrorBoundary>
     </Suspense>
   )
 }

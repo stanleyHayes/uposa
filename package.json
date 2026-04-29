@@ -10,6 +10,9 @@
     "dev:marketing": "npm run dev -w apps/marketing",
     "dev:admin": "npm run dev -w apps/admin",
     "dev:alumni": "npm run dev -w apps/alumni",
+    "dev:mobile": "npm run start -w apps/mobile",
+    "dev:mobile:ios": "npm run ios -w apps/mobile",
+    "dev:mobile:android": "npm run android -w apps/mobile",
     "dev:api": "npm run dev -w apps/api",
     "build:marketing": "npm run build -w apps/marketing",
     "build:admin": "npm run build -w apps/admin",
@@ -24,5 +27,23 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
+  },
+  "overrides": {
+    "react-native": {
+      "react": "19.1.0",
+      "react-dom": "19.1.0"
+    },
+    "expo-router": {
+      "react": "19.1.0",
+      "react-dom": "19.1.0"
+    },
+    "expo": {
+      "react": "19.1.0",
+      "react-dom": "19.1.0"
+    },
+    "react-native-web": {
+      "react": "19.1.0",
+      "react-dom": "19.1.0"
+    }
   }
 }

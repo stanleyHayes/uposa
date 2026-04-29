@@ -60,13 +60,17 @@ export default function SettingsPage() {
   const onPasswordSubmit = async (data: PasswordForm) => {
     setPasswordLoading(true)
     try {
-      await authApi.resetPassword({ token: 'current-session', password: data.newPassword })
+      await authApi.changePassword({
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      })
       setPasswordSuccess(true)
       reset()
       toast.success('Password updated successfully!')
       setTimeout(() => setPasswordSuccess(false), 3000)
-    } catch {
-      toast.error('Failed to update password. Please check your current password.')
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to update password.'
+      toast.error(msg)
     } finally {
       setPasswordLoading(false)
     }

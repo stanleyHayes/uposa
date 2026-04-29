@@ -47,6 +47,11 @@ export const env = {
   // Payment
   PAYMENT_CALLBACK_BASE_URL: process.env.PAYMENT_CALLBACK_BASE_URL || 'http://localhost:3000',
 
-  // Encryption for payment credentials stored in DB
-  CREDENTIALS_ENCRYPTION_KEY: process.env.CREDENTIALS_ENCRYPTION_KEY || 'dev-uposa-creds-encrypt-key-32c!',
+  // Encryption for payment credentials stored in DB.
+  // In production, this MUST be set to a 32-byte secret — never fall back to the dev value,
+  // because credentials encrypted with the dev key would be decryptable from the source tree.
+  CREDENTIALS_ENCRYPTION_KEY:
+    process.env.NODE_ENV === 'production'
+      ? requireEnv('CREDENTIALS_ENCRYPTION_KEY')
+      : process.env.CREDENTIALS_ENCRYPTION_KEY || 'dev-uposa-creds-encrypt-key-32c!',
 };

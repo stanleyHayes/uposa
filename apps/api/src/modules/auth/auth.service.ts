@@ -7,6 +7,7 @@ import {
   signMemberRefreshToken,
   signAdminToken,
   signAdminRefreshToken,
+  verifyMemberToken,
 } from '../../utils/jwt.utils';
 import {
   sendVerificationEmail,
@@ -124,6 +125,31 @@ export async function loginMember(data: LoginInput) {
   return { member: safeData, accessToken, refreshToken };
 }
 
+export async function refreshMemberSession(refreshToken: string) {
+  let payload: { id: string; email: string };
+  try {
+    payload = verifyMemberToken(refreshToken);
+  } catch {
+    throw Object.assign(new Error('Invalid or expired refresh token'), { statusCode: 401 });
+  }
+
+  const { members } = getRepos();
+  const member = await members.findById(payload.id);
+  if (!member) {
+    throw Object.assign(new Error('Invalid or expired refresh token'), { statusCode: 401 });
+  }
+
+  if ((member as any).membershipStatus === 'SUSPENDED' || (member as any).membershipStatus === 'INACTIVE') {
+    throw Object.assign(new Error('Invalid or expired refresh token'), { statusCode: 401 });
+  }
+
+  const tokenPayload = { id: (member as any).id, email: (member as any).email };
+  const accessToken = signMemberToken(tokenPayload);
+  const newRefreshToken = signMemberRefreshToken(tokenPayload);
+
+  return { accessToken, refreshToken: newRefreshToken };
+}
+
 export async function loginAdmin(email: string, password: string) {
   const { admins } = getRepos();
   const admin = await admins.findOne({ email });
@@ -193,6 +219,28 @@ export async function resetPassword(data: ResetPasswordInput) {
   await members.updateById((member as any).id, { password: hashedPassword, resetToken: null, resetTokenExpiry: null });
 
   return { message: 'Password reset successfully' };
+}
+
+export async function changeMemberPassword(memberId: string, data: { currentPassword: string; newPassword: string }) {
+  const { members } = getRepos();
+  const member = await members.findById(memberId) as any;
+  if (!member) {
+    throw Object.assign(new Error('Member not found'), { statusCode: 404 });
+  }
+
+  const ok = await bcrypt.compare(data.currentPassword, member.password);
+  if (!ok) {
+    throw Object.assign(new Error('Current password is incorrect'), { statusCode: 400 });
+  }
+
+  if (data.currentPassword === data.newPassword) {
+    throw Object.assign(new Error('New password must be different from current password'), { statusCode: 400 });
+  }
+
+  const hashedPassword = await bcrypt.hash(data.newPassword, 12);
+  await members.updateById(member.id, { password: hashedPassword });
+
+  return { message: 'Password changed successfully' };
 }
 
 export async function getMe(userId: string, isAdmin: boolean) {

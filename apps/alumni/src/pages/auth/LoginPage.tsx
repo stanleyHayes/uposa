@@ -42,7 +42,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const res = await authApi.login(data)
-      setAuth(res.data.data.token, res.data.data.member)
+      setAuth(res.data.data.token, res.data.data.refreshToken ?? null, res.data.data.member)
       toast.success('Welcome back!')
       navigate(from, { replace: true })
     } catch (err: unknown) {

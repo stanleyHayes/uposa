@@ -3,7 +3,8 @@ import type {
   ApiResponse, AuthResponse, PaginatedResponse, LoginCredentials,
   Member, Event, EventRsvp, Project, News, Donation, Due, Job, JobApplication,
   MentorshipRequest, ForumPost, ForumComment, Poll, Election, ContactMessage,
-  PaymentMethod,
+  PaymentMethod, GalleryItem, GalleryCategory, Executive, SchoolLeader,
+  YearGroupRepsByYear,
 } from '../types'
 
 // Auth
@@ -18,10 +19,14 @@ export const authApi = {
     client.post<ApiResponse>('/auth/forgot-password', { email }),
   resetPassword: (data: { token: string; password: string }) =>
     client.post<ApiResponse>('/auth/reset-password', data),
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    client.put<ApiResponse>('/auth/change-password', data),
   verifyEmail: (token: string) =>
     client.get<ApiResponse>(`/auth/verify-email/${token}`),
   logout: () =>
     client.post<ApiResponse>('/auth/logout'),
+  refresh: (refreshToken: string) =>
+    client.post<ApiResponse<{ token: string; refreshToken: string }>>('/auth/refresh', { refreshToken }),
 }
 
 // Members
@@ -180,6 +185,12 @@ export const contactApi = {
     client.post<ApiResponse>('/contact', data),
 }
 
+// Transcripts
+export const transcriptsApi = {
+  submit: (data: { fullName: string; email: string; phone?: string; yearGroup: string; notes?: string }) =>
+    client.post<ApiResponse>('/transcripts', data),
+}
+
 // Payment Methods (public — enabled only)
 export const paymentMethodsApi = {
   list: () =>
@@ -200,4 +211,36 @@ export const paymentsApi = {
 export const siteConfigApi = {
   getSiteData: () => client.get('/public/site-data'),
   getConfig: (key: string) => client.get(`/public/config/${key}`),
+}
+
+// Gallery (public)
+export const galleryApi = {
+  list: (params?: { category?: string; categoryId?: string }) =>
+    client.get<ApiResponse<GalleryItem[]>>('/gallery', { params }),
+  listCategories: () =>
+    client.get<ApiResponse<GalleryCategory[]>>('/gallery/categories'),
+}
+
+// Executives (public)
+export const executivesApi = {
+  list: () =>
+    client.get<ApiResponse<Executive[]>>('/executives'),
+}
+
+// School Leaders (public)
+export const schoolLeadersApi = {
+  list: () =>
+    client.get<ApiResponse<SchoolLeader[]>>('/school-leaders'),
+}
+
+// Year Group Reps (public)
+export const yearGroupRepsApi = {
+  list: () =>
+    client.get<ApiResponse<YearGroupRepsByYear>>('/public/year-group-reps'),
+}
+
+// Newsletter
+export const newsletterApi = {
+  subscribe: (email: string) =>
+    client.post<ApiResponse<{ alreadySubscribed?: boolean }>>('/newsletter', { email }),
 }

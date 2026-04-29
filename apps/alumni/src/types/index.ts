@@ -296,6 +296,67 @@ export interface PaymentMethod {
   updatedAt: string
 }
 
+// Gallery
+export interface GalleryCategory {
+  id: string
+  name: string
+  description?: string | null
+  coverImageUrl?: string | null
+  order?: number
+  imageCount?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface GalleryItem {
+  id: string
+  title: string
+  caption?: string | null
+  description?: string | null
+  imageUrl: string
+  category?: string | null
+  categoryId?: string | null
+  createdAt: string
+  updatedAt?: string
+}
+
+// Executives
+export interface Executive {
+  id: string
+  name: string
+  position: string
+  classOf: string
+  email?: string | null
+  phone?: string | null
+  bio?: string | null
+  photoUrl?: string | null
+  order?: number
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+// School Leaders
+export interface SchoolLeader {
+  id: string
+  name: string
+  position: string
+  photoUrl?: string | null
+  order?: number
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+// Year Group Reps — backend returns Record<year, Array<{name, contact?, email?}>>
+export interface YearGroupRep {
+  name: string
+  contact?: string | null
+  email?: string | null
+}
+
+export type YearGroupRepsByYear = Record<string, YearGroupRep[]>
+
 // API response types
 export interface ApiResponse<T = unknown> {
   success: boolean

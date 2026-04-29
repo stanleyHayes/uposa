@@ -11,6 +11,7 @@ import PageHeader from '../../components/ui/PageHeader'
 import ScrollReveal from '../../components/common/ScrollReveal'
 import { useAuthStore } from '../../stores/auth.store'
 import { useToast } from '../../hooks/useToast'
+import { transcriptsApi, contactApi } from '../../api/services'
 
 const transcriptSchema = z.object({
   fullName: z.string().min(2, 'Full name is required'),
@@ -76,21 +77,71 @@ export default function RequestsPage() {
     },
   })
 
-  const onTranscriptSubmit = async (_data: TranscriptForm) => {
+  const onTranscriptSubmit = async (data: TranscriptForm) => {
     setSubmitting(true)
-    // Simulate API call
-    await new Promise((r) => setTimeout(r, 1500))
-    setSubmitting(false)
-    setSubmitted('transcript')
-    toast.success('Transcript request submitted!')
+    try {
+      const notes = [
+        `Programme: ${data.programme}`,
+        `Copies: ${data.copies ?? '1'}`,
+        `Delivery: ${data.deliveryMethod}`,
+        data.deliveryMethod === 'mail' && data.mailingAddress
+          ? `Mailing address: ${data.mailingAddress}`
+          : null,
+        `Purpose: ${data.purpose}`,
+        data.additionalNotes ? `Notes: ${data.additionalNotes}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n')
+
+      await transcriptsApi.submit({
+        fullName: data.fullName,
+        email: data.email,
+        phone: data.phone,
+        yearGroup: data.yearGroup,
+        notes,
+      })
+      setSubmitted('transcript')
+      toast.success('Transcript request submitted!')
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to submit transcript request.'
+      toast.error(msg)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const onRecommendationSubmit = async (_data: RecommendationForm) => {
+  const onRecommendationSubmit = async (data: RecommendationForm) => {
     setSubmitting(true)
-    await new Promise((r) => setTimeout(r, 1500))
-    setSubmitting(false)
-    setSubmitted('recommendation')
-    toast.success('Recommendation request submitted!')
+    try {
+      const subject = `Recommendation request for ${data.recipientOrg}`
+      const message = [
+        `Recommendation request from ${data.fullName} (${data.yearGroup}, ${data.programme})`,
+        `Phone: ${data.phone}`,
+        '',
+        `Recipient: ${data.recipientName}, ${data.recipientOrg}`,
+        data.recipientEmail ? `Recipient email: ${data.recipientEmail}` : null,
+        `Purpose: ${data.purpose}`,
+        `Details: ${data.purposeDetails}`,
+        data.deadline ? `Deadline: ${data.deadline}` : null,
+        data.additionalNotes ? `Additional notes: ${data.additionalNotes}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n')
+
+      await contactApi.send({
+        name: data.fullName,
+        email: data.email,
+        subject,
+        message,
+      })
+      setSubmitted('recommendation')
+      toast.success('Recommendation request submitted!')
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to submit recommendation request.'
+      toast.error(msg)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const watchDelivery = transcriptForm.watch('deliveryMethod')
