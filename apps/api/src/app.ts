@@ -50,6 +50,7 @@ app.use(helmet({
 // CORS
 const corsAllowList = [env.CLIENT_URL, env.ADMIN_URL, ...env.ALLOWED_ORIGINS];
 const corsPatterns = env.ALLOWED_ORIGIN_PATTERNS.map((p: string) => new RegExp(p));
+console.log('[CORS] allowList=', corsAllowList, 'patterns=', env.ALLOWED_ORIGIN_PATTERNS);
 app.use(cors({
   origin: (origin, callback) => {
     if (
@@ -60,7 +61,8 @@ app.use(cors({
     ) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      console.warn('[CORS] rejected origin:', origin);
+      callback(null, false);
     }
   },
   credentials: true,
