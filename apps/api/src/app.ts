@@ -48,11 +48,16 @@ app.use(helmet({
 }));
 
 // CORS
+const corsAllowList = [env.CLIENT_URL, env.ADMIN_URL, ...env.ALLOWED_ORIGINS];
+const corsPatterns = env.ALLOWED_ORIGIN_PATTERNS.map((p: string) => new RegExp(p));
 app.use(cors({
   origin: (origin, callback) => {
-    const allowedOrigins = [env.CLIENT_URL, env.ADMIN_URL, ...env.ALLOWED_ORIGINS];
-    // Allow all localhost origins in development
-    if (!origin || allowedOrigins.includes(origin) || (env.NODE_ENV !== 'production' && origin?.match(/^https?:\/\/localhost(:\d+)?$/))) {
+    if (
+      !origin ||
+      corsAllowList.includes(origin) ||
+      corsPatterns.some((re: RegExp) => re.test(origin)) ||
+      (env.NODE_ENV !== 'production' && /^https?:\/\/localhost(:\d+)?$/.test(origin))
+    ) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

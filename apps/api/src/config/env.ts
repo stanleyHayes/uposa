@@ -24,6 +24,10 @@ export const env = {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean),
+  ALLOWED_ORIGIN_PATTERNS: (process.env.ALLOWED_ORIGIN_PATTERNS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
 
   // Cloudinary
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
