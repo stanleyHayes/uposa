@@ -50,7 +50,7 @@ app.use(helmet({
 // CORS
 app.use(cors({
   origin: (origin, callback) => {
-    const allowedOrigins = [env.CLIENT_URL, env.ADMIN_URL];
+    const allowedOrigins = [env.CLIENT_URL, env.ADMIN_URL, ...env.ALLOWED_ORIGINS];
     // Allow all localhost origins in development
     if (!origin || allowedOrigins.includes(origin) || (env.NODE_ENV !== 'production' && origin?.match(/^https?:\/\/localhost(:\d+)?$/))) {
       callback(null, true);
