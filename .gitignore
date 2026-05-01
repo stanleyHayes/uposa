@@ -10,3 +10,7 @@ uploads/*
 
 *.txt
 package-lock.json
+
+*.tsbuildinfo
+apps/*/vite.config.d.ts
+apps/*/vite.config.js
