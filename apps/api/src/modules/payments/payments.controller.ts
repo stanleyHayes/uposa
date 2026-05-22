@@ -5,6 +5,7 @@ import {
   verifyPayment,
   handleWebhookEvent,
   getPaymentByReference,
+  getPlatformFeePreview,
   adminListPayments,
 } from './payments.service';
 import { getPaymentProvider } from '../../providers/payment.registry';
@@ -94,6 +95,17 @@ export async function cryptoWebhookHandler(req: Request, res: Response): Promise
   }
 
   res.status(200).json({ received: true });
+}
+
+// Public: get platform fee preview for an amount
+export async function getPlatformFeePreviewHandler(req: Request, res: Response): Promise<void> {
+  const amount = parseFloat(req.query.amount as string);
+  if (isNaN(amount) || amount <= 0) {
+    errorResponse(res, 'Valid positive amount is required', 400);
+    return;
+  }
+  const preview = await getPlatformFeePreview(amount);
+  successResponse(res, 'Platform fee preview', preview);
 }
 
 // Admin: list all payments

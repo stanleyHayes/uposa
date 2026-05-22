@@ -1,5 +1,6 @@
 // @ts-nocheck
 import crypto from 'crypto';
+import mongoose from 'mongoose';
 import { getRepos } from '../../repositories';
 import { env } from '../../config/env';
 import { getPaymentProvider } from '../../providers/payment.registry';
@@ -17,6 +18,53 @@ function toSmallestUnit(amount: number, currency: string): number {
   if (zeroDecimalCurrencies.includes(currency.toUpperCase())) return Math.round(amount);
   return Math.round(amount * 100);
 }
+
+// ── Platform Fee ───────────────────────────────────────────
+
+interface PlatformFeeConfig {
+  percent: number;
+  fixed: number;
+  enabled: boolean;
+}
+
+async function getPlatformFeeConfig(): Promise<PlatformFeeConfig> {
+  const { siteConfig } = getRepos();
+  const [percentRaw, fixedRaw, enabledRaw] = await Promise.all([
+    siteConfig.findOne({ key: 'PAYMENT_PLATFORM_FEE_PERCENT' }),
+    siteConfig.findOne({ key: 'PAYMENT_PLATFORM_FEE_FIXED' }),
+    siteConfig.findOne({ key: 'PAYMENT_PLATFORM_FEE_ENABLED' }),
+  ]);
+
+  return {
+    percent: Number(percentRaw?.value ?? 0),
+    fixed: Number(fixedRaw?.value ?? 0),
+    enabled: String(enabledRaw?.value ?? 'true') === 'true',
+  };
+}
+
+export function calculatePlatformFee(amount: number, config: PlatformFeeConfig): { platformFee: number; totalAmount: number } {
+  if (!config.enabled || (config.percent <= 0 && config.fixed <= 0)) {
+    return { platformFee: 0, totalAmount: amount };
+  }
+  const platformFee = Math.round((amount * (config.percent / 100) + config.fixed) * 100) / 100;
+  const totalAmount = Math.round((amount + platformFee) * 100) / 100;
+  return { platformFee, totalAmount };
+}
+
+export async function getPlatformFeePreview(amount: number) {
+  const config = await getPlatformFeeConfig();
+  const { platformFee, totalAmount } = calculatePlatformFee(amount, config);
+  return {
+    amount,
+    platformFee,
+    totalAmount,
+    percent: config.percent,
+    fixed: config.fixed,
+    enabled: config.enabled,
+  };
+}
+
+// ── Payment Initialization ─────────────────────────────────
 
 export async function initializePayment(data: InitializePaymentInput, memberId?: string) {
   const { payments, paymentMethods, donations, dues } = getRepos();
@@ -41,10 +89,14 @@ export async function initializePayment(data: InitializePaymentInput, memberId?:
   const reference = generateReference();
   const callbackUrl = data.callbackUrl || `${env.PAYMENT_CALLBACK_BASE_URL}/payment/callback`;
 
+  // Calculate platform fee
+  const feeConfig = await getPlatformFeeConfig();
+  const { platformFee, totalAmount } = calculatePlatformFee(data.amount, feeConfig);
+
   const provider = getPaymentProvider(data.provider);
   const result = await provider.initialize({
     email: data.email,
-    amount: toSmallestUnit(data.amount, data.currency),
+    amount: toSmallestUnit(totalAmount, data.currency),
     currency: data.currency,
     reference,
     callbackUrl,
@@ -54,6 +106,9 @@ export async function initializePayment(data: InitializePaymentInput, memberId?:
       donationId: data.donationId,
       dueId: data.dueId,
       memberId,
+      originalAmount: data.amount,
+      platformFee,
+      totalAmount,
       ...data.metadata,
     },
   });
@@ -63,6 +118,8 @@ export async function initializePayment(data: InitializePaymentInput, memberId?:
     provider: data.provider,
     purpose: data.purpose,
     amount: data.amount,
+    platformFee,
+    totalAmount,
     currency: data.currency,
     status: 'PENDING',
     providerRef: result.providerRef || null,
@@ -81,6 +138,9 @@ export async function initializePayment(data: InitializePaymentInput, memberId?:
     reference: result.reference,
     authorizationUrl: result.authorizationUrl,
     provider: data.provider,
+    amount: data.amount,
+    platformFee,
+    totalAmount,
   };
 }
 
@@ -90,7 +150,7 @@ export async function verifyPayment(reference: string) {
   const payment = await payments.findOne({
     $or: [
       { providerRef: reference },
-      ...(reference.length === 24 ? [{ _id: reference }] : []),
+      ...(mongoose.Types.ObjectId.isValid(reference) ? [{ _id: reference }] : []),
     ],
   });
 
@@ -173,7 +233,7 @@ export async function getPaymentByReference(reference: string) {
   const payment = await payments.findOne({
     $or: [
       { providerRef: reference },
-      ...(reference.length === 24 ? [{ _id: reference }] : []),
+      ...(mongoose.Types.ObjectId.isValid(reference) ? [{ _id: reference }] : []),
     ],
   });
 

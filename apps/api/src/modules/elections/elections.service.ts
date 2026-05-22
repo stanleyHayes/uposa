@@ -99,9 +99,9 @@ export async function castVote(electionId: string, voterId: string, data: CastEl
     c.id === data.candidateId ? { ...c, votes: c.votes + 1 } : c
   );
 
-  await withTransaction(async () => {
-    await electionVotes.create({ electionId, candidateId: data.candidateId, voterId });
-    await elections.updateById(electionId, { candidates: updatedCandidates });
+  await withTransaction(async (session) => {
+    await electionVotes.create({ electionId, candidateId: data.candidateId, voterId }, { session });
+    await elections.updateById(electionId, { candidates: updatedCandidates }, { session });
   });
 
   // Emit real-time update

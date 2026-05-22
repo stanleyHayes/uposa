@@ -200,11 +200,13 @@ export const paymentMethodsApi = {
 // Payments
 export const paymentsApi = {
   initialize: (data: { provider: string; purpose: string; amount: number; currency: string; email: string; name?: string; donationId?: string; dueId?: string; callbackUrl?: string }) =>
-    client.post<ApiResponse<{ paymentId: string; reference: string; authorizationUrl: string; provider: string }>>('/payments/initialize', data),
+    client.post<ApiResponse<{ paymentId: string; reference: string; authorizationUrl: string; provider: string; amount: number; platformFee: number; totalAmount: number }>>('/payments/initialize', data),
   verify: (reference: string) =>
     client.get<ApiResponse>(`/payments/verify/${reference}`),
   status: (reference: string) =>
     client.get<ApiResponse>(`/payments/status/${reference}`),
+  platformFeePreview: (amount: number) =>
+    client.get<ApiResponse<{ amount: number; platformFee: number; totalAmount: number; percent: number; fixed: number; enabled: boolean }>>(`/payments/platform-fee?amount=${amount}`),
 }
 
 // Site Config

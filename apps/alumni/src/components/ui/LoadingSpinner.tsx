@@ -3,7 +3,7 @@ interface Props {
   className?: string
 }
 
-export default function LoadingSpinner({ size: _size = 'md', className = '' }: Props) {
+export default function LoadingSpinner({ className = '' }: Props) {
   return (
     <div className={`space-y-4 animate-pulse ${className}`}>
       <div className="flex items-center gap-3">

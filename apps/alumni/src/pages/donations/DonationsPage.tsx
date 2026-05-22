@@ -55,6 +55,8 @@ export default function DonationsPage() {
   const { methods: paymentMethods, loading: methodsLoading } = usePaymentMethods()
   const [modalOpen, setModalOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [feePreview, setFeePreview] = useState<{ amount: number; platformFee: number; totalAmount: number; percent: number; fixed: number; enabled: boolean } | null>(null)
+  const [feeLoading, setFeeLoading] = useState(false)
   const toast = useToast()
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
@@ -64,7 +66,21 @@ export default function DonationsPage() {
   })
 
   const selectedChannel = watch('channel')
+  const amountValue = watch('amount')
   const isOnlineProvider = ['PAYSTACK', 'STRIPE', 'CRYPTO'].includes(selectedChannel)
+
+  useEffect(() => {
+    const amt = Number(amountValue)
+    if (!isOnlineProvider || !amt || amt <= 0) {
+      setFeePreview(null)
+      return
+    }
+    setFeeLoading(true)
+    paymentsApi.platformFeePreview(amt)
+      .then((res) => setFeePreview(res.data.data ?? null))
+      .catch(() => setFeePreview(null))
+      .finally(() => setFeeLoading(false))
+  }, [amountValue, isOnlineProvider])
 
   useEffect(() => {
     donationsApi.my()
@@ -393,8 +409,27 @@ export default function DonationsPage() {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
+                className="overflow-hidden space-y-3"
               >
+                {feeLoading && (
+                  <div className="text-center py-2"><span className="loading loading-dots loading-sm text-primary"></span></div>
+                )}
+                {feePreview && feePreview.enabled && feePreview.platformFee > 0 && (
+                  <div className="bg-base-100 rounded-xl p-3 border border-base-300 space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-base-content/60">Donation</span>
+                      <span className="font-medium">{formatCurrency(feePreview.amount)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-base-content/60">Platform Fee ({feePreview.percent}%{(feePreview.fixed ?? 0) > 0 ? ` + ${formatCurrency(feePreview.fixed)}` : ''})</span>
+                      <span className="font-medium">{formatCurrency(feePreview.platformFee)}</span>
+                    </div>
+                    <div className="border-t border-base-300 pt-1 flex justify-between text-sm font-semibold">
+                      <span>Total to Pay</span>
+                      <span className="text-primary">{formatCurrency(feePreview.totalAmount)}</span>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-[#FFF8DC] text-sm shadow-sm">
                   <ArrowRight className="w-4 h-4 text-primary shrink-0" />
                   <span>You'll be redirected to {getChannelLabel(selectedChannel).replace(' (Pay Online)', '')} to complete payment securely.</span>

@@ -3,6 +3,7 @@ import {
   initializePaymentHandler,
   verifyPaymentHandler,
   getPaymentStatusHandler,
+  getPlatformFeePreviewHandler,
   paystackWebhookHandler,
   stripeWebhookHandler,
   cryptoWebhookHandler,
@@ -22,6 +23,9 @@ router.get('/verify/:reference', paymentLimiter, verifyPaymentHandler);
 
 // Get payment status
 router.get('/status/:reference', paymentLimiter, getPaymentStatusHandler);
+
+// Platform fee preview (no auth needed)
+router.get('/platform-fee', paymentLimiter, getPlatformFeePreviewHandler);
 
 // Webhooks (no auth — validated by provider signatures).
 // Rate limit runs after the global body parsers, so the Stripe raw-body

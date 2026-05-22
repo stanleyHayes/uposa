@@ -282,9 +282,14 @@ export const paymentsApi = {
       reference: string;
       authorizationUrl: string;
       provider: string;
+      amount: number;
+      platformFee: number;
+      totalAmount: number;
     }>>('/payments/initialize', data),
   status: (reference: string) =>
     client.get<ApiResponse>(`/payments/status/${reference}`),
+  platformFeePreview: (amount: number) =>
+    client.get<ApiResponse<{ amount: number; platformFee: number; totalAmount: number; percent: number; fixed: number; enabled: boolean }>>(`/payments/platform-fee?amount=${amount}`),
 };
 
 export { TOKEN_KEY, REFRESH_TOKEN_KEY };

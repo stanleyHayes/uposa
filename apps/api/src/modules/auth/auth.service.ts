@@ -38,7 +38,7 @@ export async function registerMember(data: RegisterInput, photoUrl?: string) {
     altPhoneNumber: data.altPhoneNumber || null,
     residentialAddress: data.residentialAddress || null,
     city: data.city || null,
-    region: null,
+    region: data.region || null,
     country: data.country || null,
     yearGroup: data.yearGroup || null,
     programme: data.programme || null,

@@ -30,6 +30,8 @@ export default function DuesPage() {
   const [transactionRef, setTransactionRef] = useState('')
   const [payNotes, setPayNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [feePreview, setFeePreview] = useState<{ amount: number; platformFee: number; totalAmount: number; percent: number; fixed: number; enabled: boolean } | null>(null)
+  const [feeLoading, setFeeLoading] = useState(false)
 
   useEffect(() => {
     duesApi.my()
@@ -46,8 +48,21 @@ export default function DuesPage() {
     setPayMethod('manual')
     setTransactionRef('')
     setPayNotes('')
+    setFeePreview(null)
     setPayModalOpen(true)
   }
+
+  useEffect(() => {
+    if (!selectedDue || payMethod === 'manual') {
+      setFeePreview(null)
+      return
+    }
+    setFeeLoading(true)
+    paymentsApi.platformFeePreview(selectedDue.amount)
+      .then((res) => setFeePreview(res.data.data ?? null))
+      .catch(() => setFeePreview(null))
+      .finally(() => setFeeLoading(false))
+  }, [selectedDue, payMethod])
 
   const handlePay = async () => {
     if (!selectedDue) return
@@ -210,6 +225,26 @@ export default function DuesPage() {
             <p className="text-2xl font-bold text-primary">{formatCurrency(selectedDue?.amount || 0)}</p>
           </div>
 
+          {feeLoading && (
+            <div className="text-center py-2"><span className="loading loading-dots loading-sm text-primary"></span></div>
+          )}
+          {feePreview && feePreview.enabled && feePreview.platformFee > 0 && (
+            <div className="bg-base-100 rounded-lg p-3 border border-base-300 space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-base-content/60">Amount Due</span>
+                <span className="font-medium">{formatCurrency(feePreview.amount)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-base-content/60">Platform Fee ({feePreview.percent}%{(feePreview.fixed ?? 0) > 0 ? ` + ${formatCurrency(feePreview.fixed)}` : ''})</span>
+                <span className="font-medium">{formatCurrency(feePreview.platformFee)}</span>
+              </div>
+              <div className="border-t border-base-300 pt-1 flex justify-between text-sm font-semibold">
+                <span>Total to Pay</span>
+                <span className="text-primary">{formatCurrency(feePreview.totalAmount)}</span>
+              </div>
+            </div>
+          )}
+
           <div className="form-control">
             <label className="label"><span className="label-text font-medium">Choose Payment Method</span></label>
             <div className="space-y-2">
@@ -250,7 +285,7 @@ export default function DuesPage() {
 
           {payMethod !== 'manual' && (
             <div className="alert alert-info text-sm py-2">
-              <span>You'll be redirected to complete payment securely.</span>
+              <span>You'll be redirected to complete payment securely. The platform fee covers transaction processing costs.</span>
             </div>
           )}
 

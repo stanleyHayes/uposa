@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 
 import { env } from './config/env';
@@ -72,6 +73,9 @@ app.use(cors({
 
 // Stripe webhook needs raw body for signature verification
 app.use('/api/payments/webhooks/stripe', express.raw({ type: 'application/json' }));
+
+// Cookie parsing (must be before auth middleware)
+app.use(cookieParser());
 
 // Request parsing
 app.use(express.json({ limit: '10mb' }));

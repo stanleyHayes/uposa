@@ -102,7 +102,7 @@ export async function memberPayDue(dueId: string, memberId: string, data: Member
 
   const due = await repos.dues.findById(dueId);
   if (!due) throw Object.assign(new Error('Due not found'), { statusCode: 404 });
-  if ((due as any).memberId !== memberId) {
+  if (String((due as any).memberId) !== memberId) {
     throw Object.assign(new Error('Not authorized to pay this due'), { statusCode: 403 });
   }
   if ((due as any).status === 'PAID') {

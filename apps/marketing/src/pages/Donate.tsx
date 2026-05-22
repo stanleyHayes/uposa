@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSiteData } from "../context/SiteDataContext.tsx";
 import SplashScreen from "../components/common/SplashScreen.tsx";
 import { Card, CardAccent, CardBody } from "../components/ui/Card.tsx";
+import { getPlatformFeePreview } from "../api/client.ts";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -56,6 +57,8 @@ const Donate = () => {
     const [initiating, setInitiating] = useState(false);
     const [donorEmail, setDonorEmail] = useState("");
     const [donorName, setDonorName] = useState("");
+    const [feePreview, setFeePreview] = useState<{ amount: number; platformFee: number; totalAmount: number; percent: number; fixed: number; enabled: boolean } | null>(null);
+    const [feeLoading, setFeeLoading] = useState(false);
     const modalRef = useRef<HTMLDivElement>(null);
 
     // Fetch enabled payment methods
@@ -95,6 +98,18 @@ const Donate = () => {
 
     const isOnlineMethod = paymentMethod && !["momo", "bank"].includes(paymentMethod);
     const selectedOnlineMethod = onlinePaymentMethods.find((m) => m.provider === paymentMethod);
+
+    useEffect(() => {
+      if (!isOnlineMethod || !finalAmount || finalAmount <= 0) {
+        setFeePreview(null);
+        return;
+      }
+      setFeeLoading(true);
+      getPlatformFeePreview(finalAmount)
+        .then((data) => setFeePreview(data))
+        .catch(() => setFeePreview(null))
+        .finally(() => setFeeLoading(false));
+    }, [isOnlineMethod, finalAmount]);
 
     const handleConfirm = async () => {
         if (isOnlineMethod && selectedOnlineMethod) {
@@ -532,8 +547,27 @@ const Donate = () => {
                                                     </div>
                                                     <h4 className="font-semibold text-sm">Pay with {selectedOnlineMethod.displayName}</h4>
                                                 </div>
+                                                {feeLoading && (
+                                                  <div className="text-center py-2"><span className="loading loading-dots loading-sm text-primary"></span></div>
+                                                )}
+                                                {feePreview && feePreview.enabled && feePreview.platformFee > 0 && (
+                                                  <div className="bg-base-100 rounded-xl p-3 border border-base-300 space-y-1">
+                                                    <div className="flex justify-between text-sm">
+                                                      <span className="text-base-content/60">Donation</span>
+                                                      <span className="font-medium">{currency} {feePreview.amount.toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-sm">
+                                                      <span className="text-base-content/60">Platform Fee ({feePreview.percent}%{(feePreview.fixed ?? 0) > 0 ? ` + ${currency} ${feePreview.fixed}` : ''})</span>
+                                                      <span className="font-medium">{currency} {feePreview.platformFee.toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="border-t border-base-300 pt-1 flex justify-between text-sm font-semibold">
+                                                      <span>Total to Pay</span>
+                                                      <span className="text-primary">{currency} {feePreview.totalAmount.toLocaleString()}</span>
+                                                    </div>
+                                                  </div>
+                                                )}
                                                 <p className="text-sm text-base-content/60">
-                                                    You will be redirected to {selectedOnlineMethod.displayName} to complete your donation of <strong>{currency} {finalAmount?.toLocaleString()}</strong> securely.
+                                                    You will be redirected to {selectedOnlineMethod.displayName} to complete your donation securely.
                                                 </p>
                                                 <div className="form-control">
                                                     <label className="label"><span className="label-text text-sm">Your Email *</span></label>

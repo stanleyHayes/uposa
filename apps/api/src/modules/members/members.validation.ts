@@ -10,6 +10,7 @@ export const updateProfileSchema = z.object({
     altPhoneNumber: z.string().optional(),
     residentialAddress: z.string().optional(),
     city: z.string().optional(),
+    region: z.string().optional(),
     country: z.string().optional(),
     yearGroup: z.coerce.number().int().min(1982).optional(),
     programme: z.enum(['GENERAL_ARTS', 'BUSINESS', 'HOME_ECONOMICS', 'VISUAL_ARTS', 'SCIENCE']).optional(),

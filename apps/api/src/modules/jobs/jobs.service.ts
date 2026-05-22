@@ -108,7 +108,7 @@ export async function updateMyJob(jobId: string, memberId: string, data: UpdateJ
 
   const job = await repos.jobs.findById(jobId);
   if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });
-  if ((job as any).postedById !== memberId) {
+  if (String((job as any).postedById) !== memberId) {
     throw Object.assign(new Error('Not authorized to edit this job'), { statusCode: 403 });
   }
 
@@ -124,7 +124,7 @@ export async function deleteMyJob(jobId: string, memberId: string) {
 
   const job = await repos.jobs.findById(jobId);
   if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });
-  if ((job as any).postedById !== memberId) {
+  if (String((job as any).postedById) !== memberId) {
     throw Object.assign(new Error('Not authorized to delete this job'), { statusCode: 403 });
   }
   await repos.jobs.deleteById(jobId);
@@ -138,7 +138,7 @@ export async function applyToJob(jobId: string, applicantId: string, data: Apply
   const job = await repos.jobs.findById(jobId);
   if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });
   if (!(job as any).isApproved) throw Object.assign(new Error('Job is not yet approved'), { statusCode: 400 });
-  if ((job as any).postedById === applicantId) {
+  if (String((job as any).postedById) === applicantId) {
     throw Object.assign(new Error('You cannot apply to your own job posting'), { statusCode: 400 });
   }
   if ((job as any).expiresAt && (job as any).expiresAt < new Date()) {
@@ -197,7 +197,7 @@ export async function getJobApplications(jobId: string, memberId: string, query:
 
   const job = await repos.jobs.findById(jobId);
   if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });
-  if ((job as any).postedById !== memberId) {
+  if (String((job as any).postedById) !== memberId) {
     throw Object.assign(new Error('Not authorized to view applications for this job'), { statusCode: 403 });
   }
 
@@ -238,7 +238,7 @@ export async function updateApplicationStatus(applicationId: string, memberId: s
   if (!application) throw Object.assign(new Error('Application not found'), { statusCode: 404 });
 
   const job = await repos.jobs.findById((application as any).jobId);
-  if (!job || (job as any).postedById !== memberId) {
+  if (!job || String((job as any).postedById) !== memberId) {
     throw Object.assign(new Error('Not authorized to update this application'), { statusCode: 403 });
   }
 

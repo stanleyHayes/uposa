@@ -374,6 +374,8 @@ export interface IPayment { id: string;
   provider: string;
   purpose: string;
   amount: number;
+  platformFee: number;
+  totalAmount: number;
   currency: string;
   status: string;
   providerRef?: string;
@@ -842,6 +844,8 @@ const PaymentSchema = new Schema<IPayment>(
     provider: { type: String, enum: PaymentProvider, required: true },
     purpose: { type: String, enum: PaymentPurpose, required: true },
     amount: { type: Number, required: true },
+    platformFee: { type: Number, default: 0 },
+    totalAmount: { type: Number, required: true },
     currency: { type: String, default: 'GHS' },
     status: { type: String, enum: PaymentStatusEnum, default: 'PENDING' },
     providerRef: { type: String },

@@ -118,7 +118,7 @@ export async function getMyDonations(memberId: string, query: Record<string, str
         from: 'projects',
         let: { pid: '$projectId' },
         pipeline: [
-          { $match: { $expr: { $eq: ['$_id', { $toObjectId: '$$pid' }] } } },
+          { $match: { $expr: { $eq: [{ $toString: '$_id' }, '$$pid'] } } },
           { $project: { _id: 0, id: { $toString: '$_id' }, title: 1 } },
         ],
         as: '_project',

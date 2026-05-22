@@ -33,6 +33,8 @@ export default function DonationsScreen() {
   const [amount, setAmount] = useState('');
   const [provider, setProvider] = useState<(typeof PROVIDERS)[number]>('PAYSTACK');
   const [submitting, setSubmitting] = useState(false);
+  const [feePreview, setFeePreview] = useState<{ amount: number; platformFee: number; totalAmount: number; percent: number; fixed: number; enabled: boolean } | null>(null);
+  const [feeLoading, setFeeLoading] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -44,6 +46,19 @@ export default function DonationsScreen() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    const amt = Number(amount);
+    if (!amt || amt <= 0) {
+      setFeePreview(null);
+      return;
+    }
+    setFeeLoading(true);
+    paymentsApi.platformFeePreview(amt)
+      .then((res) => setFeePreview(res.data.data ?? null))
+      .catch(() => setFeePreview(null))
+      .finally(() => setFeeLoading(false));
+  }, [amount]);
 
   useEffect(() => {
     load();
@@ -170,6 +185,31 @@ export default function DonationsScreen() {
             { color: palette.text, borderColor: palette.border, backgroundColor: palette.background },
           ]}
         />
+        {feeLoading && (
+          <ActivityIndicator color={palette.tint} style={{ marginTop: 8 }} />
+        )}
+        {feePreview && feePreview.enabled && feePreview.platformFee > 0 && (
+          <View style={[styles.feeCard, { backgroundColor: palette.surfaceMuted, borderColor: palette.border }]}>
+            <View style={styles.feeRow}>
+              <Text style={{ color: palette.textMuted, fontSize: 13 }}>Donation</Text>
+              <Text style={{ color: palette.text, fontSize: 13, fontWeight: '600' }}>
+                {provider === 'PAYSTACK' ? 'GHS' : 'USD'} {feePreview.amount.toLocaleString()}
+              </Text>
+            </View>
+            <View style={styles.feeRow}>
+              <Text style={{ color: palette.textMuted, fontSize: 13 }}>Platform Fee ({feePreview.percent}%)</Text>
+              <Text style={{ color: palette.text, fontSize: 13, fontWeight: '600' }}>
+                {provider === 'PAYSTACK' ? 'GHS' : 'USD'} {feePreview.platformFee.toLocaleString()}
+              </Text>
+            </View>
+            <View style={[styles.feeRow, { borderTopWidth: 1, borderTopColor: palette.border, paddingTop: 6, marginTop: 4 }]}>
+              <Text style={{ color: palette.text, fontSize: 14, fontWeight: '700' }}>Total to Pay</Text>
+              <Text style={{ color: Brand.gold, fontSize: 14, fontWeight: '700' }}>
+                {provider === 'PAYSTACK' ? 'GHS' : 'USD'} {feePreview.totalAmount.toLocaleString()}
+              </Text>
+            </View>
+          </View>
+        )}
 
         <Text style={[styles.label, { color: palette.textMuted, marginTop: 10 }]}>Provider</Text>
         <View style={styles.providerRow}>
@@ -271,4 +311,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   btnText: { color: Brand.cream, fontWeight: '700', fontSize: 15 },
+  feeCard: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 4,
+  },
+  feeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
 });

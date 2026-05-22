@@ -92,6 +92,9 @@ async function main() {
       },
     },
     { key: 'stats', value: { members: 5000, years: 50, projects: 20, events: 100 } },
+    { key: 'PAYMENT_PLATFORM_FEE_ENABLED', value: 'true' },
+    { key: 'PAYMENT_PLATFORM_FEE_PERCENT', value: 2.5 },
+    { key: 'PAYMENT_PLATFORM_FEE_FIXED', value: 0 },
     {
       key: 'schoolInfo',
       value: {

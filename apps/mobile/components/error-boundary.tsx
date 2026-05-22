@@ -22,7 +22,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     if (__DEV__) {
-      // eslint-disable-next-line no-console
       console.error('UPOSA mobile error:', error, info);
     }
   }

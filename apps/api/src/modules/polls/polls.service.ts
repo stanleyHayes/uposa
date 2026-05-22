@@ -113,11 +113,11 @@ export async function castVote(pollId: string, memberId: string, data: CastVoteI
   });
 
   // Use withTransaction for transactional behavior
-  await withTransaction(async () => {
+  await withTransaction(async (session) => {
     await pollVotes.create({
       pollId, memberId, selectedOptions: data.selectedOptions, createdAt: new Date(),
-    });
-    await polls.updateById(pollId, { $set: { options: updatedOptions } });
+    }, { session });
+    await polls.updateById(pollId, { $set: { options: updatedOptions } }, { session });
   });
 
   // Emit real-time update

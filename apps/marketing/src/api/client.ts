@@ -51,6 +51,13 @@ export async function subscribeNewsletter(email: string) {
   return json;
 }
 
+export async function getPlatformFeePreview(amount: number) {
+  const res = await fetch(`${API_BASE}/payments/platform-fee?amount=${amount}`);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Failed to fetch fee preview');
+  return json.data;
+}
+
 export async function rsvpToEvent(eventId: string, data: { name: string; email: string; phone?: string }) {
   const res = await fetch(`${API_BASE}/events/${eventId}/rsvp`, {
     method: 'POST',

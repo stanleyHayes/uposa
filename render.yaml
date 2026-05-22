@@ -1,15 +1,19 @@
-# Render Blueprint for UPOSA API
+# Render Blueprint for UPOSA Platform
+# Deploy this blueprint at: https://dashboard.render.com/blueprints
+
 services:
+  # ── API Service ─────────────────────────────────────────
   - type: web
     name: uposa-api
-    runtime: node
+    runtime: docker
     region: oregon
     rootDir: apps/api
-    buildCommand: npm install && npx prisma generate && npx prisma db push && npm run build
-    startCommand: npm run start
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 5000
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
@@ -19,6 +23,8 @@ services:
       - key: CLIENT_URL
         sync: false
       - key: ADMIN_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
         sync: false
       - key: RESEND_API_KEY
         sync: false
@@ -30,6 +36,52 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: PAYSTACK_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
       - key: CREDENTIALS_ENCRYPTION_KEY
         generateValue: true
     healthCheckPath: /health
+
+  # ── Admin Dashboard (Static Site) ───────────────────────
+  - type: web
+    name: uposa-admin
+    runtime: static
+    region: oregon
+    rootDir: apps/admin
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://uposa-api.onrender.com/api
+
+  # ── Alumni Portal (Static Site) ─────────────────────────
+  - type: web
+    name: uposa-alumni
+    runtime: static
+    region: oregon
+    rootDir: apps/alumni
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://uposa-api.onrender.com/api
+
+  # ── Marketing Site (Static Site) ────────────────────────
+  - type: web
+    name: uposa-marketing
+    runtime: static
+    region: oregon
+    rootDir: apps/marketing
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://uposa-api.onrender.com/api
