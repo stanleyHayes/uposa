@@ -12,6 +12,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
       - key: PORT
         value: 5000
       - key: DATABASE_URL
@@ -59,6 +61,8 @@ services:
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     envVars:
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
       - key: VITE_API_URL
         value: https://uposa-api.onrender.com/api
 
@@ -71,6 +75,8 @@ services:
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     envVars:
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
       - key: VITE_API_URL
         value: https://uposa-api.onrender.com/api
 
@@ -83,5 +89,7 @@ services:
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     envVars:
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
       - key: VITE_API_URL
         value: https://uposa-api.onrender.com/api
