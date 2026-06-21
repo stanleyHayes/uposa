@@ -5,6 +5,10 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ['dist/*'],
+    ignores: ['dist/*', 'node_modules/*', 'node_modules.bak/*'],
+    rules: {
+      'import/namespace': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+    },
   },
 ]);

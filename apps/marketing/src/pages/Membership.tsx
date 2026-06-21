@@ -1,21 +1,47 @@
+import { useRef, useState } from "react";
+import { Link } from "react-router";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    ArrowRight,
+    BadgeCheck,
+    Briefcase,
+    Building2,
+    CheckCircle2,
+    CreditCard,
+    Eye,
+    EyeOff,
+    FileCheck,
+    Globe,
+    GraduationCap,
+    Lock,
+    Mail,
+    MapPin,
+    Phone,
+    Search,
+    ShieldCheck,
+    Smartphone,
+    User,
+    UserPlus,
+    Users,
+} from "lucide-react";
 import { Layout } from "../components/layout/Layout.tsx";
-import { UserPlus, Search, CreditCard, User, Mail, Phone, GraduationCap, MapPin, Briefcase, CheckCircle2, Smartphone, Building2, Globe, Lock, Eye, EyeOff } from "lucide-react";
-import { useState, useRef } from "react";
-import { registerMember } from "../api/client.ts";
-import { motion, AnimatePresence } from "framer-motion";
 import { ScrollReveal } from "../components/common/ScrollReveal.tsx";
 import { StaggerChildren } from "../components/common/StaggerChildren.tsx";
-import HeroBanner from "../components/common/HeroBanner.tsx";
-import SectionHeader from "../components/common/SectionHeader.tsx";
+import { HeroReveal } from "../components/common/HeroReveal.tsx";
+import SEO from "../components/common/SEO.tsx";
 import { useSiteData } from "../context/SiteDataContext.tsx";
 import SplashScreen from "../components/common/SplashScreen.tsx";
-import { Card, CardAccent, CardBody } from "../components/ui/Card.tsx";
+import { SkeletonBlock } from "../components/common/Skeleton.tsx";
+import { registerMember } from "../api/client.ts";
+
+const inputClass = "input input-bordered w-full border-primary/15 bg-base-100 focus:border-secondary";
+const selectClass = "select select-bordered w-full border-primary/15 bg-base-100 focus:border-secondary";
 
 const Membership = () => {
     const { data, loading } = useSiteData();
     const [submitted, setSubmitted] = useState(false);
     const [regLoading, setRegLoading] = useState(false);
-    const [regError, setRegError] = useState('');
+    const [regError, setRegError] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const regFormRef = useRef<HTMLFormElement>(null);
 
@@ -25,377 +51,568 @@ const Membership = () => {
 
     const dues = data.config.dues;
     const payment = data.config.payment;
+    const stats = data.config.stats;
+    const alumniPortalUrl = import.meta.env.VITE_ALUMNI_URL || "http://localhost:5174";
+
+    const heroStats = [
+        { label: "Members", value: `${stats.members.toLocaleString()}+`, icon: Users },
+        { label: "Active years", value: `${stats.years}+`, icon: GraduationCap },
+        { label: "Annual dues", value: `${dues.currency} ${dues.annual.toLocaleString()}`, icon: CreditCard },
+    ];
+
+    const registrationSteps = [
+        { title: "Submit details", description: "Share your identity, year group, contact, and professional profile.", icon: UserPlus },
+        { title: "Verify email", description: "Use the email link to confirm the address attached to your account.", icon: Mail },
+        { title: "Executive review", description: "The team reviews and approves membership access for the alumni portal.", icon: ShieldCheck },
+    ];
+
+    const membershipBenefits = [
+        "Alumni directory access",
+        "Dues and payment tracking",
+        "Mentorship and volunteer calls",
+        "Year-group coordination",
+    ];
+
+    const years = Array.from({ length: new Date().getFullYear() - 1981 + 1 }, (_, index) => 1981 + index);
+
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setRegLoading(true);
+        setRegError("");
+
+        const fd = new FormData(event.currentTarget);
+        const password = fd.get("password") as string;
+        const confirmPassword = fd.get("confirmPassword") as string;
+
+        if (password !== confirmPassword) {
+            setRegError("Passwords do not match");
+            setRegLoading(false);
+            return;
+        }
+
+        const expertise = ((fd.get("areaOfExpertise") as string) || "")
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean);
+        const programmeMap: Record<string, string> = {
+            "General Science": "SCIENCE",
+            "General Arts": "GENERAL_ARTS",
+            Business: "BUSINESS",
+            "Visual Arts": "VISUAL_ARTS",
+            "Home Economics": "HOME_ECONOMICS",
+        };
+
+        try {
+            await registerMember({
+                fullName: fd.get("fullName") as string,
+                email: fd.get("email") as string,
+                password,
+                mobileNumber: (fd.get("mobileNumber") as string) || undefined,
+                yearGroup: fd.get("yearGroup") ? Number(fd.get("yearGroup")) : undefined,
+                programme: programmeMap[fd.get("programme") as string] || undefined,
+                house: (fd.get("house") as string) || undefined,
+                city: (fd.get("city") as string) || undefined,
+                country: (fd.get("country") as string) || undefined,
+                occupation: (fd.get("occupation") as string) || undefined,
+                areaOfExpertise: expertise.length > 0 ? expertise : undefined,
+                willingToVolunteer: fd.get("volunteer") ? "YES" : "NO",
+                consentGiven: !!fd.get("consent"),
+            });
+            setSubmitted(true);
+            regFormRef.current?.reset();
+        } catch (err) {
+            setRegError(err instanceof Error ? err.message : "Registration failed");
+        } finally {
+            setRegLoading(false);
+        }
+    };
 
     return (
         <Layout>
-            {/* Hero */}
-            <HeroBanner icon={UserPlus} title="Membership" description="Join the UPOSA community. Register as an alumnus, access the alumni directory, and manage your dues." />
+            <SEO
+                title="Membership"
+                description="Register as a UPOSA member, access the alumni directory, and manage dues and payments."
+                canonicalPath="/membership"
+            />
 
-            {/* Registration Form */}
-            <section className="py-16">
-                <div className="max-w-7xl mx-auto px-4">
-                    <div className="max-w-2xl mx-auto">
-                        <SectionHeader icon={UserPlus} title="Alumni Registration" description="We collect alumni data to keep our community connected, facilitate networking, and plan events and initiatives that serve our members." align="left" />
+            <section className="relative overflow-hidden bg-base-100 text-primary">
+                <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
+                <div
+                    className="absolute inset-0 opacity-[0.05]"
+                    style={{
+                        backgroundImage: "linear-gradient(90deg, #001B50 1px, transparent 1px), linear-gradient(#001B50 1px, transparent 1px)",
+                        backgroundSize: "44px 44px",
+                    }}
+                />
+                <img
+                    src="/logo.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -right-24 top-8 h-[520px] w-[520px] object-contain opacity-[0.08] md:h-[680px] md:w-[680px]"
+                />
 
-                        <ScrollReveal delay={0.15}>
-                            <AnimatePresence mode="wait">
-                                {submitted ? (
-                                    <motion.div
-                                        key="success"
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        className="card bg-base-100 border border-base-300 shadow-lg overflow-hidden"
-                                    >
-                                        <div className="h-1.5 bg-gradient-to-r from-success to-success/60" />
-                                        <div className="card-body items-center text-center py-12">
-                                            <motion.div
-                                                className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mb-4"
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                transition={{ type: 'spring', delay: 0.2 }}
-                                            >
-                                                <CheckCircle2 className="w-10 h-10 text-success" />
-                                            </motion.div>
-                                            <h3 className="text-xl font-bold mb-2">Registration Successful!</h3>
-                                            <div className="space-y-3 text-left max-w-sm mt-2">
-                                                <div className="flex items-start gap-3">
-                                                    <div className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</div>
-                                                    <p className="text-sm text-base-content/70"><span className="font-semibold text-base-content">Check your email</span> — We've sent a verification link to your inbox. Click it to verify your account.</p>
-                                                </div>
-                                                <div className="flex items-start gap-3">
-                                                    <div className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</div>
-                                                    <p className="text-sm text-base-content/70"><span className="font-semibold text-base-content">Admin review</span> — After verification, your membership will be reviewed and approved by the executive team.</p>
-                                                </div>
-                                                <div className="flex items-start gap-3">
-                                                    <div className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</div>
-                                                    <p className="text-sm text-base-content/70"><span className="font-semibold text-base-content">You're in!</span> — Once approved, you'll receive an email and can log in to the alumni portal.</p>
-                                                </div>
-                                            </div>
-                                            <button className="btn btn-ghost btn-sm mt-6" onClick={() => setSubmitted(false)}>
-                                                Submit another registration
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                                ) : (
-                                    <motion.div
-                                        key="form"
-                                        initial={{ opacity: 1 }}
-                                        exit={{ opacity: 0, y: -20 }}
-                                    >
-                                        <div className="card bg-base-100 border border-base-300 shadow-lg overflow-hidden">
-                                            <div className="h-1.5 bg-gradient-to-r from-primary to-accent" />
-                                            <div className="card-body p-6 sm:p-8">
-                                                {/* Header */}
-                                                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-base-300">
-                                                    <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
-                                                        <UserPlus className="w-5 h-5 text-primary" />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-bold">Registration Form</h3>
-                                                        <p className="text-xs text-base-content/50">Fields marked with * are required</p>
-                                                    </div>
-                                                </div>
+                <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 md:py-24 lg:grid-cols-[1fr_420px] lg:items-center">
+                    <HeroReveal>
+                        <div className="max-w-4xl">
+                            <div className="mb-8 inline-flex items-center gap-3 border border-primary/15 bg-base-200 px-4 py-2">
+                                <img src="/logo.png" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">Membership desk</p>
+                                    <p className="text-sm font-semibold text-primary/70">Registration, dues, and access</p>
+                                </div>
+                            </div>
 
-                                                <form ref={regFormRef} className="space-y-5" onSubmit={async (e) => {
-                                                    e.preventDefault();
-                                                    setRegLoading(true);
-                                                    setRegError('');
-                                                    const fd = new FormData(e.currentTarget);
-                                                    const password = fd.get('password') as string;
-                                                    const confirmPassword = fd.get('confirmPassword') as string;
-                                                    if (password !== confirmPassword) {
-                                                        setRegError('Passwords do not match');
-                                                        setRegLoading(false);
-                                                        return;
-                                                    }
-                                                    const expertise = (fd.get('areaOfExpertise') as string || '').split(',').map(s => s.trim()).filter(Boolean);
-                                                    const programmeMap: Record<string, string> = { 'General Science': 'SCIENCE', 'General Arts': 'GENERAL_ARTS', 'Business': 'BUSINESS', 'Visual Arts': 'VISUAL_ARTS', 'Home Economics': 'HOME_ECONOMICS' };
-                                                    try {
-                                                        await registerMember({
-                                                            fullName: fd.get('fullName') as string,
-                                                            email: fd.get('email') as string,
-                                                            password,
-                                                            mobileNumber: fd.get('mobileNumber') as string || undefined,
-                                                            yearGroup: fd.get('yearGroup') ? Number(fd.get('yearGroup')) : undefined,
-                                                            programme: programmeMap[fd.get('programme') as string] || undefined,
-                                                            house: fd.get('house') as string || undefined,
-                                                            city: fd.get('city') as string || undefined,
-                                                            country: fd.get('country') as string || undefined,
-                                                            occupation: fd.get('occupation') as string || undefined,
-                                                            areaOfExpertise: expertise.length > 0 ? expertise : undefined,
-                                                            willingToVolunteer: fd.get('volunteer') ? 'YES' : 'NO',
-                                                            consentGiven: !!fd.get('consent'),
-                                                        });
-                                                        setSubmitted(true);
-                                                        regFormRef.current?.reset();
-                                                    } catch (err) {
-                                                        setRegError(err instanceof Error ? err.message : 'Registration failed');
-                                                    } finally {
-                                                        setRegLoading(false);
-                                                    }
-                                                }}>
-                                                    {/* Personal Info */}
-                                                    <p className="text-xs font-semibold text-base-content/40 uppercase tracking-wider">Personal Information</p>
-                                                    <div className="grid sm:grid-cols-2 gap-4">
-                                                        <div className="form-control">
-                                                            <label className="label pb-1"><span className="label-text font-medium text-sm">Full Name *</span></label>
-                                                            <div className="relative">
-                                                                <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/30" />
-                                                                <input name="fullName" type="text" placeholder="Enter your full name" className="input input-bordered w-full pl-10" required />
-                                                            </div>
-                                                        </div>
-                                                        <div className="form-control">
-                                                            <label className="label pb-1"><span className="label-text font-medium text-sm">Email Address *</span></label>
-                                                            <div className="relative">
-                                                                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/30" />
-                                                                <input name="email" type="email" placeholder="you@example.com" className="input input-bordered w-full pl-10" required />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="grid sm:grid-cols-2 gap-4">
-                                                        <div className="form-control">
-                                                            <label className="label pb-1"><span className="label-text font-medium text-sm">Phone Number *</span></label>
-                                                            <div className="relative">
-                                                                <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/30" />
-                                                                <input name="mobileNumber" type="tel" placeholder="+233 XX XXX XXXX" className="input input-bordered w-full pl-10" required />
-                                                            </div>
-                                                        </div>
-                                                        <div className="form-control">
-                                                            <label className="label pb-1"><span className="label-text font-medium text-sm">Year Group *</span></label>
-                                                            <div className="relative">
-                                                                <GraduationCap size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/30" />
-                                                                <select name="yearGroup" className="select select-bordered w-full pl-10" required defaultValue="">
-                                                                    <option value="" disabled>Select year group</option>
-                                                                    {Array.from({ length: new Date().getFullYear() - 1981 + 1 }, (_, i) => 1981 + i).map((year) => (
-                                                                        <option key={year} value={year}>{year}</option>
-                                                                    ))}
-                                                                </select>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                            <p className="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.24em] text-secondary">
+                                <BadgeCheck size={16} />
+                                Old student identity
+                            </p>
+                            <h1 className="max-w-5xl text-5xl font-bold leading-[0.98] md:text-7xl">
+                                Become visible, reachable, and active in the UPOSA network.
+                            </h1>
+                            <p className="mt-7 max-w-2xl text-lg leading-relaxed text-base-content/65 md:text-xl">
+                                Register your alumni profile, keep your details current, support dues, and unlock the community tools that keep year groups connected.
+                            </p>
 
-                                                    {/* Password */}
-                                                    <p className="text-xs font-semibold text-base-content/40 uppercase tracking-wider pt-2">Account Security</p>
-                                                    <div className="grid sm:grid-cols-2 gap-4">
-                                                        <div className="form-control">
-                                                            <label className="label pb-1"><span className="label-text font-medium text-sm">Password *</span></label>
-                                                            <div className="relative">
-                                                                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/30" />
-                                                                <input name="password" type={showPassword ? 'text' : 'password'} placeholder="Min 8 characters" className="input input-bordered w-full pl-10 pr-10" required minLength={8} />
-                                                                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/30 hover:text-base-content" onClick={() => setShowPassword(!showPassword)}>
-                                                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                        <div className="form-control">
-                                                            <label className="label pb-1"><span className="label-text font-medium text-sm">Confirm Password *</span></label>
-                                                            <div className="relative">
-                                                                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/30" />
-                                                                <input name="confirmPassword" type="password" placeholder="Repeat password" className="input input-bordered w-full pl-10" required minLength={8} />
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                            <div className="mt-9 flex flex-wrap gap-3">
+                                <a href="#registration" className="btn btn-primary btn-lg">
+                                    Start registration <ArrowRight size={18} />
+                                </a>
+                                <a href="#dues" className="btn btn-secondary btn-lg">
+                                    View dues
+                                </a>
+                            </div>
+                        </div>
+                    </HeroReveal>
 
-                                                    {/* Academic */}
-                                                    <p className="text-xs font-semibold text-base-content/40 uppercase tracking-wider pt-2">Academic & Location</p>
-                                                    <div className="grid sm:grid-cols-2 gap-4">
-                                                        <div className="form-control">
-                                                            <label className="label pb-1"><span className="label-text font-medium text-sm">Programme</span></label>
-                                                            <select name="programme" className="select select-bordered w-full" defaultValue="">
-                                                                <option value="" disabled>Select your programme</option>
-                                                                <option>General Science</option>
-                                                                <option>General Arts</option>
-                                                                <option>Business</option>
-                                                                <option>Visual Arts</option>
-                                                                <option>Home Economics</option>
-                                                            </select>
-                                                        </div>
-                                                        <div className="form-control">
-                                                            <label className="label pb-1"><span className="label-text font-medium text-sm">House</span></label>
-                                                            <select name="house" className="select select-bordered w-full" defaultValue="">
-                                                                <option value="" disabled>Select your house</option>
-                                                                <option value="ACKAH">Ackah</option>
-                                                                <option value="DENSU">Densu</option>
-                                                                <option value="TANO">Tano</option>
-                                                                <option value="NKRUMAH">Nkrumah</option>
-                                                                <option value="PRA">Pra</option>
-                                                                <option value="VOLTA">Volta</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                    <div className="grid sm:grid-cols-3 gap-4">
-                                                        <div className="form-control">
-                                                            <label className="label pb-1"><span className="label-text font-medium text-sm">Region</span></label>
-                                                            <div className="relative">
-                                                                <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/30" />
-                                                                <select name="region" className="select select-bordered w-full pl-10" defaultValue="">
-                                                                    <option value="" disabled>Select</option>
-                                                                    <option>Ahafo</option><option>Ashanti</option><option>Bono</option><option>Bono East</option>
-                                                                    <option>Central</option><option>Eastern</option><option>Greater Accra</option>
-                                                                    <option>North East</option><option>Northern</option><option>Oti</option>
-                                                                    <option>Savannah</option><option>Upper East</option><option>Upper West</option>
-                                                                    <option>Volta</option><option>Western</option><option>Western North</option>
-                                                                </select>
-                                                            </div>
-                                                        </div>
-                                                        <div className="form-control">
-                                                            <label className="label pb-1"><span className="label-text font-medium text-sm">City</span></label>
-                                                            <select name="city" className="select select-bordered w-full" defaultValue="">
-                                                                <option value="" disabled>Select</option>
-                                                                <option>Accra</option><option>Kumasi</option><option>Cape Coast</option><option>Takoradi</option>
-                                                                <option>Tamale</option><option>Sunyani</option><option>Ho</option><option>Koforidua</option>
-                                                                <option>Bolgatanga</option><option>Wa</option><option>Techiman</option><option>Obuasi</option>
-                                                                <option>Tema</option><option>Tarkwa</option><option>Winneba</option><option>Other</option>
-                                                            </select>
-                                                        </div>
-                                                        <div className="form-control">
-                                                            <label className="label pb-1"><span className="label-text font-medium text-sm">Country</span></label>
-                                                            <input name="country" type="text" placeholder="Ghana" className="input input-bordered w-full" defaultValue="Ghana" />
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Professional */}
-                                                    <p className="text-xs font-semibold text-base-content/40 uppercase tracking-wider pt-2">Professional</p>
-                                                    <div className="grid sm:grid-cols-2 gap-4">
-                                                        <div className="form-control">
-                                                            <label className="label pb-1"><span className="label-text font-medium text-sm">Occupation</span></label>
-                                                            <div className="relative">
-                                                                <Briefcase size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/30" />
-                                                                <input name="occupation" type="text" placeholder="Your occupation" className="input input-bordered w-full pl-10" />
-                                                            </div>
-                                                        </div>
-                                                        <div className="form-control">
-                                                            <label className="label pb-1"><span className="label-text font-medium text-sm">Area(s) of Expertise</span></label>
-                                                            <input name="areaOfExpertise" type="text" placeholder="e.g., Engineering, Education" className="input input-bordered w-full" />
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Consent */}
-                                                    <div className="bg-base-200/50 rounded-xl p-4 border border-base-300 mt-2 space-y-3">
-                                                        <label className="cursor-pointer flex items-start gap-3">
-                                                            <input name="volunteer" type="checkbox" className="checkbox checkbox-primary checkbox-sm mt-0.5" />
-                                                            <span className="text-sm text-base-content/70">I am willing to volunteer for UPOSA activities.</span>
-                                                        </label>
-                                                        <label className="cursor-pointer flex items-start gap-3">
-                                                            <input name="consent" type="checkbox" className="checkbox checkbox-primary checkbox-sm mt-0.5" required />
-                                                            <span className="text-sm text-base-content/70">I consent to being contacted for association purposes. *</span>
-                                                        </label>
-                                                    </div>
-
-                                                    {regError && <p className="text-error text-sm">{regError}</p>}
-
-                                                    <button type="submit" className={`btn btn-primary w-full h-12 text-base gap-2 ${regLoading ? 'loading' : ''}`} disabled={regLoading}>
-                                                        {regLoading ? 'Submitting...' : <><UserPlus size={18} /> Submit Registration</>}
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </ScrollReveal>
-                    </div>
-                </div>
-            </section>
-
-            {/* Alumni Directory */}
-            <section id="directory" className="py-16 bg-base-200">
-                <div className="max-w-7xl mx-auto px-4">
-                    <SectionHeader icon={Search} title="Alumni Directory" description="Search and connect with fellow alumni. The directory is available to registered members through the alumni portal." align="left" />
-                    <ScrollReveal delay={0.15}>
-                        <Card className="max-w-xl">
-                            <CardAccent />
-                            <CardBody>
-                                <div className="flex items-center gap-3 mb-3">
-                                    <div className="bg-secondary/10 text-secondary rounded-xl p-2.5">
-                                        <Search size={20} />
+                    <ScrollReveal direction="left">
+                        <div className="border border-primary/15 bg-primary p-4 text-primary-content shadow-2xl">
+                            <div className="border border-primary-content/10 bg-primary-content/10 p-5">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-secondary">Member file</p>
+                                        <h2 className="mt-3 text-2xl font-bold">One profile for the alumni portal.</h2>
                                     </div>
-                                    <h3 className="font-semibold">Find Fellow Alumni</h3>
+                                    <UserPlus className="text-secondary" size={34} />
                                 </div>
-                                <p className="text-sm text-base-content/70 mb-4">
-                                    Our directory lets you search by name, year group, programme, and location. Register as a member to access the full directory through the alumni portal.
-                                </p>
-                                <div className="flex flex-wrap gap-3">
-                                    <a href="#registration" className="btn btn-primary btn-sm">Register Now</a>
-                                    <a href={import.meta.env.VITE_ALUMNI_URL || 'http://localhost:5174'} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-sm">Sign In to Portal</a>
+
+                                <div className="mt-8 space-y-3">
+                                    {membershipBenefits.map((benefit) => (
+                                        <div key={benefit} className="flex items-center gap-3 border border-primary-content/10 bg-primary-content/10 p-3">
+                                            <CheckCircle2 size={18} className="text-secondary" />
+                                            <p className="text-sm font-semibold text-primary-content/75">{benefit}</p>
+                                        </div>
+                                    ))}
                                 </div>
-                            </CardBody>
-                        </Card>
+                            </div>
+                        </div>
                     </ScrollReveal>
                 </div>
             </section>
 
-            {/* Dues & Payments */}
-            <section id="dues" className="py-16">
-                <div className="max-w-7xl mx-auto px-4">
-                    <SectionHeader icon={CreditCard} title="Dues & Payments" description="Annual membership dues help fund our projects and activities. Stay current with your dues to enjoy full membership benefits." align="left" />
-                    <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl">
-                        <Card shape="notch" className="h-full">
-                            <CardAccent />
-                            <CardBody className="text-center flex flex-col justify-between">
+            <section className="bg-primary text-primary-content">
+                <div className="mx-auto max-w-7xl px-4 py-6">
+                    <StaggerChildren className="grid gap-3 md:grid-cols-3">
+                        {heroStats.map((stat) => {
+                            const Icon = stat.icon;
+                            return (
+                                <div key={stat.label} className="flex items-center gap-4 border border-primary-content/10 bg-primary-content/10 p-4">
+                                    <div className="grid h-12 w-12 place-items-center bg-secondary text-secondary-content">
+                                        <Icon size={22} />
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-bold">{stat.value}</p>
+                                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-content/55">{stat.label}</p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </StaggerChildren>
+                </div>
+            </section>
+
+            <section id="registration" className="bg-base-200 py-16 md:py-24">
+                <div className="mx-auto grid max-w-7xl gap-8 px-4 lg:grid-cols-[360px_1fr] lg:items-start">
+                    <ScrollReveal>
+                        <div className="border border-primary/10 bg-primary p-5 text-primary-content shadow-sm lg:sticky lg:top-28">
+                            <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Registration</p>
+                            <h2 className="text-4xl font-bold leading-tight">Your alumni record starts here.</h2>
+                            <p className="mt-5 leading-relaxed text-primary-content/65">
+                                The form creates the member profile used for directory access, volunteer matching, dues records, and association communication.
+                            </p>
+
+                            <div className="mt-8 space-y-4">
+                                {registrationSteps.map((step, index) => {
+                                    const Icon = step.icon;
+                                    return (
+                                        <div key={step.title} className="border border-primary-content/10 bg-primary-content/10 p-4">
+                                            <div className="mb-3 flex items-center gap-3">
+                                                <div className="grid h-10 w-10 place-items-center bg-secondary text-secondary-content">
+                                                    <Icon size={18} />
+                                                </div>
+                                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-content/45">
+                                                    Step {String(index + 1).padStart(2, "0")}
+                                                </p>
+                                            </div>
+                                            <h3 className="font-bold">{step.title}</h3>
+                                            <p className="mt-2 text-sm leading-relaxed text-primary-content/65">{step.description}</p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </ScrollReveal>
+
+                    <ScrollReveal delay={0.1}>
+                        <AnimatePresence mode="wait">
+                            {submitted ? (
+                                <motion.div
+                                    key="success"
+                                    initial={{ opacity: 0, y: 18 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -18 }}
+                                    className="border border-success/20 bg-base-100 shadow-sm"
+                                >
+                                    <div className="h-2 bg-success" />
+                                    <div className="p-8 text-center md:p-12">
+                                        <motion.div
+                                            className="mx-auto mb-6 grid h-20 w-20 place-items-center bg-success/10"
+                                            initial={{ scale: 0 }}
+                                            animate={{ scale: 1 }}
+                                            transition={{ type: "spring", delay: 0.15 }}
+                                        >
+                                            <CheckCircle2 className="h-10 w-10 text-success" />
+                                        </motion.div>
+                                        <p className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-secondary">Registration submitted</p>
+                                        <h3 className="text-3xl font-bold text-primary">Your profile is in the review queue.</h3>
+                                        <div className="mx-auto mt-8 grid max-w-3xl gap-4 text-left md:grid-cols-3">
+                                            {["Check your email", "Await review", "Access the portal"].map((title, index) => (
+                                                <div key={title} className="border border-base-300 bg-base-200 p-4">
+                                                    <div className="mb-4 flex h-8 w-8 items-center justify-center bg-primary text-sm font-bold text-primary-content">
+                                                        {index + 1}
+                                                    </div>
+                                                    <h4 className="font-bold text-primary">{title}</h4>
+                                                    <p className="mt-2 text-sm leading-relaxed text-base-content/60">
+                                                        {index === 0 && "Use the verification link sent to your inbox."}
+                                                        {index === 1 && "The executive team confirms your membership details."}
+                                                        {index === 2 && "Approved members receive portal access by email."}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button className="btn btn-primary mt-8" onClick={() => setSubmitted(false)}>
+                                            Submit another registration
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                <motion.div key="form" initial={{ opacity: 1 }} exit={{ opacity: 0, y: -20 }}>
+                                    <div className="border border-primary/10 bg-base-100 shadow-sm">
+                                        <div className="flex flex-col gap-4 border-b border-primary/10 p-6 md:flex-row md:items-center md:justify-between">
+                                            <div>
+                                                <p className="text-xs font-bold uppercase tracking-[0.18em] text-secondary">Alumni registration</p>
+                                                <h3 className="mt-2 text-2xl font-bold text-primary">Member profile form</h3>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm font-semibold text-base-content/55">
+                                                <FileCheck size={18} className="text-secondary" />
+                                                Required fields marked *
+                                            </div>
+                                        </div>
+
+                                        <form ref={regFormRef} className="space-y-7 p-6 md:p-8" onSubmit={handleSubmit}>
+                                            <div>
+                                                <p className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-secondary">Personal information</p>
+                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="form-control">
+                                                        <label className="label pb-1"><span className="label-text font-semibold text-primary">Full name *</span></label>
+                                                        <div className="relative">
+                                                            <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary/35" />
+                                                            <input name="fullName" type="text" placeholder="Enter your full name" className={`${inputClass} pl-10`} required />
+                                                        </div>
+                                                    </div>
+                                                    <div className="form-control">
+                                                        <label className="label pb-1"><span className="label-text font-semibold text-primary">Email address *</span></label>
+                                                        <div className="relative">
+                                                            <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary/35" />
+                                                            <input name="email" type="email" placeholder="you@example.com" className={`${inputClass} pl-10`} required />
+                                                        </div>
+                                                    </div>
+                                                    <div className="form-control">
+                                                        <label className="label pb-1"><span className="label-text font-semibold text-primary">Phone number *</span></label>
+                                                        <div className="relative">
+                                                            <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary/35" />
+                                                            <input name="mobileNumber" type="tel" placeholder="+233 XX XXX XXXX" className={`${inputClass} pl-10`} required />
+                                                        </div>
+                                                    </div>
+                                                    <div className="form-control">
+                                                        <label className="label pb-1"><span className="label-text font-semibold text-primary">Year group *</span></label>
+                                                        <div className="relative">
+                                                            <GraduationCap size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary/35" />
+                                                            <select name="yearGroup" className={`${selectClass} pl-10`} required defaultValue="">
+                                                                <option value="" disabled>Select year group</option>
+                                                                {years.map((year) => (
+                                                                    <option key={year} value={year}>{year}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <p className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-secondary">Account security</p>
+                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="form-control">
+                                                        <label className="label pb-1"><span className="label-text font-semibold text-primary">Password *</span></label>
+                                                        <div className="relative">
+                                                            <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary/35" />
+                                                            <input name="password" type={showPassword ? "text" : "password"} placeholder="Min 8 characters" className={`${inputClass} pl-10 pr-10`} required minLength={8} />
+                                                            <button
+                                                                type="button"
+                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-primary/40 transition-colors hover:text-primary"
+                                                                onClick={() => setShowPassword(!showPassword)}
+                                                                aria-label={showPassword ? "Hide password" : "Show password"}
+                                                            >
+                                                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="form-control">
+                                                        <label className="label pb-1"><span className="label-text font-semibold text-primary">Confirm password *</span></label>
+                                                        <div className="relative">
+                                                            <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary/35" />
+                                                            <input name="confirmPassword" type="password" placeholder="Repeat password" className={`${inputClass} pl-10`} required minLength={8} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <p className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-secondary">Academic and location</p>
+                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="form-control">
+                                                        <label className="label pb-1"><span className="label-text font-semibold text-primary">Programme</span></label>
+                                                        <select name="programme" className={selectClass} defaultValue="">
+                                                            <option value="" disabled>Select your programme</option>
+                                                            <option>General Science</option>
+                                                            <option>General Arts</option>
+                                                            <option>Business</option>
+                                                            <option>Visual Arts</option>
+                                                            <option>Home Economics</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="form-control">
+                                                        <label className="label pb-1"><span className="label-text font-semibold text-primary">House</span></label>
+                                                        <select name="house" className={selectClass} defaultValue="">
+                                                            <option value="" disabled>Select your house</option>
+                                                            <option value="ACKAH">Ackah</option>
+                                                            <option value="DENSU">Densu</option>
+                                                            <option value="TANO">Tano</option>
+                                                            <option value="NKRUMAH">Nkrumah</option>
+                                                            <option value="PRA">Pra</option>
+                                                            <option value="VOLTA">Volta</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                                                    <div className="form-control">
+                                                        <label className="label pb-1"><span className="label-text font-semibold text-primary">Region</span></label>
+                                                        <div className="relative">
+                                                            <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary/35" />
+                                                            <select name="region" className={`${selectClass} pl-10`} defaultValue="">
+                                                                <option value="" disabled>Select</option>
+                                                                <option>Ahafo</option><option>Ashanti</option><option>Bono</option><option>Bono East</option>
+                                                                <option>Central</option><option>Eastern</option><option>Greater Accra</option>
+                                                                <option>North East</option><option>Northern</option><option>Oti</option>
+                                                                <option>Savannah</option><option>Upper East</option><option>Upper West</option>
+                                                                <option>Volta</option><option>Western</option><option>Western North</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div className="form-control">
+                                                        <label className="label pb-1"><span className="label-text font-semibold text-primary">City</span></label>
+                                                        <select name="city" className={selectClass} defaultValue="">
+                                                            <option value="" disabled>Select</option>
+                                                            <option>Accra</option><option>Kumasi</option><option>Cape Coast</option><option>Takoradi</option>
+                                                            <option>Tamale</option><option>Sunyani</option><option>Ho</option><option>Koforidua</option>
+                                                            <option>Bolgatanga</option><option>Wa</option><option>Techiman</option><option>Obuasi</option>
+                                                            <option>Tema</option><option>Tarkwa</option><option>Winneba</option><option>Other</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="form-control">
+                                                        <label className="label pb-1"><span className="label-text font-semibold text-primary">Country</span></label>
+                                                        <input name="country" type="text" placeholder="Ghana" className={inputClass} defaultValue="Ghana" />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <p className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-secondary">Professional profile</p>
+                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="form-control">
+                                                        <label className="label pb-1"><span className="label-text font-semibold text-primary">Occupation</span></label>
+                                                        <div className="relative">
+                                                            <Briefcase size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary/35" />
+                                                            <input name="occupation" type="text" placeholder="Your occupation" className={`${inputClass} pl-10`} />
+                                                        </div>
+                                                    </div>
+                                                    <div className="form-control">
+                                                        <label className="label pb-1"><span className="label-text font-semibold text-primary">Area(s) of expertise</span></label>
+                                                        <input name="areaOfExpertise" type="text" placeholder="e.g. Engineering, Education" className={inputClass} />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-3 border border-primary/10 bg-base-200 p-4">
+                                                <label className="flex cursor-pointer items-start gap-3">
+                                                    <input name="volunteer" type="checkbox" className="checkbox checkbox-primary checkbox-sm mt-0.5" />
+                                                    <span className="text-sm leading-relaxed text-base-content/70">I am willing to volunteer for UPOSA activities.</span>
+                                                </label>
+                                                <label className="flex cursor-pointer items-start gap-3">
+                                                    <input name="consent" type="checkbox" className="checkbox checkbox-primary checkbox-sm mt-0.5" required />
+                                                    <span className="text-sm leading-relaxed text-base-content/70">I consent to being contacted for association purposes. *</span>
+                                                </label>
+                                            </div>
+
+                                            {regError && <p className="border border-error/20 bg-error/10 p-3 text-sm font-semibold text-error">{regError}</p>}
+
+                                            <button type="submit" className="btn btn-primary h-12 w-full gap-2 text-base" disabled={regLoading}>
+                                                {regLoading ? <SkeletonBlock className="h-4 w-36 bg-primary-content/25" /> : <><UserPlus size={18} /> Submit registration</>}
+                                            </button>
+                                        </form>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </ScrollReveal>
+                </div>
+            </section>
+
+            <section id="directory" className="bg-primary py-16 text-primary-content md:py-24">
+                <div className="mx-auto grid max-w-7xl gap-8 px-4 lg:grid-cols-[1fr_460px] lg:items-center">
+                    <ScrollReveal>
+                        <div>
+                            <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Alumni directory</p>
+                            <h2 className="max-w-3xl text-4xl font-bold leading-tight md:text-5xl">Find classmates, year groups, executives, and community contacts.</h2>
+                            <p className="mt-5 max-w-2xl leading-relaxed text-primary-content/65">
+                                Directory access belongs inside the alumni portal so member information stays useful, searchable, and protected.
+                            </p>
+                            <div className="mt-8 flex flex-wrap gap-3">
+                                <a href="#registration" className="btn btn-secondary">
+                                    Register first
+                                </a>
+                                <a href={alumniPortalUrl} target="_blank" rel="noopener noreferrer" className="btn border-primary-content/20 bg-primary-content/10 text-primary-content hover:bg-primary-content hover:text-primary">
+                                    Sign in to portal <ArrowRight size={18} />
+                                </a>
+                            </div>
+                        </div>
+                    </ScrollReveal>
+
+                    <ScrollReveal direction="left">
+                        <div className="border border-primary-content/10 bg-primary-content/10 p-5">
+                            <div className="mb-5 flex items-center gap-3 border border-primary-content/10 bg-primary p-4">
+                                <Search className="text-secondary" size={22} />
                                 <div>
-                                    <div className="bg-secondary/10 text-secondary rounded-xl p-2.5 mx-auto mb-3 w-fit">
-                                        <CreditCard size={24} />
-                                    </div>
-                                    <h3 className="font-semibold text-lg">Annual Dues</h3>
-                                    <p className="text-3xl font-bold text-primary my-2">{dues.currency} {dues.annual.toLocaleString()}</p>
-                                    <p className="text-sm text-base-content/60">Standard membership fee per year</p>
+                                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-content/45">Directory preview</p>
+                                    <p className="font-bold">Search by name, year, programme, or location</p>
                                 </div>
-                                <a href="/donate" className="btn btn-primary btn-sm mt-4">Pay Now</a>
-                            </CardBody>
-                        </Card>
-                        <Card shape="notch" className="h-full">
-                            <CardAccent />
-                            <CardBody className="text-center flex flex-col justify-between">
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                {["Year group", "Programme", "City", "Expertise"].map((filter) => (
+                                    <div key={filter} className="border border-primary-content/10 bg-primary p-4">
+                                        <p className="text-xs uppercase tracking-[0.14em] text-primary-content/45">{filter}</p>
+                                        <p className="mt-2 font-semibold text-primary-content/80">Member filter</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </ScrollReveal>
+                </div>
+            </section>
+
+            <section id="dues" className="bg-base-100 py-16 md:py-24">
+                <div className="mx-auto max-w-7xl px-4">
+                    <ScrollReveal>
+                        <div className="mb-12 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                            <div>
+                                <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Dues and payments</p>
+                                <h2 className="max-w-3xl text-4xl font-bold leading-tight text-primary md:text-5xl">Membership dues keep the association moving.</h2>
+                                <p className="mt-4 max-w-2xl leading-relaxed text-base-content/60">
+                                    Annual and lifetime payments support association operations, alumni programs, events, and school-facing projects.
+                                </p>
+                            </div>
+                            <CreditCard size={42} className="text-secondary" />
+                        </div>
+                    </ScrollReveal>
+
+                    <StaggerChildren className="grid gap-5 lg:grid-cols-[1fr_1fr_1.2fr]">
+                        <div className="border border-primary/10 bg-base-200 p-6 shadow-sm">
+                            <div className="mb-8 flex items-start justify-between gap-4">
+                                <div className="grid h-12 w-12 place-items-center bg-secondary text-secondary-content">
+                                    <CreditCard size={23} />
+                                </div>
+                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">Per year</p>
+                            </div>
+                            <h3 className="text-2xl font-bold text-primary">Annual dues</h3>
+                            <p className="mt-4 text-4xl font-bold text-primary">{dues.currency} {dues.annual.toLocaleString()}</p>
+                            <p className="mt-3 leading-relaxed text-base-content/60">Standard yearly membership contribution.</p>
+                            <Link to="/donate" className="btn btn-primary mt-8 w-full">
+                                Pay annual dues
+                            </Link>
+                        </div>
+
+                        <div className="border border-primary/10 bg-primary p-6 text-primary-content shadow-sm">
+                            <div className="mb-8 flex items-start justify-between gap-4">
+                                <div className="grid h-12 w-12 place-items-center bg-secondary text-secondary-content">
+                                    <BadgeCheck size={23} />
+                                </div>
+                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">One time</p>
+                            </div>
+                            <h3 className="text-2xl font-bold">Lifetime membership</h3>
+                            <p className="mt-4 text-4xl font-bold">{dues.currency} {dues.lifetime.toLocaleString()}</p>
+                            <p className="mt-3 leading-relaxed text-primary-content/65">A one-time commitment for long-term membership support.</p>
+                            <Link to="/donate" className="btn btn-secondary mt-8 w-full">
+                                Pay lifetime dues
+                            </Link>
+                        </div>
+
+                        <div className="border border-primary/10 bg-base-200 p-6 shadow-sm">
+                            <div className="mb-6 flex items-center justify-between gap-4">
                                 <div>
-                                    <div className="bg-secondary/10 text-secondary rounded-xl p-2.5 mx-auto mb-3 w-fit">
-                                        <CreditCard size={24} />
-                                    </div>
-                                    <h3 className="font-semibold text-lg">Lifetime Membership</h3>
-                                    <p className="text-3xl font-bold text-primary my-2">{dues.currency} {dues.lifetime.toLocaleString()}</p>
-                                    <p className="text-sm text-base-content/60">One-time payment, lifetime access</p>
+                                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">Payment channels</p>
+                                    <h3 className="mt-2 text-2xl font-bold text-primary">Choose your route</h3>
                                 </div>
-                                <a href="/donate" className="btn btn-primary btn-sm mt-4">Pay Now</a>
-                            </CardBody>
-                        </Card>
-                        <Card shape="notch" className="h-full">
-                            <CardAccent />
-                            <CardBody className="flex flex-col h-full">
-                                <div className="bg-secondary/10 text-secondary rounded-xl p-2.5 mx-auto mb-3 w-fit">
-                                    <CreditCard size={24} />
-                                </div>
-                                <h3 className="font-semibold text-lg text-center mb-4">Payment Methods</h3>
-                                <div className="space-y-3 flex-1">
-                                    <div className="flex items-center gap-3 p-3 rounded-xl bg-base-200/60 border border-base-300/40">
-                                        <div className="w-9 h-9 rounded-lg bg-primary text-primary-content flex items-center justify-center shrink-0">
-                                            <Smartphone size={16} />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-semibold">Mobile Money</p>
-                                            <p className="text-xs text-base-content/50 truncate">{payment.momo.accountName} &middot; {payment.momo.number}</p>
-                                        </div>
+                                <Smartphone className="text-secondary" size={32} />
+                            </div>
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3 border border-primary/10 bg-base-100 p-4">
+                                    <div className="grid h-11 w-11 shrink-0 place-items-center bg-primary text-primary-content">
+                                        <Smartphone size={18} />
                                     </div>
-                                    <div className="flex items-center gap-3 p-3 rounded-xl bg-base-200/60 border border-base-300/40">
-                                        <div className="w-9 h-9 rounded-lg bg-primary text-primary-content flex items-center justify-center shrink-0">
-                                            <Building2 size={16} />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-semibold">Bank Transfer</p>
-                                            <p className="text-xs text-base-content/50 truncate">{payment.bank.bank} &middot; {payment.bank.accountNo}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 p-3 rounded-xl bg-base-200/60 border border-base-300/40">
-                                        <div className="w-9 h-9 rounded-lg bg-secondary text-secondary-content flex items-center justify-center shrink-0">
-                                            <Globe size={16} />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-semibold">Online Payment</p>
-                                            <p className="text-xs text-base-content/50">Card, PayPal & more</p>
-                                        </div>
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-primary">Mobile Money</p>
+                                        <p className="truncate text-sm text-base-content/55">{payment.momo.accountName} - {payment.momo.number}</p>
                                     </div>
                                 </div>
-                            </CardBody>
-                        </Card>
+                                <div className="flex items-center gap-3 border border-primary/10 bg-base-100 p-4">
+                                    <div className="grid h-11 w-11 shrink-0 place-items-center bg-primary text-primary-content">
+                                        <Building2 size={18} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-primary">Bank transfer</p>
+                                        <p className="truncate text-sm text-base-content/55">{payment.bank.bank} - {payment.bank.accountNo}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 border border-primary/10 bg-base-100 p-4">
+                                    <div className="grid h-11 w-11 shrink-0 place-items-center bg-secondary text-secondary-content">
+                                        <Globe size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-primary">Online payment</p>
+                                        <p className="text-sm text-base-content/55">Card, PayPal, and supported digital channels.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </StaggerChildren>
                 </div>
             </section>

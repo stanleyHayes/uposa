@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { RouteRequest } from '../../types/request.types';
 import { z } from 'zod';
 import {
   getDashboardStats,
@@ -36,30 +37,30 @@ const changePasswordSchema = z.object({
   }),
 });
 
-export async function getDashboardStatsHandler(_req: Request, res: Response): Promise<void> {
+export async function getDashboardStatsHandler(req: RouteRequest, res: Response): Promise<void> {
   const stats = await getDashboardStats();
   successResponse(res, 'Dashboard stats retrieved', stats);
 }
 
-export async function listAdminsHandler(req: Request, res: Response): Promise<void> {
+export async function listAdminsHandler(req: RouteRequest, res: Response): Promise<void> {
   const result = await listAdmins(req.query as Record<string, string | undefined>);
   successResponse(res, 'Admins retrieved', result.data, 200, result.meta);
 }
 
-export async function createAdminHandler(req: Request, res: Response): Promise<void> {
+export async function createAdminHandler(req: RouteRequest, res: Response): Promise<void> {
   const parsed = createAdminSchema.parse({ body: req.body });
   const admin = await createAdmin(parsed.body);
   successResponse(res, 'Admin created successfully', admin, 201);
 }
 
-export async function updateAdminHandler(req: Request, res: Response): Promise<void> {
+export async function updateAdminHandler(req: RouteRequest, res: Response): Promise<void> {
   const { id } = req.params;
   const parsed = updateAdminSchema.parse({ body: req.body });
   const admin = await updateAdmin(id, parsed.body);
   successResponse(res, 'Admin updated', admin);
 }
 
-export async function deactivateAdminHandler(req: Request, res: Response): Promise<void> {
+export async function deactivateAdminHandler(req: RouteRequest, res: Response): Promise<void> {
   if (!req.admin) {
     errorResponse(res, 'Unauthorized', 401);
     return;
@@ -76,7 +77,7 @@ const updateProfileSchema = z.object({
   }),
 });
 
-export async function updateProfileHandler(req: Request, res: Response): Promise<void> {
+export async function updateProfileHandler(req: RouteRequest, res: Response): Promise<void> {
   if (!req.admin) {
     errorResponse(res, 'Unauthorized', 401);
     return;
@@ -86,7 +87,7 @@ export async function updateProfileHandler(req: Request, res: Response): Promise
   successResponse(res, 'Profile updated', admin);
 }
 
-export async function changePasswordHandler(req: Request, res: Response): Promise<void> {
+export async function changePasswordHandler(req: RouteRequest, res: Response): Promise<void> {
   if (!req.admin) {
     errorResponse(res, 'Unauthorized', 401);
     return;

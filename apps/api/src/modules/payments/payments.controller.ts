@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { RouteRequest } from '../../types/request.types';
 import { initializePaymentSchema } from './payments.validation';
 import {
   initializePayment,
@@ -11,27 +12,27 @@ import {
 import { getPaymentProvider } from '../../providers/payment.registry';
 import { successResponse, errorResponse } from '../../utils/response.utils';
 
-export async function initializePaymentHandler(req: Request, res: Response): Promise<void> {
+export async function initializePaymentHandler(req: RouteRequest, res: Response): Promise<void> {
   const parsed = initializePaymentSchema.parse({ body: req.body });
   const memberId = req.user?.id;
   const result = await initializePayment(parsed.body, memberId);
   successResponse(res, 'Payment initialized', result, 201);
 }
 
-export async function verifyPaymentHandler(req: Request, res: Response): Promise<void> {
+export async function verifyPaymentHandler(req: RouteRequest, res: Response): Promise<void> {
   const { reference } = req.params;
   const payment = await verifyPayment(reference);
   successResponse(res, 'Payment verified', payment);
 }
 
-export async function getPaymentStatusHandler(req: Request, res: Response): Promise<void> {
+export async function getPaymentStatusHandler(req: RouteRequest, res: Response): Promise<void> {
   const { reference } = req.params;
   const payment = await getPaymentByReference(reference);
   successResponse(res, 'Payment status retrieved', payment);
 }
 
 // Paystack webhook
-export async function paystackWebhookHandler(req: Request, res: Response): Promise<void> {
+export async function paystackWebhookHandler(req: RouteRequest, res: Response): Promise<void> {
   const signature = req.headers['x-paystack-signature'] as string;
   if (!signature) {
     errorResponse(res, 'Missing signature', 400);
@@ -54,7 +55,7 @@ export async function paystackWebhookHandler(req: Request, res: Response): Promi
 }
 
 // Stripe webhook
-export async function stripeWebhookHandler(req: Request, res: Response): Promise<void> {
+export async function stripeWebhookHandler(req: RouteRequest, res: Response): Promise<void> {
   const signature = req.headers['stripe-signature'] as string;
   if (!signature) {
     errorResponse(res, 'Missing signature', 400);
@@ -76,7 +77,7 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
 }
 
 // Crypto (Coinbase Commerce) webhook
-export async function cryptoWebhookHandler(req: Request, res: Response): Promise<void> {
+export async function cryptoWebhookHandler(req: RouteRequest, res: Response): Promise<void> {
   const signature = req.headers['x-cc-webhook-signature'] as string;
   if (!signature) {
     errorResponse(res, 'Missing signature', 400);
@@ -98,7 +99,7 @@ export async function cryptoWebhookHandler(req: Request, res: Response): Promise
 }
 
 // Public: get platform fee preview for an amount
-export async function getPlatformFeePreviewHandler(req: Request, res: Response): Promise<void> {
+export async function getPlatformFeePreviewHandler(req: RouteRequest, res: Response): Promise<void> {
   const amount = parseFloat(req.query.amount as string);
   if (isNaN(amount) || amount <= 0) {
     errorResponse(res, 'Valid positive amount is required', 400);
@@ -109,7 +110,7 @@ export async function getPlatformFeePreviewHandler(req: Request, res: Response):
 }
 
 // Admin: list all payments
-export async function adminListPaymentsHandler(req: Request, res: Response): Promise<void> {
+export async function adminListPaymentsHandler(req: RouteRequest, res: Response): Promise<void> {
   const result = await adminListPayments(req.query as Record<string, string | undefined>);
   successResponse(res, 'Payments retrieved', result.data, 200, result.meta);
 }

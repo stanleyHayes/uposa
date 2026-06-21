@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { RouteRequest } from '../../types/request.types';
 import {
   registerSchema,
   loginSchema,
@@ -29,7 +30,7 @@ const COOKIE_OPTIONS = {
   sameSite: 'lax' as const,
 };
 
-export async function register(req: Request, res: Response): Promise<void> {
+export async function register(req: RouteRequest, res: Response): Promise<void> {
   const parsed = registerSchema.parse({ body: req.body });
   let photoUrl: string | undefined;
   if (req.file) {
@@ -39,7 +40,7 @@ export async function register(req: Request, res: Response): Promise<void> {
   successResponse(res, 'Registration successful. Please verify your email.', member, 201);
 }
 
-export async function login(req: Request, res: Response): Promise<void> {
+export async function login(req: RouteRequest, res: Response): Promise<void> {
   const parsed = loginSchema.parse({ body: req.body });
   const result = await loginMember(parsed.body);
 
@@ -59,7 +60,7 @@ export async function login(req: Request, res: Response): Promise<void> {
   });
 }
 
-export async function refreshTokenHandler(req: Request, res: Response): Promise<void> {
+export async function refreshTokenHandler(req: RouteRequest, res: Response): Promise<void> {
   const parsed = refreshTokenSchema.parse({ body: req.body });
   let result;
   try {
@@ -84,7 +85,7 @@ export async function refreshTokenHandler(req: Request, res: Response): Promise<
   });
 }
 
-export async function adminLogin(req: Request, res: Response): Promise<void> {
+export async function adminLogin(req: RouteRequest, res: Response): Promise<void> {
   const parsed = adminLoginSchema.parse({ body: req.body });
   const result = await loginAdmin(parsed.body.email, parsed.body.password);
 
@@ -104,7 +105,7 @@ export async function adminLogin(req: Request, res: Response): Promise<void> {
   });
 }
 
-export async function verifyEmail(req: Request, res: Response): Promise<void> {
+export async function verifyEmail(req: RouteRequest, res: Response): Promise<void> {
   const { token } = req.params;
   if (!token) {
     errorResponse(res, 'Token is required', 400);
@@ -114,19 +115,19 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
   successResponse(res, result.message);
 }
 
-export async function forgotPasswordHandler(req: Request, res: Response): Promise<void> {
+export async function forgotPasswordHandler(req: RouteRequest, res: Response): Promise<void> {
   const parsed = forgotPasswordSchema.parse({ body: req.body });
   const result = await forgotPassword(parsed.body);
   successResponse(res, result.message);
 }
 
-export async function resetPasswordHandler(req: Request, res: Response): Promise<void> {
+export async function resetPasswordHandler(req: RouteRequest, res: Response): Promise<void> {
   const parsed = resetPasswordSchema.parse({ body: req.body });
   const result = await resetPassword(parsed.body);
   successResponse(res, result.message);
 }
 
-export async function getMeHandler(req: Request, res: Response): Promise<void> {
+export async function getMeHandler(req: RouteRequest, res: Response): Promise<void> {
   if (req.user) {
     const result = await getMe(req.user.id, false);
     successResponse(res, 'Profile retrieved', result);
@@ -140,7 +141,7 @@ export async function getMeHandler(req: Request, res: Response): Promise<void> {
   errorResponse(res, 'Not authenticated', 401);
 }
 
-export async function changePasswordHandler(req: Request, res: Response): Promise<void> {
+export async function changePasswordHandler(req: RouteRequest, res: Response): Promise<void> {
   if (!req.user) {
     errorResponse(res, 'Not authenticated', 401);
     return;
@@ -150,7 +151,7 @@ export async function changePasswordHandler(req: Request, res: Response): Promis
   successResponse(res, result.message);
 }
 
-export function logout(_req: Request, res: Response): void {
+export function logout(req: RouteRequest, res: Response): void {
   res.clearCookie('accessToken');
   res.clearCookie('refreshToken');
   res.clearCookie('adminToken');

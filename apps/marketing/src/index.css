@@ -1,4 +1,7 @@
-@import "tailwindcss";
+/* source("../") scopes Tailwind's content scanning to this app only; without it
+   Tailwind v4 auto-detects from the monorepo git root and scans every workspace
+   (including the large apps/mobile tree), which stalls the Vite dev server. */
+@import "tailwindcss" source("../");
 @plugin "daisyui" {
   themes: uposa --default;
 }

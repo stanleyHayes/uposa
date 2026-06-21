@@ -11,14 +11,41 @@ import { ScrollReveal } from "../components/common/ScrollReveal.tsx";
 import { HeroReveal } from "../components/common/HeroReveal.tsx";
 import SEO from "../components/common/SEO.tsx";
 import MarkdownContent from "../components/common/MarkdownContent.tsx";
-// SplashScreen removed — using inline skeleton
+import SplashScreen from "../components/common/SplashScreen.tsx";
 import { Card, CardBody } from "../components/ui/Card.tsx";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
+type ProjectMilestone = {
+  title: string;
+  description?: string | null;
+  date?: string | null;
+  completed: boolean;
+};
+
+type ProjectDetailItem = {
+  title: string;
+  slug?: string;
+  description: string;
+  content?: string | null;
+  imageUrl?: string | null;
+  gallery?: string[];
+  milestones?: ProjectMilestone[];
+  goalAmount: number;
+  raisedAmount: number;
+  status: string;
+  isFeatured: boolean;
+  startDate?: string | null;
+  endDate?: string | null;
+};
+
+type ProjectDetailResponse = {
+  data?: ProjectDetailItem | null;
+};
+
 const ProjectDetail = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [project, setProject] = useState<any>(null);
+  const [project, setProject] = useState<ProjectDetailItem | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
@@ -26,13 +53,13 @@ const ProjectDetail = () => {
     if (!slug) return;
     fetch(`${API_BASE}/projects/${slug}`)
       .then((r: Response) => r.json())
-      .then((j: any) => setProject(j.data || null))
+      .then((j: ProjectDetailResponse) => setProject(j.data || null))
       .catch(() => setProject(null))
       .finally(() => setPageLoading(false));
   }, [slug]);
 
   if (pageLoading) {
-    return <Layout><div className="min-h-[60vh] flex items-center justify-center"><div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin" /></div></Layout>;
+    return <SplashScreen />;
   }
 
   if (!project) {
@@ -61,7 +88,7 @@ const ProjectDetail = () => {
   const progress = project.goalAmount > 0 ? Math.round((project.raisedAmount / project.goalAmount) * 100) : 0;
   const allImages = [project.imageUrl, ...(project.gallery || [])].filter(Boolean) as string[];
   const milestones = project.milestones || [];
-  const completedCount = milestones.filter((m: any) => m.completed).length;
+  const completedCount = milestones.filter((m) => m.completed).length;
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
@@ -144,7 +171,7 @@ const ProjectDetail = () => {
                       <div className="relative">
                         <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-base-300" />
                         <div className="space-y-5">
-                          {milestones.map((m: any, i: number) => (
+                          {milestones.map((m, i) => (
                             <div key={i} className="flex gap-3.5 relative">
                               <div className="shrink-0 mt-0.5 z-10">
                                 {m.completed ? (

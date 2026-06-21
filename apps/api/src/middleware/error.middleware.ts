@@ -12,7 +12,7 @@ export function errorMiddleware(
 
   // Zod validation error
   if (err instanceof ZodError) {
-    const errors = err.errors.map((e) => ({
+    const errors = err.issues.map((e) => ({
       field: e.path.join('.'),
       message: e.message,
     }));

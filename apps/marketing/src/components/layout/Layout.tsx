@@ -9,6 +9,28 @@ interface LayoutProps {
     children: React.ReactNode;
 }
 
+const SiteWatermarks = () => (
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-[1] overflow-hidden">
+        <div
+            className="absolute inset-0 opacity-[0.018]"
+            style={{
+                backgroundImage: "radial-gradient(circle at 1px 1px, rgba(0,27,80,0.26) 1px, transparent 0)",
+                backgroundSize: "64px 64px",
+            }}
+        />
+        <img
+            src="/logo.png"
+            alt=""
+            className="absolute -right-32 top-24 h-[420px] w-[420px] object-contain opacity-[0.028] md:h-[560px] md:w-[560px]"
+        />
+        <img
+            src="/logo.png"
+            alt=""
+            className="absolute -left-28 bottom-8 h-[320px] w-[320px] object-contain opacity-[0.022] md:h-[460px] md:w-[460px]"
+        />
+    </div>
+);
+
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
     const { hash, pathname } = useLocation();
 
@@ -26,6 +48,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     return (
         <PageTransition>
             <div className="min-h-screen flex flex-col">
+                <SiteWatermarks />
                 <Header />
                 <main className="flex-1">{children}</main>
                 <Footer />

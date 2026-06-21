@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { RouteRequest } from '../../types/request.types';
 import { createProjectSchema, updateProjectSchema } from './projects.validation';
 import {
   listProjects,
@@ -12,22 +13,22 @@ import {
 import { successResponse, errorResponse } from '../../utils/response.utils';
 import { uploadToCloudinary } from '../../utils/cloudinary.utils';
 
-export async function listProjectsHandler(req: Request, res: Response): Promise<void> {
+export async function listProjectsHandler(req: RouteRequest, res: Response): Promise<void> {
   const result = await listProjects(req.query as Record<string, string | undefined>);
   successResponse(res, 'Projects retrieved', result.data, 200, result.meta);
 }
 
-export async function getOngoingProjectsHandler(req: Request, res: Response): Promise<void> {
+export async function getOngoingProjectsHandler(req: RouteRequest, res: Response): Promise<void> {
   const result = await getOngoingProjects(req.query as Record<string, string | undefined>);
   successResponse(res, 'Ongoing projects retrieved', result.data, 200, result.meta);
 }
 
-export async function getCompletedProjectsHandler(req: Request, res: Response): Promise<void> {
+export async function getCompletedProjectsHandler(req: RouteRequest, res: Response): Promise<void> {
   const result = await getCompletedProjects(req.query as Record<string, string | undefined>);
   successResponse(res, 'Completed projects retrieved', result.data, 200, result.meta);
 }
 
-export async function getProjectBySlugHandler(req: Request, res: Response): Promise<void> {
+export async function getProjectBySlugHandler(req: RouteRequest, res: Response): Promise<void> {
   const { slug } = req.params;
   const project = await getProjectBySlug(slug);
   successResponse(res, 'Project retrieved', project);
@@ -49,7 +50,7 @@ function parseFormDataBody(body: Record<string, unknown>): Record<string, unknow
   return result;
 }
 
-export async function createProjectHandler(req: Request, res: Response): Promise<void> {
+export async function createProjectHandler(req: RouteRequest, res: Response): Promise<void> {
   if (!req.admin) {
     errorResponse(res, 'Unauthorized', 401);
     return;
@@ -61,7 +62,7 @@ export async function createProjectHandler(req: Request, res: Response): Promise
   successResponse(res, 'Project created successfully', project, 201);
 }
 
-export async function updateProjectHandler(req: Request, res: Response): Promise<void> {
+export async function updateProjectHandler(req: RouteRequest, res: Response): Promise<void> {
   const { id } = req.params;
   const body = parseFormDataBody(req.body);
   const parsed = updateProjectSchema.parse({ body });
@@ -70,7 +71,7 @@ export async function updateProjectHandler(req: Request, res: Response): Promise
   successResponse(res, 'Project updated successfully', project);
 }
 
-export async function deleteProjectHandler(req: Request, res: Response): Promise<void> {
+export async function deleteProjectHandler(req: RouteRequest, res: Response): Promise<void> {
   const { id } = req.params;
   const result = await deleteProject(id);
   successResponse(res, result.message);

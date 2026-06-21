@@ -1,4 +1,6 @@
-import 'express-async-errors';
+// express-async-errors is unnecessary on Express 5 (async errors are forwarded
+// to error middleware natively) and its v3 build is incompatible with Express 5
+// internals (`express/lib/router/layer` was removed), so it is not imported.
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -58,7 +60,7 @@ app.use(cors({
       !origin ||
       corsAllowList.includes(origin) ||
       corsPatterns.some((re: RegExp) => re.test(origin)) ||
-      (env.NODE_ENV !== 'production' && /^https?:\/\/localhost(:\d+)?$/.test(origin))
+      (env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origin))
     ) {
       callback(null, true);
     } else {

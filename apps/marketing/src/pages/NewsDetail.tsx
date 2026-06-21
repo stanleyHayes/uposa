@@ -11,16 +11,30 @@ import StatusPill from "../components/common/StatusPill.tsx";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
+type NewsDetailItem = {
+    title: string;
+    content?: string | null;
+    excerpt?: string | null;
+    imageUrl?: string | null;
+    category: string;
+    authorName?: string | null;
+    publishedAt?: string | null;
+};
+
+type NewsDetailResponse = {
+    data?: NewsDetailItem | null;
+};
+
 const NewsDetail = () => {
     const { slug } = useParams<{ slug: string }>();
-    const [item, setItem] = useState<any>(null);
+    const [item, setItem] = useState<NewsDetailItem | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!slug) return;
         fetch(`${API_BASE}/news/${slug}`)
             .then(r => r.json())
-            .then(j => setItem(j.data || null))
+            .then((j: NewsDetailResponse) => setItem(j.data || null))
             .catch(() => setItem(null))
             .finally(() => setLoading(false));
     }, [slug]);

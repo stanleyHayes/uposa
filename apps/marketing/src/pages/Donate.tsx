@@ -1,17 +1,35 @@
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    ArrowRight,
+    Banknote,
+    Bitcoin,
+    Building2,
+    CheckCircle2,
+    Copy,
+    CreditCard,
+    Globe,
+    Heart,
+    Landmark,
+    PieChart,
+    ShieldCheck,
+    Smartphone,
+    Target,
+    X,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Layout } from "../components/layout/Layout.tsx";
-import { Heart, Building, Smartphone, Globe, X, CheckCircle2, Copy, Bitcoin, CreditCard, HandCoins, PieChart } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
 import { ScrollReveal } from "../components/common/ScrollReveal.tsx";
 import { StaggerChildren } from "../components/common/StaggerChildren.tsx";
-import HeroBanner from "../components/common/HeroBanner.tsx";
-import SectionHeader from "../components/common/SectionHeader.tsx";
-import { motion, AnimatePresence } from "framer-motion";
+import { HeroReveal } from "../components/common/HeroReveal.tsx";
+import SEO from "../components/common/SEO.tsx";
 import { useSiteData } from "../context/SiteDataContext.tsx";
+import type { SiteData } from "../context/SiteDataContext.tsx";
 import SplashScreen from "../components/common/SplashScreen.tsx";
-import { Card, CardAccent, CardBody } from "../components/ui/Card.tsx";
+import { SkeletonBlock } from "../components/common/Skeleton.tsx";
 import { getPlatformFeePreview } from "../api/client.ts";
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 interface PaymentMethodData {
     id: string;
@@ -23,7 +41,26 @@ interface PaymentMethodData {
     countries: string[];
 }
 
-const defaultImpactStories = [
+interface ImpactStory {
+    quote: string;
+    name: string;
+    year: string;
+}
+
+interface PlatformFeePreview {
+    amount: number;
+    platformFee: number;
+    totalAmount: number;
+    percent: number;
+    fixed: number;
+    enabled: boolean;
+}
+
+type SelectedMethod = "momo" | "bank" | string | null;
+type DonationStep = "amount" | "payment" | "confirm" | "success";
+type ConfigWithImpactStories = SiteData["config"] & { impactStories?: ImpactStory[] };
+
+const defaultImpactStories: ImpactStory[] = [
     {
         quote: "Thanks to the UPOSA scholarship, I was able to complete my A-levels and gain admission to the University of Ghana. Today I am a practicing pharmacist.",
         name: "Samuel Mensah",
@@ -36,13 +73,55 @@ const defaultImpactStories = [
     },
 ];
 
-type SelectedMethod = "momo" | "bank" | string | null;
+const presetAmounts = [50, 100, 200, 500, 1000];
+const heroAmounts = [50, 100, 500];
 
-const providerIcons: Record<string, typeof Globe> = {
+const providerIcons: Record<string, LucideIcon> = {
     PAYSTACK: CreditCard,
     STRIPE: CreditCard,
     CRYPTO: Bitcoin,
 };
+
+function formatMoney(currency: string, amount?: number | null) {
+    if (!amount || Number.isNaN(amount)) return `${currency} 0`;
+    return `${currency} ${amount.toLocaleString()}`;
+}
+
+function DetailRow({ label, value, action }: { label: string; value: ReactNode; action?: ReactNode }) {
+    return (
+        <div className="flex items-center justify-between gap-4 border-b border-base-300 py-3 last:border-0">
+            <span className="text-sm font-semibold text-base-content/45">{label}</span>
+            <span className="flex min-w-0 items-center gap-2 text-right text-sm font-bold text-primary">
+                {value}
+                {action}
+            </span>
+        </div>
+    );
+}
+
+function StepMarker({ currentStep }: { currentStep: DonationStep }) {
+    const steps: { id: DonationStep; label: string }[] = [
+        { id: "amount", label: "Amount" },
+        { id: "payment", label: "Method" },
+        { id: "confirm", label: "Confirm" },
+    ];
+    const activeIndex = steps.findIndex((step) => step.id === currentStep);
+    const success = currentStep === "success";
+
+    return (
+        <div className="grid grid-cols-3 gap-2">
+            {steps.map((item, index) => {
+                const active = success || index <= activeIndex;
+                return (
+                    <div key={item.id} className={`border p-3 ${active ? "border-secondary bg-secondary/10 text-primary" : "border-base-300 bg-base-200 text-base-content/45"}`}>
+                        <p className="text-xs font-bold uppercase tracking-[0.14em]">{String(index + 1).padStart(2, "0")}</p>
+                        <p className="mt-1 text-sm font-bold">{item.label}</p>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
 
 const Donate = () => {
     const { data, loading } = useSiteData();
@@ -52,32 +131,49 @@ const Donate = () => {
     const [customAmount, setCustomAmount] = useState("");
     const [isCustom, setIsCustom] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<SelectedMethod>(null);
-    const [step, setStep] = useState<"amount" | "payment" | "confirm" | "success">("amount");
+    const [step, setStep] = useState<DonationStep>("amount");
     const [copied, setCopied] = useState(false);
     const [initiating, setInitiating] = useState(false);
     const [donorEmail, setDonorEmail] = useState("");
     const [donorName, setDonorName] = useState("");
-    const [feePreview, setFeePreview] = useState<{ amount: number; platformFee: number; totalAmount: number; percent: number; fixed: number; enabled: boolean } | null>(null);
+    const [feePreview, setFeePreview] = useState<PlatformFeePreview | null>(null);
     const [feeLoading, setFeeLoading] = useState(false);
     const modalRef = useRef<HTMLDivElement>(null);
 
-    // Fetch enabled payment methods
     useEffect(() => {
+        let cancelled = false;
+
         fetch(`${API_BASE}/payment-methods`)
-            .then((res) => res.json())
-            .then((json) => {
-                if (json.data) setOnlinePaymentMethods(json.data);
+            .then((response) => response.json())
+            .then((json: { data?: PaymentMethodData[] }) => {
+                if (!cancelled) {
+                    setOnlinePaymentMethods(json.data?.filter((method) => method.isEnabled) || []);
+                }
             })
-            .catch(() => {});
+            .catch(() => {
+                if (!cancelled) setOnlinePaymentMethods([]);
+            });
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
+
+    const payment = data?.config.payment;
+    const donationAllocation = data?.config.donationAllocation || [];
+    const currency = data?.config.dues.currency || "GHS";
+    const configWithImpactStories = data?.config as ConfigWithImpactStories | undefined;
+    const impactStories = configWithImpactStories?.impactStories?.length ? configWithImpactStories.impactStories : defaultImpactStories;
 
     const openModal = (amount?: number) => {
         if (amount) {
             setSelectedAmount(amount);
+            setCustomAmount("");
             setIsCustom(false);
             setStep("payment");
         } else {
             setSelectedAmount(null);
+            setCustomAmount("");
             setIsCustom(true);
             setStep("amount");
         }
@@ -85,10 +181,14 @@ const Donate = () => {
         setCopied(false);
         setDonorEmail("");
         setDonorName("");
+        setFeePreview(null);
         setModalOpen(true);
     };
 
     const finalAmount = isCustom ? Number(customAmount) : selectedAmount;
+    const hasValidAmount = Boolean(finalAmount && finalAmount > 0);
+    const isOnlineMethod = paymentMethod && !["momo", "bank"].includes(paymentMethod);
+    const selectedOnlineMethod = onlinePaymentMethods.find((method) => method.provider === paymentMethod);
 
     const handleCopy = (text: string) => {
         navigator.clipboard.writeText(text);
@@ -96,67 +196,63 @@ const Donate = () => {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const isOnlineMethod = paymentMethod && !["momo", "bank"].includes(paymentMethod);
-    const selectedOnlineMethod = onlinePaymentMethods.find((m) => m.provider === paymentMethod);
-
     useEffect(() => {
-      if (!isOnlineMethod || !finalAmount || finalAmount <= 0) {
-        setFeePreview(null);
-        return;
-      }
-      setFeeLoading(true);
-      getPlatformFeePreview(finalAmount)
-        .then((data) => setFeePreview(data))
-        .catch(() => setFeePreview(null))
-        .finally(() => setFeeLoading(false));
+        if (!isOnlineMethod || !finalAmount || finalAmount <= 0) {
+            setFeePreview(null);
+            return;
+        }
+
+        setFeeLoading(true);
+        getPlatformFeePreview(finalAmount)
+            .then((preview: PlatformFeePreview) => setFeePreview(preview))
+            .catch(() => setFeePreview(null))
+            .finally(() => setFeeLoading(false));
     }, [isOnlineMethod, finalAmount]);
 
     const handleConfirm = async () => {
         if (isOnlineMethod && selectedOnlineMethod) {
-            // Validate email for online payment
             if (!donorEmail.trim()) return;
             setInitiating(true);
+
             try {
-                // Create donation first
-                const donationRes = await fetch(`${API_BASE}/donations`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                const donationResponse = await fetch(`${API_BASE}/donations`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        donorName: donorName || 'Anonymous',
-                        donorEmail: donorEmail,
+                        donorName: donorName || "Anonymous",
+                        donorEmail,
                         amount: finalAmount,
-                        currency: data?.config.dues.currency || 'GHS',
+                        currency,
                         channel: selectedOnlineMethod.provider,
-                        purpose: 'General Donation',
+                        purpose: "General Donation",
                     }),
                 });
-                const donationJson = await donationRes.json();
+                const donationJson = await donationResponse.json();
                 const donationId = donationJson.data?.id;
 
-                // Initialize payment
-                const paymentRes = await fetch(`${API_BASE}/payments/initialize`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                const paymentResponse = await fetch(`${API_BASE}/payments/initialize`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         provider: selectedOnlineMethod.provider,
-                        purpose: 'DONATION',
+                        purpose: "DONATION",
                         amount: finalAmount,
-                        currency: data?.config.dues.currency || 'GHS',
+                        currency,
                         email: donorEmail,
                         name: donorName || undefined,
                         donationId,
                         callbackUrl: `${window.location.origin}/donate?status=success`,
                     }),
                 });
-                const paymentJson = await paymentRes.json();
+                const paymentJson = await paymentResponse.json();
+
                 if (paymentJson.data?.authorizationUrl) {
                     window.location.href = paymentJson.data.authorizationUrl;
                     return;
                 }
-                // Fallback to success step if no redirect
+
                 setStep("success");
             } catch {
-                // Show success anyway for UX (payment may still process)
                 setStep("success");
             } finally {
                 setInitiating(false);
@@ -172,474 +268,768 @@ const Donate = () => {
         } else {
             document.body.style.overflow = "";
         }
-        return () => { document.body.style.overflow = ""; };
+
+        return () => {
+            document.body.style.overflow = "";
+        };
     }, [modalOpen]);
 
-    if (loading || !data) {
+    if (loading || !data || !payment) {
         return <SplashScreen />;
     }
 
-    const payment = data.config.payment;
-    const donationAllocation = data.config.donationAllocation;
-    const currency = data.config.dues.currency;
+    const totalAllocation = donationAllocation.reduce((sum, item) => sum + item.percentage, 0);
+    const paymentRails = [
+        {
+            id: "momo",
+            title: "Mobile Money",
+            subtitle: "MTN, Vodafone, or AirtelTigo",
+            detail: payment.momo.number,
+            meta: `MoMo Pay ID: ${payment.momo.payId}`,
+            icon: Smartphone,
+            action: () => {
+                openModal();
+                setPaymentMethod("momo");
+                setStep("amount");
+            },
+        },
+        {
+            id: "bank",
+            title: "Bank Transfer",
+            subtitle: payment.bank.bank,
+            detail: payment.bank.accountNo,
+            meta: payment.bank.accountName,
+            icon: Building2,
+            action: () => {
+                openModal();
+                setPaymentMethod("bank");
+                setStep("amount");
+            },
+        },
+    ];
 
     return (
         <Layout>
-            <HeroBanner icon={Heart} title="Donate / Support Us" description="Your generous contributions help us transform lives and improve our school. Every cedi counts." />
+            <SEO
+                title="Donate"
+                description="Support UPOSA projects, scholarships, school infrastructure, and student welfare through secure donations."
+                canonicalPath="/donate"
+            />
 
-            {/* Why Donate */}
-            <section className="py-16">
-                <div className="max-w-7xl mx-auto px-4">
-                    <SectionHeader icon={Heart} title="Why Donate?" description="Your contributions directly impact student lives and school development." align="left" />
-                    <div className="grid md:grid-cols-2 gap-8 mb-8">
-                        <ScrollReveal direction="left" delay={0.1}>
+            <section className="relative overflow-hidden bg-base-100 text-primary">
+                <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
+                <div
+                    className="absolute inset-0 opacity-[0.05]"
+                    style={{
+                        backgroundImage: "linear-gradient(90deg, #001B50 1px, transparent 1px), linear-gradient(#001B50 1px, transparent 1px)",
+                        backgroundSize: "44px 44px",
+                    }}
+                />
+                <img
+                    src="/logo.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -right-24 top-8 h-[520px] w-[520px] object-contain opacity-[0.08] md:h-[680px] md:w-[680px]"
+                />
+
+                <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 md:py-24 lg:grid-cols-[1fr_430px] lg:items-center">
+                    <HeroReveal>
+                        <div className="max-w-4xl">
+                            <div className="mb-8 inline-flex items-center gap-3 border border-primary/15 bg-base-200 px-4 py-2">
+                                <img src="/logo.png" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">Giving desk</p>
+                                    <p className="text-sm font-semibold text-primary/70">Projects, welfare, and school support</p>
+                                </div>
+                            </div>
+
+                            <p className="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.24em] text-secondary">
+                                <Heart size={16} />
+                                Alumni giving
+                            </p>
+                            <h1 className="max-w-5xl text-5xl font-bold leading-[0.98] md:text-7xl">
+                                Make every cedi visible in the school story.
+                            </h1>
+                            <p className="mt-7 max-w-2xl text-lg leading-relaxed text-base-content/65 md:text-xl">
+                                Support scholarships, infrastructure, NSMQ preparation, student welfare, and association-led projects for University Practice SHS.
+                            </p>
+
+                            <div className="mt-9 flex flex-wrap gap-3">
+                                {heroAmounts.map((amount) => (
+                                    <button key={amount} type="button" className="btn btn-primary btn-lg" onClick={() => openModal(amount)}>
+                                        Give {formatMoney(currency, amount)}
+                                    </button>
+                                ))}
+                                <button type="button" className="btn btn-secondary btn-lg" onClick={() => openModal()}>
+                                    Custom amount
+                                </button>
+                            </div>
+                        </div>
+                    </HeroReveal>
+
+                    <ScrollReveal direction="left">
+                        <div className="border border-primary/15 bg-primary p-4 text-primary-content shadow-2xl">
+                            <div className="border border-primary-content/10 bg-primary-content/10 p-5">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-secondary">Giving routes</p>
+                                        <h2 className="mt-3 text-2xl font-bold">Pick an amount, choose a rail, and complete securely.</h2>
+                                    </div>
+                                    <ShieldCheck className="text-secondary" size={34} />
+                                </div>
+
+                                <div className="mt-8 grid gap-3">
+                                    {[
+                                        { label: "Manual rails", value: "MoMo and bank", icon: Banknote },
+                                        { label: "Online rails", value: onlinePaymentMethods.length > 0 ? `${onlinePaymentMethods.length} enabled` : "Available soon", icon: CreditCard },
+                                        { label: "Allocation map", value: `${totalAllocation}% assigned`, icon: PieChart },
+                                    ].map((item) => {
+                                        const Icon = item.icon;
+                                        return (
+                                            <div key={item.label} className="flex items-center gap-4 border border-primary-content/10 bg-primary-content/10 p-4">
+                                                <div className="grid h-12 w-12 place-items-center bg-secondary text-secondary-content">
+                                                    <Icon size={20} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary-content/45">{item.label}</p>
+                                                    <p className="mt-1 font-bold">{item.value}</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </ScrollReveal>
+                </div>
+            </section>
+
+            <section className="bg-primary text-primary-content">
+                <div className="mx-auto max-w-7xl px-4 py-6">
+                    <StaggerChildren className="grid gap-3 md:grid-cols-3">
+                        {[
+                            { label: "Scholarships and welfare", icon: Heart },
+                            { label: "Infrastructure projects", icon: Landmark },
+                            { label: "Quiz and academic support", icon: Target },
+                        ].map((item) => {
+                            const Icon = item.icon;
+                            return (
+                                <div key={item.label} className="flex items-center gap-4 border border-primary-content/10 bg-primary-content/10 p-4">
+                                    <div className="grid h-12 w-12 place-items-center bg-secondary text-secondary-content">
+                                        <Icon size={22} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-content/45">Your gift supports</p>
+                                        <p className="text-lg font-bold">{item.label}</p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </StaggerChildren>
+                </div>
+            </section>
+
+            <section className="bg-base-200 py-16 md:py-24">
+                <div className="mx-auto grid max-w-7xl gap-10 px-4 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+                    <ScrollReveal direction="right">
+                        <div className="sticky top-24">
+                            <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Why give</p>
+                            <h2 className="text-4xl font-bold leading-tight text-primary md:text-5xl">Give back to the place that helped shape us.</h2>
+                            <p className="mt-5 leading-relaxed text-base-content/60">
+                                Donations help UPOSA fund visible school priorities and student-facing support, from scholarships to infrastructure improvements.
+                            </p>
+                            <button type="button" className="btn btn-primary mt-8" onClick={() => openModal()}>
+                                Start donation <ArrowRight size={16} />
+                            </button>
+                        </div>
+                    </ScrollReveal>
+
+                    <div className="grid gap-4">
+                        {impactStories.map((story, index) => (
+                            <ScrollReveal key={`${story.name}-${story.year}`} delay={index * 0.08}>
+                                <div className="border border-base-300 bg-base-100 p-5 shadow-sm">
+                                    <div className="mb-5 flex items-start gap-4">
+                                        <div className="grid h-12 w-12 shrink-0 place-items-center bg-secondary text-secondary-content">
+                                            <Heart size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">Impact story</p>
+                                            <h3 className="mt-1 text-xl font-bold text-primary">{story.name}</h3>
+                                        </div>
+                                    </div>
+                                    <p className="text-base leading-relaxed text-base-content/65">"{story.quote}"</p>
+                                    <p className="mt-5 border-t border-base-300 pt-4 text-sm font-bold text-primary">{story.year}</p>
+                                </div>
+                            </ScrollReveal>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            <section className="relative overflow-hidden bg-base-100 py-16 md:py-24">
+                <img
+                    src="/logo.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -right-24 top-8 h-[360px] w-[360px] object-contain opacity-[0.035]"
+                />
+                <div className="mx-auto max-w-7xl px-4">
+                    <ScrollReveal>
+                        <div className="relative mb-10 grid gap-6 lg:grid-cols-[1fr_360px] lg:items-end">
                             <div>
-                                <p className="text-base-content/60 mb-4">
-                                    Your donations directly impact the lives of students at University Practice SHS. From funding scholarships for brilliant but needy students to renovating school infrastructure, every contribution creates lasting change.
-                                </p>
-                                <p className="text-base-content/60">
-                                    As alumni, we have a unique opportunity to give back to the institution that shaped us. Together, we can ensure that future generations have even better opportunities than we did.
+                                <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Payment rails</p>
+                                <h2 className="max-w-3xl text-4xl font-bold leading-tight text-primary md:text-5xl">Choose the giving route that works for you.</h2>
+                                <p className="mt-4 max-w-2xl text-base leading-relaxed text-base-content/60">
+                                    Use manual MoMo or bank rails, or continue through any enabled online provider for card or digital payment.
                                 </p>
                             </div>
-                        </ScrollReveal>
-                        <div className="space-y-4">
-                            {((data?.config as any)?.impactStories?.length > 0 ? (data?.config as any).impactStories : defaultImpactStories).map((story: { quote: string; name: string; year: string }, i: number) => (
-                                <ScrollReveal key={story.name} delay={0.15 + i * 0.1}>
-                                    <Card shape="wave">
-                                        <CardAccent />
-                                        <CardBody>
-                                            <p className="text-sm text-base-content/60 italic">"{story.quote}"</p>
-                                            <div className="border-t border-base-300 pt-3 mt-2">
-                                                <p className="text-xs font-semibold">{story.name} &middot; {story.year}</p>
-                                            </div>
-                                        </CardBody>
-                                    </Card>
-                                </ScrollReveal>
-                            ))}
+                            <button type="button" className="btn btn-secondary justify-self-start lg:justify-self-end" onClick={() => openModal()}>
+                                Donate now <ArrowRight size={16} />
+                            </button>
                         </div>
-                    </div>
-                </div>
-            </section>
+                    </ScrollReveal>
 
-            {/* How to Donate */}
-            <section className="py-16 bg-base-200">
-                <div className="max-w-7xl mx-auto px-4">
-                    <SectionHeader icon={HandCoins} title="How to Donate" description="Choose the payment method that works best for you." align="left" />
-                    <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                        <Card className="h-full">
-                            <CardAccent color="secondary" />
-                            <CardBody className="items-center text-center flex flex-col flex-1">
-                                <div className="bg-secondary/10 text-secondary rounded-xl p-2.5">
-                                    <Smartphone size={28} />
-                                </div>
-                                <h3 className="font-bold text-lg mt-2">Mobile Money (MoMo)</h3>
-                                <p className="text-sm text-base-content/60">Send to:</p>
-                                <p className="font-mono font-semibold text-primary text-lg">{payment.momo.number}</p>
-                                <div className="border-t border-base-300 w-full pt-3 mt-auto space-y-1">
-                                    <p className="text-xs text-base-content/50">MoMo Pay ID: {payment.momo.payId}</p>
-                                    <p className="text-xs text-base-content/50">Name: {payment.momo.accountName}</p>
-                                </div>
-                            </CardBody>
-                        </Card>
-                        <Card className="h-full">
-                            <CardAccent color="secondary" />
-                            <CardBody className="items-center text-center flex flex-col flex-1">
-                                <div className="bg-secondary/10 text-secondary rounded-xl p-2.5">
-                                    <Building size={28} />
-                                </div>
-                                <h3 className="font-bold text-lg mt-2">Bank Transfer</h3>
-                                <div className="border-t border-base-300 w-full pt-3 mt-auto text-sm text-base-content/60 text-left space-y-1">
-                                    <p><span className="font-medium">Bank:</span> {payment.bank.bank}</p>
-                                    <p><span className="font-medium">Account No:</span> {payment.bank.accountNo}</p>
-                                    <p><span className="font-medium">Name:</span> {payment.bank.accountName}</p>
-                                    <p><span className="font-medium">Branch:</span> {payment.bank.branch}</p>
-                                </div>
-                            </CardBody>
-                        </Card>
-                        {onlinePaymentMethods.length > 0 ? (
-                            onlinePaymentMethods.map((method) => {
-                                const Icon = providerIcons[method.provider] || Globe;
+                    <div className="relative overflow-hidden border border-base-300 bg-base-100 shadow-sm">
+                        <div className="grid lg:grid-cols-3">
+                            {paymentRails.map((rail) => {
+                                const Icon = rail.icon;
                                 return (
-                                    <Card key={method.id} className="h-full">
-                                        <CardAccent color="secondary" />
-                                        <CardBody className="items-center text-center flex flex-col flex-1">
-                                            <div className="bg-secondary/10 text-secondary rounded-xl p-2.5">
-                                                <Icon size={28} />
+                                    <button
+                                        key={rail.id}
+                                        type="button"
+                                        className="group flex min-h-[260px] flex-col border-b border-base-300 p-6 text-left transition hover:bg-base-200 lg:border-b-0 lg:border-r"
+                                        onClick={rail.action}
+                                    >
+                                        <div className="mb-7 flex items-start justify-between gap-4">
+                                            <div className="grid h-14 w-14 place-items-center bg-secondary text-secondary-content">
+                                                <Icon size={24} />
                                             </div>
-                                            <h3 className="font-bold text-lg mt-2">{method.displayName}</h3>
-                                            <p className="text-sm text-base-content/60">{method.description}</p>
-                                            <div className="border-t border-base-300 w-full pt-3 mt-auto">
-                                                <button className="btn btn-primary btn-sm w-full" onClick={() => openModal()}>Donate with {method.displayName}</button>
-                                            </div>
-                                        </CardBody>
-                                    </Card>
+                                            <span className="border border-base-300 px-2.5 py-1 text-xs font-bold uppercase tracking-[0.14em] text-base-content/35">Manual</span>
+                                        </div>
+                                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-secondary">{rail.subtitle}</p>
+                                        <h3 className="mt-2 text-2xl font-bold leading-tight text-primary">{rail.title}</h3>
+                                        <div className="mt-6 grid gap-1">
+                                            <p className="break-words font-mono text-xl font-bold leading-tight text-primary">{rail.detail}</p>
+                                            <p className="text-sm leading-relaxed text-base-content/50">{rail.meta}</p>
+                                        </div>
+                                        <span className="mt-auto flex items-center justify-between border-t border-base-300 pt-5 text-sm font-bold text-primary">
+                                            Start with this rail
+                                            <ArrowRight size={17} className="transition group-hover:translate-x-1 group-hover:text-secondary" />
+                                        </span>
+                                    </button>
                                 );
-                            })
-                        ) : (
-                            <Card className="h-full">
-                                <CardAccent color="secondary" />
-                                <CardBody className="items-center text-center flex flex-col flex-1">
-                                    <div className="bg-secondary/10 text-secondary rounded-xl p-2.5">
-                                        <Globe size={28} />
-                                    </div>
-                                    <h3 className="font-bold text-lg mt-2">Online Payment</h3>
-                                    <p className="text-sm text-base-content/60">For international donations</p>
-                                    <div className="border-t border-base-300 w-full pt-3 mt-auto">
-                                        <button className="btn btn-primary btn-sm w-full" onClick={() => openModal()}>Donate Online</button>
-                                    </div>
-                                </CardBody>
-                            </Card>
-                        )}
-                    </StaggerChildren>
-                </div>
-            </section>
+                            })}
 
-            {/* What Donations Support */}
-            <section className="py-16">
-                <div className="max-w-7xl mx-auto px-4">
-                    <SectionHeader icon={PieChart} title="What Your Donations Support" description="See how your contributions are allocated across key areas." align="left" />
-                    <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {donationAllocation.map((item) => (
-                            <Card key={item.title} className="h-full">
-                                <CardAccent />
-                                <CardBody className="items-center text-center flex flex-col">
-                                    <div className="bg-secondary/10 text-secondary rounded-xl p-2.5">
-                                        <Heart size={24} />
+                            {onlinePaymentMethods.length > 0 ? (
+                                onlinePaymentMethods.slice(0, 1).map((method) => {
+                                    const Icon = providerIcons[method.provider] || Globe;
+                                    return (
+                                        <button
+                                            key={method.id}
+                                            type="button"
+                                            className="group flex min-h-[260px] flex-col bg-base-200 p-6 text-left transition hover:bg-base-100"
+                                            onClick={() => {
+                                                openModal();
+                                                setPaymentMethod(method.provider);
+                                                setStep("amount");
+                                            }}
+                                        >
+                                            <div className="mb-7 flex items-start justify-between gap-4">
+                                                <div className="grid h-14 w-14 place-items-center bg-secondary text-secondary-content">
+                                                    <Icon size={24} />
+                                                </div>
+                                                <span className="border border-base-300 px-2.5 py-1 text-xs font-bold uppercase tracking-[0.14em] text-base-content/35">Online</span>
+                                            </div>
+                                            <p className="text-xs font-bold uppercase tracking-[0.18em] text-secondary">Online provider</p>
+                                            <h3 className="mt-2 text-2xl font-bold leading-tight text-primary">{method.displayName}</h3>
+                                            <p className="mt-6 line-clamp-3 text-sm leading-relaxed text-base-content/60">{method.description || "Secure online donation processing."}</p>
+                                            <p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-base-content/35">
+                                                {method.supportedCurrencies.join(", ")}
+                                            </p>
+                                            <span className="mt-auto flex items-center justify-between border-t border-base-300 pt-5 text-sm font-bold text-primary">
+                                                Continue online
+                                                <ArrowRight size={17} className="transition group-hover:translate-x-1 group-hover:text-secondary" />
+                                            </span>
+                                        </button>
+                                    );
+                                })
+                            ) : (
+                                <div className="flex min-h-[260px] flex-col bg-base-200 p-6">
+                                    <div className="mb-7 flex items-start justify-between gap-4">
+                                        <div className="grid h-14 w-14 place-items-center bg-secondary text-secondary-content">
+                                            <Globe size={24} />
+                                        </div>
+                                        <span className="border border-base-300 px-2.5 py-1 text-xs font-bold uppercase tracking-[0.14em] text-base-content/35">Soon</span>
                                     </div>
-                                    <h3 className="font-semibold mt-2">{item.title}</h3>
-                                    <p className="text-3xl font-bold text-primary">{item.percentage}%</p>
-                                    <div className="w-full bg-base-300 rounded-full h-2.5 overflow-hidden">
-                                        <div className="bg-gradient-to-r from-secondary to-secondary/80 h-full rounded-full" style={{ width: `${item.percentage}%` }} />
-                                    </div>
-                                    <p className="text-sm text-base-content/60 mt-1">{item.description}</p>
-                                </CardBody>
-                            </Card>
-                        ))}
-                    </StaggerChildren>
-                </div>
-            </section>
-
-            {/* CTA */}
-            <section className="relative py-20 bg-primary text-primary-content overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#001B50] via-[#002870] to-[#1E3A8A]" />
-                <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '32px 32px' }} />
-                <ScrollReveal>
-                    <div className="relative max-w-3xl mx-auto px-4 text-center">
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 mb-6">
-                            <Heart size={14} className="text-secondary" />
-                            <span className="text-sm font-medium text-white/80">Support Us</span>
-                        </div>
-                        <h2 className="text-3xl md:text-4xl font-bold mb-4">Make a Difference Today</h2>
-                        <p className="mb-8 text-white/70 max-w-lg mx-auto">
-                            No amount is too small. Your contribution helps build a brighter future for University Practice students.
-                        </p>
-                        <div className="flex flex-wrap gap-3 justify-center">
-                            <button className="btn btn-secondary shadow-lg shadow-secondary/25" onClick={() => openModal(50)}>Donate {currency} 50</button>
-                            <button className="btn btn-secondary shadow-lg shadow-secondary/25" onClick={() => openModal(100)}>Donate {currency} 100</button>
-                            <button className="btn btn-secondary shadow-lg shadow-secondary/25" onClick={() => openModal(500)}>Donate {currency} 500</button>
-                            <button className="btn btn-outline border-white/20 text-white hover:bg-white/10 hover:border-white/30" onClick={() => openModal()}>Custom Amount</button>
+                                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-secondary">Online provider</p>
+                                    <h3 className="mt-2 text-2xl font-bold leading-tight text-primary">Online payment</h3>
+                                    <p className="mt-6 text-sm leading-relaxed text-base-content/60">Card and international payment options will appear here when enabled.</p>
+                                    <p className="mt-auto border-t border-base-300 pt-5 text-sm font-bold text-base-content/45">No provider enabled yet</p>
+                                </div>
+                            )}
                         </div>
                     </div>
-                </ScrollReveal>
+                </div>
             </section>
 
-            {/* Donation Modal */}
+            <section className="relative overflow-hidden bg-base-200 py-16 md:py-24">
+                <img
+                    src="/logo.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -left-24 bottom-0 h-[360px] w-[360px] object-contain opacity-[0.03]"
+                />
+                <div className="relative mx-auto grid max-w-7xl gap-8 px-4 lg:grid-cols-[360px_1fr] lg:items-stretch">
+                    <ScrollReveal direction="right">
+                        <div className="flex h-full flex-col border border-base-300 bg-base-100 p-6 shadow-sm md:p-8">
+                            <div className="mb-8 flex items-start justify-between gap-4">
+                                <div className="grid h-14 w-14 place-items-center bg-secondary text-secondary-content">
+                                    <PieChart size={24} />
+                                </div>
+                                <span className="text-xs font-bold uppercase tracking-[0.18em] text-base-content/35">Funding split</span>
+                            </div>
+                            <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Allocation map</p>
+                            <h2 className="text-4xl font-bold leading-tight text-primary md:text-5xl">What your donation supports.</h2>
+                            <p className="mt-5 text-sm leading-relaxed text-base-content/60">
+                                These categories help alumni see how support is spread across student welfare, facilities, and association priorities.
+                            </p>
+                            <div className="mt-auto pt-8">
+                                <div className="flex items-end justify-between gap-4 border-t border-base-300 pt-6">
+                                    <span className="text-xs font-bold uppercase tracking-[0.18em] text-base-content/35">Total assigned</span>
+                                    <span className="text-4xl font-bold leading-none text-primary">{totalAllocation}%</span>
+                                </div>
+                                <div className="mt-4 h-2 bg-base-300">
+                                    <div className="h-full bg-secondary" style={{ width: `${Math.min(totalAllocation, 100)}%` }} />
+                                </div>
+                            </div>
+                        </div>
+                    </ScrollReveal>
+
+                    <div className="overflow-hidden border border-base-300 bg-base-100 shadow-sm">
+                        {donationAllocation.map((item, index) => (
+                            <ScrollReveal key={item.title} delay={index * 0.05}>
+                                <div className="grid gap-5 border-b border-base-300 p-5 last:border-b-0 md:grid-cols-[90px_1fr_132px] md:items-center md:p-6">
+                                    <div className="flex items-center gap-4 md:block">
+                                        <div className="grid h-14 w-14 shrink-0 place-items-center bg-secondary text-sm font-bold text-secondary-content">
+                                            {String(index + 1).padStart(2, "0")}
+                                        </div>
+                                        <p className="text-3xl font-bold leading-none text-primary md:mt-5 md:hidden">{item.percentage}%</p>
+                                    </div>
+
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            <h3 className="text-xl font-bold leading-tight text-primary">{item.title}</h3>
+                                            <span className="border border-base-300 px-2.5 py-1 text-xs font-bold uppercase tracking-[0.14em] text-base-content/35">
+                                                {item.percentage}% share
+                                            </span>
+                                        </div>
+                                        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-base-content/60">{item.description}</p>
+                                        <div className="mt-4 h-2 bg-base-300">
+                                            <div className="h-full bg-secondary" style={{ width: `${item.percentage}%` }} />
+                                        </div>
+                                    </div>
+
+                                    <div className="hidden text-right md:block">
+                                        <p className="text-5xl font-bold leading-none text-primary">{item.percentage}%</p>
+                                        <p className="mt-2 text-xs font-bold uppercase tracking-[0.14em] text-base-content/35">of gifts</p>
+                                    </div>
+                                </div>
+                            </ScrollReveal>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            <section className="relative overflow-hidden bg-primary text-primary-content">
+                <img
+                    src="/logo.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -left-28 top-4 h-[420px] w-[420px] object-contain opacity-[0.045]"
+                />
+                <div className="relative mx-auto max-w-7xl px-4 py-16 md:py-20">
+                    <ScrollReveal>
+                        <div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                            <div>
+                                <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Ready to help</p>
+                                <h2 className="max-w-3xl text-4xl font-bold leading-tight md:text-5xl">Choose an amount and move a priority forward.</h2>
+                                <p className="mt-5 max-w-2xl leading-relaxed text-primary-content/60">
+                                    No amount is too small. Every contribution becomes part of a visible alumni support record.
+                                </p>
+                            </div>
+                            <button type="button" className="btn btn-secondary w-fit" onClick={() => openModal()}>
+                                Enter custom gift <ArrowRight size={16} />
+                            </button>
+                        </div>
+                    </ScrollReveal>
+
+                    <div className="overflow-hidden border border-primary-content/12 bg-primary-content/10">
+                        <div className="grid lg:grid-cols-[1fr_340px]">
+                            <div className="grid sm:grid-cols-2 xl:grid-cols-4">
+                                {[...heroAmounts, 1000].map((amount) => (
+                                    <button
+                                        key={amount}
+                                        type="button"
+                                        className="group flex min-h-[168px] flex-col border-b border-primary-content/12 p-6 text-left transition hover:bg-primary-content/10 sm:border-r xl:border-b-0"
+                                        onClick={() => openModal(amount)}
+                                    >
+                                        <span className="block text-xs font-bold uppercase tracking-[0.16em] text-primary-content/45">Donate</span>
+                                        <span className="mt-3 block text-3xl font-bold leading-none text-secondary">{formatMoney(currency, amount)}</span>
+                                        <span className="mt-auto flex items-center justify-between border-t border-primary-content/12 pt-5 text-sm font-bold text-primary-content/70">
+                                            Select amount
+                                            <ArrowRight size={18} className="transition group-hover:translate-x-1 group-hover:text-secondary" />
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                type="button"
+                                className="group flex min-h-[168px] flex-col bg-secondary p-6 text-left text-secondary-content transition hover:bg-secondary/90"
+                                onClick={() => openModal()}
+                            >
+                                <span className="block text-xs font-bold uppercase tracking-[0.16em] opacity-70">Custom gift</span>
+                                <span className="mt-3 block max-w-xs text-3xl font-bold leading-tight">Enter your own amount</span>
+                                <span className="mt-auto flex items-center justify-between border-t border-secondary-content/20 pt-5 text-sm font-bold">
+                                    Open amount field
+                                    <ArrowRight size={18} className="transition group-hover:translate-x-1" />
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <AnimatePresence>
                 {modalOpen && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-                        onClick={(e) => { if (e.target === e.currentTarget) setModalOpen(false); }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+                        onClick={(event) => {
+                            if (event.target === event.currentTarget) setModalOpen(false);
+                        }}
                     >
                         <motion.div
                             ref={modalRef}
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            initial={{ opacity: 0, y: 24 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 24 }}
                             transition={{ duration: 0.2 }}
+                            className="w-full max-w-2xl overflow-hidden border border-base-300 bg-base-100 shadow-2xl"
                         >
-                            <Card hover={false} className="w-full max-w-md max-h-[90vh] overflow-y-auto">
-                            <CardAccent color="secondary" />
-                            <CardBody>
-                                <div className="flex items-center justify-between mb-2">
-                                    <h3 className="font-bold text-lg">
-                                        {step === "success" ? "Thank You!" : "Make a Donation"}
-                                    </h3>
-                                    <button className="btn btn-ghost btn-sm btn-circle" onClick={() => setModalOpen(false)}>
-                                        <X size={18} />
-                                    </button>
+                            <div className="flex items-start justify-between gap-4 border-b border-base-300 bg-primary p-5 text-primary-content">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-secondary">{step === "success" ? "Donation received" : "Donation checkout"}</p>
+                                    <h3 className="mt-2 text-2xl font-bold">{step === "success" ? "Thank you for giving" : "Make a donation"}</h3>
                                 </div>
+                                <button type="button" className="btn btn-ghost btn-sm text-primary-content hover:bg-primary-content/10" onClick={() => setModalOpen(false)} aria-label="Close donation modal">
+                                    <X size={20} />
+                                </button>
+                            </div>
 
-                                {/* Step 1: Custom Amount */}
+                            <div className="max-h-[76vh] overflow-y-auto p-5 md:p-6">
+                                {step !== "success" && <StepMarker currentStep={step} />}
+
                                 {step === "amount" && (
-                                    <div className="space-y-4">
-                                        <p className="text-sm text-base-content/60">Enter your donation amount:</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {[50, 100, 200, 500, 1000].map((amt) => (
-                                                <button
-                                                    key={amt}
-                                                    className={`btn btn-sm ${Number(customAmount) === amt ? "btn-primary" : "btn-outline"}`}
-                                                    onClick={() => setCustomAmount(String(amt))}
-                                                >
-                                                    {currency} {amt}
-                                                </button>
-                                            ))}
+                                    <div className="mt-6 space-y-5">
+                                        <div>
+                                            <p className="text-xs font-bold uppercase tracking-[0.16em] text-base-content/45">Choose a quick amount or enter your own.</p>
+                                            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                                                {presetAmounts.map((amount) => (
+                                                    <button
+                                                        key={amount}
+                                                        type="button"
+                                                        className={`border px-3 py-2.5 text-[13px] font-bold leading-none transition ${
+                                                            Number(customAmount) === amount ? "border-secondary bg-secondary text-secondary-content" : "border-base-300 bg-base-200 text-primary hover:border-primary/25"
+                                                        }`}
+                                                        onClick={() => setCustomAmount(String(amount))}
+                                                    >
+                                                        {formatMoney(currency, amount)}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <div className="form-control">
-                                            <label className="label"><span className="label-text font-medium">Or enter a custom amount</span></label>
-                                            <label className="input input-bordered flex items-center gap-2">
-                                                <span className="font-semibold text-base-content/50">{currency}</span>
+
+                                        <label className="form-control">
+                                            <span className="label pb-2">
+                                                <span className="label-text text-xs font-bold uppercase tracking-[0.16em] text-primary">Custom amount</span>
+                                            </span>
+                                            <label className="flex h-12 items-center gap-3 border border-base-300 bg-base-200 px-4 text-sm">
+                                                <span className="font-bold text-base-content/45">{currency}</span>
                                                 <input
                                                     type="number"
                                                     min="1"
                                                     placeholder="0"
-                                                    className="grow bg-transparent outline-none"
+                                                    className="min-w-0 grow bg-transparent font-semibold text-primary outline-none placeholder:text-base-content/45"
                                                     value={customAmount}
-                                                    onChange={(e) => setCustomAmount(e.target.value)}
+                                                    onChange={(event) => setCustomAmount(event.target.value)}
                                                 />
                                             </label>
+                                        </label>
+
+                                        <div className="flex items-center justify-between gap-3 border-t border-base-300 pt-5">
+                                            <button type="button" className="btn btn-ghost" onClick={() => setModalOpen(false)}>
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="btn btn-primary btn-sm disabled:!border-primary/15 disabled:!bg-primary/10 disabled:!text-primary/45 disabled:!opacity-100 disabled:!shadow-none"
+                                                disabled={!hasValidAmount}
+                                                onClick={() => setStep("payment")}
+                                            >
+                                                Continue <ArrowRight size={16} />
+                                            </button>
                                         </div>
-                                        <button
-                                            className="btn btn-primary w-full"
-                                            disabled={!customAmount || Number(customAmount) <= 0}
-                                            onClick={() => setStep("payment")}
-                                        >
-                                            Continue
-                                        </button>
                                     </div>
                                 )}
 
-                                {/* Step 2: Payment Method */}
                                 {step === "payment" && (
-                                    <div className="space-y-4">
-                                        <div className="bg-gradient-to-r from-secondary/10 to-secondary/5 rounded-xl p-4 text-center border border-secondary/20">
-                                            <p className="text-sm text-base-content/50">Donation Amount</p>
-                                            <p className="text-2xl font-bold text-primary">{currency} {finalAmount?.toLocaleString()}</p>
+                                    <div className="mt-6 space-y-5">
+                                        <div className="border border-secondary/20 bg-secondary/10 p-4 text-center">
+                                            <p className="text-sm font-semibold text-base-content/50">Donation amount</p>
+                                            <p className="mt-1 text-3xl font-bold text-primary">{formatMoney(currency, finalAmount)}</p>
                                         </div>
-                                        <p className="text-sm text-base-content/60">Select a payment method:</p>
-                                        <div className="space-y-2">
-                                            {/* Manual methods */}
-                                            <button
-                                                className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-left ${paymentMethod === "momo" ? "border-primary bg-primary/10 shadow-sm" : "border-base-300 hover:border-primary hover:shadow-sm"}`}
-                                                onClick={() => setPaymentMethod("momo")}
-                                            >
-                                                <div className={`rounded-xl p-2.5 ${paymentMethod === "momo" ? "bg-secondary/10 text-secondary" : "bg-base-200 text-base-content/50"}`}>
-                                                    <Smartphone size={20} />
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium text-sm">Mobile Money (MoMo)</p>
-                                                    <p className="text-xs text-base-content/50">Pay via MTN, Vodafone, or AirtelTigo</p>
-                                                </div>
-                                            </button>
-                                            <button
-                                                className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-left ${paymentMethod === "bank" ? "border-primary bg-primary/10 shadow-sm" : "border-base-300 hover:border-primary hover:shadow-sm"}`}
-                                                onClick={() => setPaymentMethod("bank")}
-                                            >
-                                                <div className={`rounded-xl p-2.5 ${paymentMethod === "bank" ? "bg-secondary/10 text-secondary" : "bg-base-200 text-base-content/50"}`}>
-                                                    <Building size={20} />
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium text-sm">Bank Transfer</p>
-                                                    <p className="text-xs text-base-content/50">Direct bank deposit or transfer</p>
-                                                </div>
-                                            </button>
-                                            {/* Online payment providers from API */}
-                                            {onlinePaymentMethods.map((method) => {
-                                                const Icon = providerIcons[method.provider] || Globe;
-                                                return (
-                                                    <button
-                                                        key={method.id}
-                                                        className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-left ${paymentMethod === method.provider ? "border-primary bg-primary/10 shadow-sm" : "border-base-300 hover:border-primary hover:shadow-sm"}`}
-                                                        onClick={() => setPaymentMethod(method.provider)}
-                                                    >
-                                                        <div className={`rounded-xl p-2.5 ${paymentMethod === method.provider ? "bg-secondary/10 text-secondary" : "bg-base-200 text-base-content/50"}`}>
-                                                            <Icon size={20} />
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-medium text-sm">{method.displayName}</p>
-                                                            <p className="text-xs text-base-content/50">{method.description}</p>
-                                                        </div>
-                                                    </button>
-                                                );
-                                            })}
+
+                                        <div>
+                                            <p className="mb-3 text-sm font-bold text-primary">Select a payment method</p>
+                                            <div className="grid gap-3">
+                                                {[
+                                                    { id: "momo", title: "Mobile Money", description: "Pay via MTN, Vodafone, or AirtelTigo", icon: Smartphone },
+                                                    { id: "bank", title: "Bank Transfer", description: "Direct bank deposit or transfer", icon: Building2 },
+                                                ].map((method) => {
+                                                    const Icon = method.icon;
+                                                    const active = paymentMethod === method.id;
+                                                    return (
+                                                        <button
+                                                            key={method.id}
+                                                            type="button"
+                                                            className={`grid grid-cols-[48px_1fr_auto] items-center gap-3 border p-3 text-left transition ${
+                                                                active ? "border-secondary bg-secondary/10" : "border-base-300 bg-base-200 hover:border-primary/25"
+                                                            }`}
+                                                            onClick={() => setPaymentMethod(method.id)}
+                                                        >
+                                                            <span className={`grid h-12 w-12 place-items-center ${active ? "bg-secondary text-secondary-content" : "bg-primary/5 text-primary"}`}>
+                                                                <Icon size={20} />
+                                                            </span>
+                                                            <span>
+                                                                <span className="block font-bold text-primary">{method.title}</span>
+                                                                <span className="mt-1 block text-sm text-base-content/50">{method.description}</span>
+                                                            </span>
+                                                            <CheckCircle2 size={18} className={active ? "text-secondary" : "text-base-content/20"} />
+                                                        </button>
+                                                    );
+                                                })}
+
+                                                {onlinePaymentMethods.map((method) => {
+                                                    const Icon = providerIcons[method.provider] || Globe;
+                                                    const active = paymentMethod === method.provider;
+                                                    return (
+                                                        <button
+                                                            key={method.id}
+                                                            type="button"
+                                                            className={`grid grid-cols-[48px_1fr_auto] items-center gap-3 border p-3 text-left transition ${
+                                                                active ? "border-secondary bg-secondary/10" : "border-base-300 bg-base-200 hover:border-primary/25"
+                                                            }`}
+                                                            onClick={() => setPaymentMethod(method.provider)}
+                                                        >
+                                                            <span className={`grid h-12 w-12 place-items-center ${active ? "bg-secondary text-secondary-content" : "bg-primary/5 text-primary"}`}>
+                                                                <Icon size={20} />
+                                                            </span>
+                                                            <span>
+                                                                <span className="block font-bold text-primary">{method.displayName}</span>
+                                                                <span className="mt-1 block text-sm text-base-content/50">{method.description || "Secure online payment"}</span>
+                                                            </span>
+                                                            <CheckCircle2 size={18} className={active ? "text-secondary" : "text-base-content/20"} />
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                        <div className="border-t border-base-300 pt-4 flex gap-2">
-                                            <button className="btn btn-ghost btn-sm" onClick={() => setStep("amount")}>Back</button>
-                                            <button
-                                                className="btn btn-primary flex-1"
-                                                disabled={!paymentMethod}
-                                                onClick={() => setStep("confirm")}
-                                            >
-                                                Continue
+
+                                        <div className="flex items-center justify-between gap-3 border-t border-base-300 pt-5">
+                                            <button type="button" className="btn btn-ghost" onClick={() => (isCustom ? setStep("amount") : setModalOpen(false))}>
+                                                Back
+                                            </button>
+                                            <button type="button" className="btn btn-primary" disabled={!paymentMethod} onClick={() => setStep("confirm")}>
+                                                Continue <ArrowRight size={16} />
                                             </button>
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Step 3: Confirm / Instructions */}
                                 {step === "confirm" && (
-                                    <div className="space-y-4">
-                                        <div className="bg-gradient-to-r from-secondary/10 to-secondary/5 rounded-xl p-4 text-center border border-secondary/20">
-                                            <p className="text-sm text-base-content/50">Donation Amount</p>
-                                            <p className="text-2xl font-bold text-primary">{currency} {finalAmount?.toLocaleString()}</p>
+                                    <div className="mt-6 space-y-5">
+                                        <div className="border border-secondary/20 bg-secondary/10 p-4 text-center">
+                                            <p className="text-sm font-semibold text-base-content/50">Donation amount</p>
+                                            <p className="mt-1 text-3xl font-bold text-primary">{formatMoney(currency, finalAmount)}</p>
                                         </div>
 
                                         {paymentMethod === "momo" && (
-                                            <div className="space-y-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="bg-secondary/10 text-secondary rounded-xl p-2.5">
+                                            <div className="border border-base-300 bg-base-200 p-5">
+                                                <div className="mb-4 flex items-center gap-3">
+                                                    <div className="grid h-11 w-11 place-items-center bg-secondary text-secondary-content">
                                                         <Smartphone size={18} />
                                                     </div>
-                                                    <h4 className="font-semibold text-sm">Mobile Money Instructions</h4>
+                                                    <h4 className="font-bold text-primary">Mobile Money instructions</h4>
                                                 </div>
-                                                <ol className="text-sm text-base-content/60 space-y-2 list-decimal pl-5">
-                                                    <li>Dial <span className="font-mono font-semibold">*170#</span> (MTN) or your network's shortcode</li>
-                                                    <li>Select <strong>Send Money</strong></li>
-                                                    <li>Enter the number below:</li>
+                                                <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-base-content/60">
+                                                    <li>Dial your network's mobile money shortcode.</li>
+                                                    <li>Select send money or MoMo Pay.</li>
+                                                    <li>Enter the number or Pay ID below and confirm with your PIN.</li>
                                                 </ol>
-                                                <div className="flex items-center gap-2 bg-base-200 rounded-xl p-3 border border-base-300">
-                                                    <span className="font-mono font-bold text-primary flex-1">{payment.momo.number}</span>
-                                                    <button className="btn btn-ghost btn-xs" onClick={() => handleCopy(payment.momo.number)}>
-                                                        {copied ? <CheckCircle2 size={14} className="text-success" /> : <Copy size={14} />}
-                                                    </button>
-                                                </div>
-                                                <div className="border-t border-base-300 pt-3 space-y-1">
-                                                    <p className="text-xs text-base-content/50">MoMo Pay ID: <strong>{payment.momo.payId}</strong></p>
-                                                    <p className="text-xs text-base-content/50">Registered Name: <strong>{payment.momo.accountName}</strong></p>
-                                                    <p className="text-xs text-base-content/50">Enter <strong>{currency} {finalAmount?.toLocaleString()}</strong> as the amount and confirm with your PIN.</p>
+                                                <div className="mt-5 bg-base-100 p-4">
+                                                    <DetailRow
+                                                        label="Number"
+                                                        value={<span className="font-mono">{payment.momo.number}</span>}
+                                                        action={
+                                                            <button type="button" className="btn btn-ghost btn-xs" onClick={() => handleCopy(payment.momo.number)} aria-label="Copy MoMo number">
+                                                                {copied ? <CheckCircle2 size={14} className="text-success" /> : <Copy size={14} />}
+                                                            </button>
+                                                        }
+                                                    />
+                                                    <DetailRow label="MoMo Pay ID" value={payment.momo.payId} />
+                                                    <DetailRow label="Registered name" value={payment.momo.accountName} />
+                                                    <DetailRow label="Amount" value={formatMoney(currency, finalAmount)} />
                                                 </div>
                                             </div>
                                         )}
 
                                         {paymentMethod === "bank" && (
-                                            <div className="space-y-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="bg-secondary/10 text-secondary rounded-xl p-2.5">
-                                                        <Building size={18} />
+                                            <div className="border border-base-300 bg-base-200 p-5">
+                                                <div className="mb-4 flex items-center gap-3">
+                                                    <div className="grid h-11 w-11 place-items-center bg-secondary text-secondary-content">
+                                                        <Building2 size={18} />
                                                     </div>
-                                                    <h4 className="font-semibold text-sm">Bank Transfer Details</h4>
+                                                    <h4 className="font-bold text-primary">Bank transfer details</h4>
                                                 </div>
-                                                <div className="bg-base-200 rounded-xl p-3 space-y-1 text-sm border border-base-300">
-                                                    <p><span className="text-base-content/50">Bank:</span> <strong>{payment.bank.bank}</strong></p>
-                                                    <p><span className="text-base-content/50">Branch:</span> <strong>{payment.bank.branch}</strong></p>
-                                                    <p><span className="text-base-content/50">Account Name:</span> <strong>{payment.bank.accountName}</strong></p>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-base-content/50">Account No:</span>
-                                                        <span className="font-mono font-bold text-primary">{payment.bank.accountNo}</span>
-                                                        <button className="btn btn-ghost btn-xs" onClick={() => handleCopy(payment.bank.accountNo)}>
-                                                            {copied ? <CheckCircle2 size={14} className="text-success" /> : <Copy size={14} />}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div className="border-t border-base-300 pt-3">
-                                                    <p className="text-xs text-base-content/50">Use <strong>"Donation - {finalAmount}"</strong> as the reference.</p>
+                                                <div className="bg-base-100 p-4">
+                                                    <DetailRow label="Bank" value={payment.bank.bank} />
+                                                    <DetailRow label="Branch" value={payment.bank.branch} />
+                                                    <DetailRow label="Account name" value={payment.bank.accountName} />
+                                                    <DetailRow
+                                                        label="Account no."
+                                                        value={<span className="font-mono">{payment.bank.accountNo}</span>}
+                                                        action={
+                                                            <button type="button" className="btn btn-ghost btn-xs" onClick={() => handleCopy(payment.bank.accountNo)} aria-label="Copy bank account number">
+                                                                {copied ? <CheckCircle2 size={14} className="text-success" /> : <Copy size={14} />}
+                                                            </button>
+                                                        }
+                                                    />
+                                                    <DetailRow label="Reference" value={`Donation - ${finalAmount}`} />
                                                 </div>
                                             </div>
                                         )}
 
                                         {isOnlineMethod && selectedOnlineMethod && (
-                                            <div className="space-y-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="bg-secondary/10 text-secondary rounded-xl p-2.5">
+                                            <div className="border border-base-300 bg-base-200 p-5">
+                                                <div className="mb-4 flex items-center gap-3">
+                                                    <div className="grid h-11 w-11 place-items-center bg-secondary text-secondary-content">
                                                         <CreditCard size={18} />
                                                     </div>
-                                                    <h4 className="font-semibold text-sm">Pay with {selectedOnlineMethod.displayName}</h4>
+                                                    <h4 className="font-bold text-primary">Pay with {selectedOnlineMethod.displayName}</h4>
                                                 </div>
+
                                                 {feeLoading && (
-                                                  <div className="text-center py-2"><span className="loading loading-dots loading-sm text-primary"></span></div>
+                                                    <div className="mb-4 bg-base-100 p-4">
+                                                        <div className="space-y-3">
+                                                            <SkeletonBlock className="h-4 w-2/3 bg-primary/10" />
+                                                            <SkeletonBlock className="h-4 w-1/2 bg-primary/10" />
+                                                            <SkeletonBlock className="h-4 w-3/4 bg-primary/10" />
+                                                        </div>
+                                                    </div>
                                                 )}
+
                                                 {feePreview && feePreview.enabled && feePreview.platformFee > 0 && (
-                                                  <div className="bg-base-100 rounded-xl p-3 border border-base-300 space-y-1">
-                                                    <div className="flex justify-between text-sm">
-                                                      <span className="text-base-content/60">Donation</span>
-                                                      <span className="font-medium">{currency} {feePreview.amount.toLocaleString()}</span>
+                                                    <div className="mb-4 bg-base-100 p-4">
+                                                        <DetailRow label="Donation" value={formatMoney(currency, feePreview.amount)} />
+                                                        <DetailRow
+                                                            label={`Platform fee (${feePreview.percent}%${(feePreview.fixed ?? 0) > 0 ? ` + ${formatMoney(currency, feePreview.fixed)}` : ""})`}
+                                                            value={formatMoney(currency, feePreview.platformFee)}
+                                                        />
+                                                        <DetailRow label="Total to pay" value={formatMoney(currency, feePreview.totalAmount)} />
                                                     </div>
-                                                    <div className="flex justify-between text-sm">
-                                                      <span className="text-base-content/60">Platform Fee ({feePreview.percent}%{(feePreview.fixed ?? 0) > 0 ? ` + ${currency} ${feePreview.fixed}` : ''})</span>
-                                                      <span className="font-medium">{currency} {feePreview.platformFee.toLocaleString()}</span>
-                                                    </div>
-                                                    <div className="border-t border-base-300 pt-1 flex justify-between text-sm font-semibold">
-                                                      <span>Total to Pay</span>
-                                                      <span className="text-primary">{currency} {feePreview.totalAmount.toLocaleString()}</span>
-                                                    </div>
-                                                  </div>
                                                 )}
-                                                <p className="text-sm text-base-content/60">
+
+                                                <p className="text-sm leading-relaxed text-base-content/60">
                                                     You will be redirected to {selectedOnlineMethod.displayName} to complete your donation securely.
                                                 </p>
-                                                <div className="form-control">
-                                                    <label className="label"><span className="label-text text-sm">Your Email *</span></label>
-                                                    <input
-                                                        type="email"
-                                                        className="input input-bordered input-sm"
-                                                        placeholder="your@email.com"
-                                                        value={donorEmail}
-                                                        onChange={(e) => setDonorEmail(e.target.value)}
-                                                        required
-                                                    />
+
+                                                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                                                    <label className="form-control">
+                                                        <span className="label pb-2">
+                                                            <span className="label-text text-sm font-bold text-primary">Email *</span>
+                                                        </span>
+                                                        <input
+                                                            type="email"
+                                                            className="input input-bordered bg-base-100"
+                                                            placeholder="your@email.com"
+                                                            value={donorEmail}
+                                                            onChange={(event) => setDonorEmail(event.target.value)}
+                                                            required
+                                                        />
+                                                    </label>
+                                                    <label className="form-control">
+                                                        <span className="label pb-2">
+                                                            <span className="label-text text-sm font-bold text-primary">Name</span>
+                                                        </span>
+                                                        <input
+                                                            type="text"
+                                                            className="input input-bordered bg-base-100"
+                                                            placeholder="Full name"
+                                                            value={donorName}
+                                                            onChange={(event) => setDonorName(event.target.value)}
+                                                        />
+                                                    </label>
                                                 </div>
-                                                <div className="form-control">
-                                                    <label className="label"><span className="label-text text-sm">Your Name (optional)</span></label>
-                                                    <input
-                                                        type="text"
-                                                        className="input input-bordered input-sm"
-                                                        placeholder="Full name"
-                                                        value={donorName}
-                                                        onChange={(e) => setDonorName(e.target.value)}
-                                                    />
-                                                </div>
-                                                <div className="bg-base-200 rounded-xl p-3 text-xs text-base-content/50 space-y-1 border border-base-300">
-                                                    <p>Accepted: {selectedOnlineMethod.supportedCurrencies.join(', ')}</p>
-                                                    <p>All transactions are encrypted and secure.</p>
+
+                                                <div className="mt-4 border border-base-300 bg-base-100 p-3 text-xs leading-relaxed text-base-content/50">
+                                                    Accepted currencies: {selectedOnlineMethod.supportedCurrencies.join(", ")}. All transactions are encrypted and secure.
                                                 </div>
                                             </div>
                                         )}
 
-                                        <div className="border-t border-base-300 pt-4 flex gap-2">
-                                            <button className="btn btn-ghost btn-sm" onClick={() => setStep("payment")}>Back</button>
+                                        <div className="flex items-center justify-between gap-3 border-t border-base-300 pt-5">
+                                            <button type="button" className="btn btn-ghost" onClick={() => setStep("payment")}>
+                                                Back
+                                            </button>
                                             <button
-                                                className={`btn btn-primary flex-1 ${initiating ? "loading" : ""}`}
+                                                type="button"
+                                                className="btn btn-primary"
                                                 disabled={initiating || (!!isOnlineMethod && !donorEmail.trim())}
                                                 onClick={handleConfirm}
                                             >
-                                                {initiating ? "Processing..." : isOnlineMethod ? "Proceed to Payment" : "I've Made the Transfer"}
+                                                {initiating ? <SkeletonBlock className="h-4 w-32 bg-primary-content/25" /> : isOnlineMethod ? "Proceed to payment" : "I've made the transfer"}
                                             </button>
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Step 4: Success */}
                                 {step === "success" && (
-                                    <div className="text-center space-y-4 py-4">
+                                    <div className="py-8 text-center">
                                         <motion.div
-                                            initial={{ scale: 0 }}
+                                            initial={{ scale: 0.86 }}
                                             animate={{ scale: 1 }}
-                                            transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                                            transition={{ type: "spring", stiffness: 220, damping: 18 }}
+                                            className="mx-auto mb-6 grid h-24 w-24 place-items-center bg-success/10 text-success"
                                         >
-                                            <div className="bg-success/10 text-success rounded-full p-4 inline-flex">
-                                                <CheckCircle2 size={48} />
-                                            </div>
+                                            <CheckCircle2 size={46} />
                                         </motion.div>
-                                        <h4 className="text-xl font-bold">Thank You for Your Generosity!</h4>
-                                        <div className="bg-gradient-to-r from-secondary/10 to-secondary/5 rounded-xl p-4 border border-secondary/20">
-                                            <p className="text-sm text-base-content/60">
-                                                Your donation of <strong className="text-primary">{currency} {finalAmount?.toLocaleString()}</strong> will make a real difference in the lives of University Practice students.
-                                            </p>
-                                        </div>
+                                        <h4 className="text-2xl font-bold text-primary">Thank you for your generosity.</h4>
+                                        <p className="mx-auto mt-4 max-w-md leading-relaxed text-base-content/60">
+                                            Your donation of <strong className="text-primary">{formatMoney(currency, finalAmount)}</strong> will help support University Practice students and UPOSA priorities.
+                                        </p>
                                         {!isOnlineMethod && (
-                                            <p className="text-xs text-base-content/50">
-                                                If you completed a MoMo or bank transfer, our team will verify and send you a confirmation receipt.
+                                            <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-base-content/45">
+                                                If you completed a MoMo or bank transfer, the team will verify it and follow up with a confirmation receipt.
                                             </p>
                                         )}
-                                        <div className="border-t border-base-300 pt-4">
-                                            <button className="btn btn-primary" onClick={() => setModalOpen(false)}>Close</button>
-                                        </div>
+                                        <button type="button" className="btn btn-primary mt-7" onClick={() => setModalOpen(false)}>
+                                            Close
+                                        </button>
                                     </div>
                                 )}
-                            </CardBody>
-                            </Card>
+                            </div>
                         </motion.div>
                     </motion.div>
                 )}

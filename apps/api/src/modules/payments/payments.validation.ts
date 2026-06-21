@@ -14,7 +14,7 @@ export const initializePaymentSchema = z.object({
     dueId: z.string().optional(),
     // Optional callback override
     callbackUrl: z.string().url().optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   }),
 });
 

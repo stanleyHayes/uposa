@@ -1,16 +1,99 @@
+import { useMemo, useState } from "react";
+import { Link } from "react-router";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    ArrowRight,
+    ArrowUpRight,
+    Award,
+    BookOpen,
+    Calendar,
+    ChevronLeft,
+    ChevronRight,
+    Crown,
+    GraduationCap,
+    Image as ImageIcon,
+    Landmark,
+    MapPin,
+    School,
+    ShieldCheck,
+    Sparkles,
+    Users,
+    X,
+} from "lucide-react";
 import { Layout } from "../components/layout/Layout.tsx";
-import { GraduationCap, Award, Trophy, Users, ChevronLeft, ChevronRight, X, School, Image, Calendar, BookOpen } from "lucide-react";
-import { useState, useMemo } from "react";
 import { ScrollReveal } from "../components/common/ScrollReveal.tsx";
 import { StaggerChildren } from "../components/common/StaggerChildren.tsx";
-import HeroBanner from "../components/common/HeroBanner.tsx";
-import SectionHeader from "../components/common/SectionHeader.tsx";
-import { motion, AnimatePresence } from "framer-motion";
+import { HeroReveal } from "../components/common/HeroReveal.tsx";
 import SEO from "../components/common/SEO.tsx";
-import { useSiteData } from "../context/SiteDataContext.tsx";
+import { useSiteData, type GalleryItemData } from "../context/SiteDataContext.tsx";
 import SplashScreen from "../components/common/SplashScreen.tsx";
+import EmptyState from "../components/common/EmptyState.tsx";
 import { Card, CardAccent, CardBody } from "../components/ui/Card.tsx";
 import SchoolLeadershipHierarchy from "../components/common/SchoolLeadershipHierarchy.tsx";
+
+type GalleryTileProps = {
+    image: GalleryItemData;
+    index: number;
+    onOpen: (index: number) => void;
+};
+
+const GalleryTile = ({ image, index, onOpen }: GalleryTileProps) => {
+    const [imageFailed, setImageFailed] = useState(false);
+    const isFeatured = index === 0;
+    const category = image.category || "Gallery";
+
+    return (
+        <motion.button
+            type="button"
+            initial={{ opacity: 0, y: 22 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }}
+            transition={{ duration: 0.45, delay: Math.min(index * 0.04, 0.18) }}
+            className={`group relative isolate h-full min-h-[260px] overflow-hidden border border-primary/10 bg-primary text-left text-primary-content shadow-sm transition-all hover:z-10 hover:border-secondary/70 hover:shadow-xl ${isFeatured ? "md:col-span-2 md:row-span-2" : ""}`}
+            onClick={() => onOpen(index)}
+        >
+            {!imageFailed ? (
+                <img
+                    src={image.imageUrl}
+                    alt={image.title}
+                    loading="lazy"
+                    onError={() => setImageFailed(true)}
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                />
+            ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-base-100 p-6 text-center">
+                    <div className="mb-4 border border-secondary/30 bg-base-200 p-4">
+                        <img src="/logo.png" alt="" aria-hidden="true" className="h-16 w-16 object-contain opacity-90" />
+                    </div>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-secondary">Image unavailable</p>
+                </div>
+            )}
+
+            <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/50 to-transparent opacity-95" />
+            <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 p-4">
+                <span className="bg-secondary px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-primary">
+                    {category}
+                </span>
+                <span className="grid h-9 w-9 place-items-center border border-primary-content/20 bg-primary/55 text-primary-content transition-colors group-hover:bg-secondary group-hover:text-primary">
+                    <ArrowUpRight size={17} />
+                </span>
+            </div>
+            <div className="relative z-10 flex h-full flex-col justify-end p-5 md:p-6">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-primary-content/65">
+                    {String(index + 1).padStart(2, "0")} / {category}
+                </p>
+                <h3 className={`${isFeatured ? "text-3xl md:text-4xl" : "text-2xl"} font-bold leading-tight text-primary-content`}>
+                    {image.title}
+                </h3>
+                {image.description && (
+                    <p className={`mt-3 max-w-2xl leading-relaxed text-primary-content/75 ${isFeatured ? "line-clamp-3" : "line-clamp-2 text-sm"}`}>
+                        {image.description}
+                    </p>
+                )}
+            </div>
+        </motion.button>
+    );
+};
 
 const OurSchool = () => {
     const { data, loading } = useSiteData();
@@ -19,23 +102,27 @@ const OurSchool = () => {
 
     const galleryCategories = useMemo(() => {
         if (!data?.gallery) return ["All"];
-        const cats = new Set(data.gallery.map(g => g.category).filter(Boolean));
+        const cats = new Set(data.gallery.map((item) => item.category).filter(Boolean));
         return ["All", ...Array.from(cats)];
     }, [data?.gallery]);
 
     const filteredGallery = useMemo(() => {
         const items = data?.gallery || [];
         if (galleryFilter === "All") return items;
-        return items.filter(img => img.category === galleryFilter);
+        return items.filter((item) => item.category === galleryFilter);
     }, [data?.gallery, galleryFilter]);
 
-    const openLightbox = (idx: number) => setLightboxIndex(idx);
+    const openLightbox = (index: number) => setLightboxIndex(index);
     const closeLightbox = () => setLightboxIndex(null);
     const nextImage = () => {
-        if (lightboxIndex !== null) setLightboxIndex((lightboxIndex + 1) % filteredGallery.length);
+        if (lightboxIndex !== null && filteredGallery.length > 0) {
+            setLightboxIndex((lightboxIndex + 1) % filteredGallery.length);
+        }
     };
     const prevImage = () => {
-        if (lightboxIndex !== null) setLightboxIndex((lightboxIndex - 1 + filteredGallery.length) % filteredGallery.length);
+        if (lightboxIndex !== null && filteredGallery.length > 0) {
+            setLightboxIndex((lightboxIndex - 1 + filteredGallery.length) % filteredGallery.length);
+        }
     };
 
     if (loading || !data) {
@@ -43,73 +130,188 @@ const OurSchool = () => {
     }
 
     const schoolInfo = data.config.schoolInfo;
+    const leaders = data.schoolLeaders && data.schoolLeaders.length > 0
+        ? data.schoolLeaders
+        : schoolInfo.leadership.map((leader) => ({
+            name: leader.name,
+            position: leader.position,
+            initials: leader.initials,
+        }));
+
+    const schoolFacts = [
+        { label: "Founded", value: String(schoolInfo.founded), icon: Calendar },
+        { label: "Students", value: `${schoolInfo.studentPopulation.toLocaleString()}+`, icon: Users },
+        { label: "Teaching staff", value: `${schoolInfo.teachingStaff}+`, icon: BookOpen },
+        { label: "Programs", value: String(schoolInfo.programs.length), icon: GraduationCap },
+    ];
 
     return (
         <Layout>
-            <SEO title="Our School" description="Learn about University Practice Senior High School (UPSHS) - academic programs, achievements, notable alumni, and our rich legacy in Cape Coast, Ghana." canonicalPath="/our-school" />
-            {/* Hero */}
-            <HeroBanner icon={School} title="Our School" description={`${schoolInfo.name} — a proud institution of academic excellence, discipline, and holistic development since ${schoolInfo.founded}.`} />
+            <SEO title="Our School" description="Learn about University Practice Senior High School (UPSHS), its academic programs, leadership, achievements, gallery, and legacy in Cape Coast, Ghana." canonicalPath="/our-school" />
 
-            {/* School Overview */}
-            <section className="py-16">
-                <div className="max-w-7xl mx-auto px-4">
-                    <div className="grid md:grid-cols-2 gap-12 items-center">
-                        <ScrollReveal direction="left">
-                            <div>
-                                <h2 className="text-3xl font-bold mb-6">School Overview</h2>
-                                <div className="space-y-4 text-base-content/70">
-                                    <p>
-                                        {schoolInfo.name}, commonly known as "{schoolInfo.abbreviation}," is a co-educational institution located {schoolInfo.location}. Founded in <strong className="text-base-content">{schoolInfo.founded}</strong>, the school has grown from a small practice school into one of the most respected senior high schools in the Greater Accra Region.
-                                    </p>
-                                    <p>
-                                        The school benefits from its unique location within a university environment, providing students with access to academic resources, mentorship from university faculty, and a culture that prioritizes learning and personal development.
-                                    </p>
-                                    <p>
-                                        With a student population of over <strong className="text-base-content">{schoolInfo.studentPopulation.toLocaleString()}</strong> and a dedicated teaching staff of <strong className="text-base-content">{schoolInfo.teachingStaff}+</strong>, {schoolInfo.name} continues to produce outstanding graduates who excel in various fields across Ghana and beyond.
-                                    </p>
+            <section className="relative overflow-hidden bg-base-100 text-primary">
+                <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
+                <div
+                    className="absolute inset-0 opacity-[0.05]"
+                    style={{
+                        backgroundImage: "linear-gradient(90deg, #001B50 1px, transparent 1px), linear-gradient(#001B50 1px, transparent 1px)",
+                        backgroundSize: "44px 44px",
+                    }}
+                />
+                <img
+                    src="/logo.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -right-24 top-8 h-[520px] w-[520px] object-contain opacity-[0.08] md:top-4 md:h-[680px] md:w-[680px]"
+                />
+
+                <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 md:py-24 lg:grid-cols-[1fr_430px] lg:items-center">
+                    <HeroReveal>
+                        <div className="max-w-4xl">
+                            <div className="mb-8 inline-flex items-center gap-3 border border-primary/15 bg-base-200 px-4 py-2">
+                                <img src="/logo.png" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">Our school</p>
+                                    <p className="text-sm font-semibold text-primary/70">{schoolInfo.abbreviation || "UPSHS"} legacy</p>
                                 </div>
                             </div>
-                        </ScrollReveal>
-                        <ScrollReveal direction="right" delay={0.15}>
-                            <div className="grid grid-cols-2 gap-4">
-                                {[
-                                    { label: "Founded", value: String(schoolInfo.founded), icon: Calendar, gradient: "from-primary to-accent" },
-                                    { label: "Students", value: `${schoolInfo.studentPopulation.toLocaleString()}+`, icon: Users, gradient: "from-accent to-primary" },
-                                    { label: "Teaching Staff", value: `${schoolInfo.teachingStaff}+`, icon: BookOpen, gradient: "from-secondary/80 to-secondary" },
-                                    { label: "Programs", value: String(schoolInfo.programs.length), icon: GraduationCap, gradient: "from-primary via-accent to-primary/60" },
-                                ].map((stat) => (
-                                    <div key={stat.label} className="group relative bg-base-100 border border-base-300/50 rounded-2xl overflow-hidden shadow-[0_1px_4px_rgba(0,27,80,0.05)] hover:shadow-[0_12px_42px_rgba(0,27,80,0.09)] hover:-translate-y-1 transition-all duration-300">
-                                        <div className={`h-1.5 bg-gradient-to-r ${stat.gradient}`} />
-                                        <div className="p-6 flex flex-col items-center">
-                                            <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                                                <stat.icon size={20} className="text-white" />
-                                            </div>
-                                            <p className="text-4xl font-extrabold text-primary tracking-tight leading-none">{stat.value}</p>
-                                            <div className="w-8 h-0.5 bg-secondary/60 rounded-full my-3" />
-                                            <p className="text-sm font-medium text-base-content/60 uppercase tracking-wider">{stat.label}</p>
-                                        </div>
-                                    </div>
-                                ))}
+
+                            <p className="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.24em] text-secondary">
+                                <ShieldCheck size={16} />
+                                School identity
+                            </p>
+                            <h1 className="max-w-5xl text-5xl font-bold leading-[0.98] md:text-7xl">
+                                {schoolInfo.name} is the home ground of the UPOSA story.
+                            </h1>
+                            <p className="mt-7 max-w-2xl text-lg leading-relaxed text-base-content/65 md:text-xl">
+                                A school shaped by discipline, learning, leadership, and the old students who continue to carry its name forward.
+                            </p>
+
+                            <div className="mt-9 flex flex-wrap gap-3">
+                                <a href="#programs" className="btn btn-primary btn-lg">
+                                    Academic programs <ArrowRight size={18} />
+                                </a>
+                                <a href="#gallery" className="btn btn-secondary btn-lg">
+                                    View gallery
+                                </a>
                             </div>
-                        </ScrollReveal>
+                        </div>
+                    </HeroReveal>
+
+                    <ScrollReveal direction="left">
+                        <div className="border border-primary/15 bg-primary p-4 text-primary-content shadow-2xl">
+                            <div className="border border-primary-content/10 bg-primary-content/10 p-5">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">School brief</p>
+                                        <h2 className="mt-2 text-3xl font-bold leading-tight">{schoolInfo.abbreviation || schoolInfo.name}</h2>
+                                    </div>
+                                    <img src="/logo.png" alt="" aria-hidden="true" className="h-16 w-16 shrink-0 bg-primary-content object-contain p-1.5" />
+                                </div>
+
+                                <div className="mt-7 space-y-3">
+                                    {[
+                                        { label: "Slogan", value: schoolInfo.slogan || "The Legit Elites", icon: Sparkles },
+                                        { label: "Location", value: schoolInfo.location || "Cape Coast", icon: MapPin },
+                                        { label: "Founded", value: String(schoolInfo.founded || "1976"), icon: Landmark },
+                                    ].map((item) => {
+                                        const Icon = item.icon;
+                                        return (
+                                            <div key={item.label} className="flex items-center gap-4 border border-primary-content/10 bg-primary-content/10 p-4">
+                                                <span className="flex h-11 w-11 shrink-0 items-center justify-center bg-secondary text-secondary-content">
+                                                    <Icon size={21} />
+                                                </span>
+                                                <span>
+                                                    <span className="block font-bold">{item.value}</span>
+                                                    <span className="mt-1 block text-xs font-bold uppercase tracking-[0.16em] text-primary-content/45">{item.label}</span>
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </ScrollReveal>
+                </div>
+            </section>
+
+            <section className="bg-primary text-primary-content">
+                <div className="mx-auto max-w-7xl px-4 py-7">
+                    <StaggerChildren className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        {schoolFacts.map((fact) => {
+                            const Icon = fact.icon;
+                            return (
+                                <div key={fact.label} className="border border-primary-content/10 bg-primary-content/10 p-5">
+                                    <div className="mb-5 flex items-center justify-between">
+                                        <Icon size={22} className="text-secondary" />
+                                        <span className="text-xs font-bold uppercase tracking-[0.18em] text-primary-content/35">School</span>
+                                    </div>
+                                    <p className="text-4xl font-bold leading-none">{fact.value}</p>
+                                    <p className="mt-2 text-sm font-medium text-primary-content/55">{fact.label}</p>
+                                </div>
+                            );
+                        })}
+                    </StaggerChildren>
+                </div>
+            </section>
+
+            <section className="relative overflow-hidden bg-base-100 py-16 md:py-24">
+                <div className="absolute left-0 top-0 h-full w-2 bg-secondary" />
+                <div className="mx-auto grid max-w-7xl gap-10 px-4 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
+                    <ScrollReveal direction="right">
+                        <div className="sticky top-24">
+                            <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">School overview</p>
+                            <h2 className="text-4xl font-bold leading-tight text-primary md:text-5xl">A learning environment with a wider academic culture around it.</h2>
+                            <p className="mt-5 leading-relaxed text-base-content/65">
+                                {schoolInfo.name}, commonly known as {schoolInfo.abbreviation}, is a co-educational institution located in {schoolInfo.location}. Founded in {schoolInfo.founded}, it continues to produce graduates who carry the school’s name across Ghana and beyond.
+                            </p>
+                        </div>
+                    </ScrollReveal>
+
+                    <div className="space-y-4">
+                        {[
+                            "The school benefits from its unique location within a university environment, giving students access to academic resources, mentorship, and a culture of learning.",
+                            `With over ${schoolInfo.studentPopulation.toLocaleString()} students and ${schoolInfo.teachingStaff}+ teaching staff, the school combines scale with a deep tradition of discipline and personal development.`,
+                            "UPOSA keeps this story alive by connecting old students back to the institution through projects, mentorship, events, and school support.",
+                        ].map((copy, index) => (
+                            <ScrollReveal key={copy} delay={index * 0.08}>
+                                <div className="grid gap-4 border border-base-300 bg-base-100 p-5 shadow-sm md:grid-cols-[84px_1fr]">
+                                    <div className="flex h-16 w-16 items-center justify-center bg-primary text-primary-content">
+                                        <span className="text-xl font-bold">{String(index + 1).padStart(2, "0")}</span>
+                                    </div>
+                                    <p className="leading-relaxed text-base-content/68">{copy}</p>
+                                </div>
+                            </ScrollReveal>
+                        ))}
                     </div>
                 </div>
             </section>
 
-            {/* Programs Offered */}
-            <section className="py-16 bg-base-200">
-                <div className="max-w-7xl mx-auto px-4">
-                    <SectionHeader icon={GraduationCap} title="Programs Offered" description="Academic tracks available to students at our school." align="left" />
-                    <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {schoolInfo.programs.map((prog) => (
-                            <Card key={prog.name} shape="ribbon" className="h-full">
-                                <CardAccent />
-                                <CardBody className="items-center text-center flex flex-col">
-                                    <div className="bg-secondary/10 text-secondary rounded-xl p-2.5">
-                                        <GraduationCap size={32} />
+            <section id="programs" className="bg-base-200 py-16 md:py-24">
+                <div className="mx-auto max-w-7xl px-4">
+                    <ScrollReveal>
+                        <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                            <div>
+                                <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Programs offered</p>
+                                <h2 className="text-4xl font-bold leading-tight text-primary md:text-5xl">Academic tracks that shape student pathways.</h2>
+                            </div>
+                            <GraduationCap size={42} className="text-secondary" />
+                        </div>
+                    </ScrollReveal>
+
+                    <StaggerChildren className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+                        {schoolInfo.programs.map((program, index) => (
+                            <Card key={program.name} className="h-full">
+                                <CardAccent color={index % 2 === 0 ? "primary" : "secondary"} />
+                                <CardBody>
+                                    <div className="mb-8 flex items-start justify-between gap-4">
+                                        <span className="flex h-14 w-14 items-center justify-center bg-secondary/10 text-secondary">
+                                            <GraduationCap size={26} />
+                                        </span>
+                                        <ArrowUpRight size={18} className="text-base-content/25" />
                                     </div>
-                                    <h3 className="font-bold text-base">{prog.name}</h3>
-                                    <p className="text-sm text-base-content/70">{prog.description}</p>
+                                    <h3 className="text-xl font-bold text-primary">{program.name}</h3>
+                                    <p className="mt-3 text-sm leading-relaxed text-base-content/60">{program.description}</p>
                                 </CardBody>
                             </Card>
                         ))}
@@ -117,28 +319,28 @@ const OurSchool = () => {
                 </div>
             </section>
 
-            {/* Legacy & Achievements */}
-            <section id="achievements" className="py-16">
-                <div className="max-w-4xl mx-auto px-4">
-                    <SectionHeader icon={Trophy} title="Legacy & Achievements" description="Milestones that define our school's proud history." align="left" />
+            <section id="achievements" className="bg-base-100 py-16 md:py-24">
+                <div className="mx-auto grid max-w-7xl gap-10 px-4 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+                    <ScrollReveal direction="right">
+                        <div className="sticky top-24">
+                            <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Legacy and achievements</p>
+                            <h2 className="text-4xl font-bold leading-tight text-primary md:text-5xl">Milestones that keep showing up in the school story.</h2>
+                            <p className="mt-5 leading-relaxed text-base-content/65">
+                                These highlights give old students a shared record of school pride and progress.
+                            </p>
+                        </div>
+                    </ScrollReveal>
+
                     <div className="space-y-4">
-                        {schoolInfo.achievements.map((item, i) => (
-                            <ScrollReveal key={item.year + item.description} delay={i * 0.06}>
-                                <div className="flex items-stretch gap-4 group">
-                                    {/* Year badge */}
-                                    <div className="flex flex-col items-center shrink-0">
-                                        <div className="w-12 h-12 rounded-2xl bg-primary text-primary-content flex items-center justify-center font-bold text-sm shadow-sm group-hover:scale-110 transition-transform">
-                                            {item.year}
-                                        </div>
-                                        {i < schoolInfo.achievements.length - 1 && (
-                                            <div className="w-0.5 flex-1 bg-gradient-to-b from-primary/20 to-transparent mt-2" />
-                                        )}
+                        {schoolInfo.achievements.map((achievement, index) => (
+                            <ScrollReveal key={`${achievement.year}-${achievement.description}`} delay={index * 0.06}>
+                                <div className="grid gap-4 border border-base-300 bg-base-100 p-5 shadow-sm md:grid-cols-[96px_1fr]">
+                                    <div className="flex h-20 w-20 items-center justify-center bg-primary text-primary-content">
+                                        <span className="text-lg font-bold">{achievement.year}</span>
                                     </div>
-                                    {/* Card */}
-                                    <div className="flex-1 pb-4">
-                                        <div className="bg-base-100 rounded-xl border border-base-300/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 p-4">
-                                            <p className="font-semibold text-base-content">{item.description}</p>
-                                        </div>
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">Milestone</p>
+                                        <p className="mt-2 font-semibold leading-relaxed text-primary">{achievement.description}</p>
                                     </div>
                                 </div>
                             </ScrollReveal>
@@ -147,88 +349,102 @@ const OurSchool = () => {
                 </div>
             </section>
 
-            {/* Notable Alumni */}
-            <section className="py-16 bg-base-200 relative overflow-hidden">
-                <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-20 left-10 w-72 h-72 bg-secondary/5 rounded-full blur-3xl" />
-                    <div className="absolute bottom-10 right-10 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
-                </div>
-                <div className="max-w-7xl mx-auto px-4 relative">
-                    <SectionHeader icon={Award} title="Notable Alumni" description="Distinguished graduates who have made their mark in various fields." />
-                    <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {schoolInfo.notableAlumni.map((alum, i) => {
-                            const initials = alum.name.split(" ").map(n => n[0]).join("").slice(0, 2);
-                            const accents = [
-                                'from-secondary/15 via-secondary/5 to-transparent',
-                                'from-primary/12 via-primary/4 to-transparent',
-                                'from-accent/12 via-accent/4 to-transparent',
-                            ];
+            <section className="bg-primary py-16 text-primary-content md:py-24">
+                <div className="mx-auto max-w-7xl px-4">
+                    <ScrollReveal>
+                        <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                            <div>
+                                <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Notable alumni</p>
+                                <h2 className="text-4xl font-bold leading-tight md:text-5xl">Graduates carrying the school into wider spaces.</h2>
+                            </div>
+                            <Award size={42} className="text-secondary" />
+                        </div>
+                    </ScrollReveal>
+
+                    <StaggerChildren className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {schoolInfo.notableAlumni.map((alum) => {
+                            const initials = alum.name.split(" ").map((part) => part[0]).join("").slice(0, 2);
                             return (
-                                <ScrollReveal key={alum.name} delay={i * 0.08}>
-                                    <Card className="h-full group">
-                                        <CardAccent color={i % 3 === 0 ? 'secondary' : i % 3 === 1 ? 'primary' : 'accent'} />
-                                        {/* Decorative gradient */}
-                                        <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl ${accents[i % 3]} rounded-bl-[64px] pointer-events-none`} />
-                                        <CardBody className="flex flex-col items-center text-center relative">
-                                            {/* Avatar */}
-                                            <div className="relative mb-4">
-                                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary via-accent to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20 ring-4 ring-base-100">
-                                                    <span className="text-2xl font-bold text-primary-content">{initials}</span>
-                                                </div>
-                                                {/* Star badge */}
-                                                <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center shadow-md shadow-secondary/30 border-2 border-base-100">
-                                                    <Award size={12} className="text-secondary-content" />
-                                                </div>
-                                            </div>
-
-                                            {/* Name */}
-                                            <h3 className="font-bold text-lg">{alum.name}</h3>
-
-                                            {/* Achievement */}
-                                            <p className="text-sm text-base-content/70 mt-1.5 leading-relaxed max-w-[260px]">{alum.achievement}</p>
-
-                                            {/* Year badge */}
-                                            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-primary/8 to-accent/5 text-primary text-xs font-semibold border border-primary/10">
-                                                <GraduationCap size={12} />
-                                                {alum.yearGroup}
-                                            </div>
-                                        </CardBody>
-                                        {/* Bottom gradient accent */}
-                                        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-secondary/20 to-transparent" />
-                                    </Card>
-                                </ScrollReveal>
+                                <div key={alum.name} className="border border-primary-content/10 bg-primary-content/10 p-5">
+                                    <div className="mb-5 flex items-center gap-4">
+                                        <div className="flex h-16 w-16 items-center justify-center bg-secondary text-secondary-content">
+                                            <span className="text-xl font-bold">{initials}</span>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold">{alum.name}</h3>
+                                            <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-primary-content/40">{alum.yearGroup}</p>
+                                        </div>
+                                    </div>
+                                    <p className="leading-relaxed text-primary-content/65">{alum.achievement}</p>
+                                </div>
                             );
                         })}
                     </StaggerChildren>
                 </div>
             </section>
 
-            {/* School Leadership */}
-            <section id="leadership" className="py-16">
-                <div className="max-w-7xl mx-auto px-4">
-                    <SectionHeader icon={Users} title="School Leadership" description="The team guiding our school's vision and operations." />
-                    <SchoolLeadershipHierarchy
-                        leaders={
-                            data.schoolLeaders && data.schoolLeaders.length > 0
-                                ? data.schoolLeaders
-                                : schoolInfo.leadership.map((l) => ({ name: l.name, position: l.position, initials: l.initials }))
-                        }
-                    />
+            <section id="leadership" className="bg-base-100 py-16 md:py-24">
+                <div className="mx-auto max-w-7xl px-4">
+                    <ScrollReveal>
+                        <div className="mb-12 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                            <div>
+                                <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">School leadership</p>
+                                <h2 className="text-4xl font-bold leading-tight text-primary md:text-5xl">The team guiding the school’s daily vision.</h2>
+                            </div>
+                            <Crown size={42} className="text-secondary" />
+                        </div>
+                    </ScrollReveal>
+                    <SchoolLeadershipHierarchy leaders={leaders} />
                 </div>
             </section>
 
-            {/* Gallery */}
-            <section id="gallery" className="py-16 bg-base-200">
-                <div className="max-w-7xl mx-auto px-4">
-                    <SectionHeader icon={Image} title="Gallery" description="School events, facilities, and archived images." align="left" />
-                    {filteredGallery.length > 0 || (data?.gallery && data.gallery.length > 0) ? (
+            <section id="gallery" className="bg-base-200 py-16 md:py-24">
+                <div className="mx-auto max-w-7xl px-4">
+                    <ScrollReveal>
+                        <div className="mb-10 grid gap-6 lg:grid-cols-[1fr_340px] lg:items-end">
+                            <div>
+                                <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Gallery</p>
+                                <h2 className="max-w-3xl text-4xl font-bold leading-tight text-primary md:text-5xl">School moments, spaces, and archives.</h2>
+                                <p className="mt-4 max-w-2xl text-base leading-relaxed text-base-content/60">
+                                    A visual record of campus life, alumni gatherings, student achievements, and the spaces that carry the UPSHS story.
+                                </p>
+                            </div>
+                            <div className="border border-primary/10 bg-primary p-5 text-primary-content shadow-sm">
+                                <div className="mb-8 flex items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-secondary">Archive index</p>
+                                        <p className="mt-2 text-sm leading-relaxed text-primary-content/65">
+                                            {galleryFilter === "All" ? "All published school images" : `${galleryFilter} collection`}
+                                        </p>
+                                    </div>
+                                    <ImageIcon size={34} className="text-secondary" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="border border-primary-content/10 bg-primary-content/10 p-3">
+                                        <p className="text-3xl font-bold">{data.gallery.length}</p>
+                                        <p className="text-xs uppercase tracking-[0.14em] text-primary-content/60">Total images</p>
+                                    </div>
+                                    <div className="border border-primary-content/10 bg-primary-content/10 p-3">
+                                        <p className="text-3xl font-bold">{filteredGallery.length}</p>
+                                        <p className="text-xs uppercase tracking-[0.14em] text-primary-content/60">Showing</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </ScrollReveal>
+
+                    {data.gallery.length > 0 ? (
                         <>
                             <ScrollReveal>
-                                <div className="flex flex-wrap gap-2 mb-8">
+                                <div className="mb-8 flex flex-wrap gap-2 border-y border-primary/10 py-4">
                                     {galleryCategories.map((filter) => (
                                         <button
                                             key={filter}
-                                            className={`btn btn-sm ${galleryFilter === filter ? "btn-primary" : "btn-outline"}`}
+                                            type="button"
+                                            className={`border px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] transition-all ${galleryFilter === filter
+                                                ? "border-primary bg-primary text-primary-content shadow-sm"
+                                                : "border-primary/15 bg-base-100 text-primary hover:border-secondary hover:text-secondary"
+                                            }`}
                                             onClick={() => setGalleryFilter(filter || "All")}
                                         >
                                             {filter}
@@ -236,104 +452,119 @@ const OurSchool = () => {
                                     ))}
                                 </div>
                             </ScrollReveal>
-                            <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {filteredGallery.map((img, idx) => (
-                                    <Card
-                                        key={img.id}
-                                        className="cursor-pointer"
-                                    >
-                                        <figure className="h-48 bg-gradient-to-br from-primary/10 to-accent/10 overflow-hidden" onClick={() => openLightbox(idx)}>
-                                            <img
-                                                src={img.imageUrl}
-                                                alt={img.title}
-                                                loading="lazy"
-                                                className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500"
-                                            />
-                                        </figure>
-                                        <div className="py-3 px-4" onClick={() => openLightbox(idx)}>
-                                            <h3 className="font-semibold text-sm">{img.title}</h3>
-                                            <p className="text-xs text-base-content/60">{img.description}</p>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </StaggerChildren>
+
+                            {filteredGallery.length > 0 ? (
+                                <div className="grid auto-rows-[260px] gap-0 md:grid-cols-2 lg:grid-cols-3">
+                                    {filteredGallery.map((image, index) => (
+                                        <GalleryTile key={image.id} image={image} index={index} onOpen={openLightbox} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <EmptyState
+                                    icon={<ImageIcon />}
+                                    title="No images in this collection yet."
+                                    description="Choose another gallery category to keep browsing."
+                                />
+                            )}
                         </>
                     ) : (
-                        <div className="text-center py-12">
-                            <GraduationCap className="mx-auto text-primary/20 mb-3" size={48} />
-                            <p className="text-base-content/50">Gallery images coming soon.</p>
-                        </div>
+                        <EmptyState
+                            icon={<GraduationCap />}
+                            title="Gallery images coming soon."
+                            description="School moments, archive images, and event photos will appear here once they are published."
+                        />
                     )}
                 </div>
             </section>
 
-            {/* Lightbox */}
             <AnimatePresence>
                 {lightboxIndex !== null && filteredGallery[lightboxIndex] && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
                         onClick={closeLightbox}
                     >
                         <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
+                            initial={{ scale: 0.96, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="w-full max-w-2xl"
-                            onClick={(e) => e.stopPropagation()}
+                            exit={{ scale: 0.96, opacity: 0 }}
+                            className="relative w-full max-w-4xl overflow-hidden bg-base-100"
+                            onClick={(event) => event.stopPropagation()}
                         >
-                            <Card hover={false}>
-                            <CardAccent />
-                            <figure className="max-h-[60vh] overflow-hidden">
+                            <div className="max-h-[70vh] bg-black">
                                 <img
                                     src={filteredGallery[lightboxIndex].imageUrl}
                                     alt={filteredGallery[lightboxIndex].title}
-                                    className="w-full h-full object-contain"
+                                    onError={(event) => {
+                                        event.currentTarget.src = "/logo.png";
+                                        event.currentTarget.className = "max-h-[70vh] w-full bg-base-100 p-10 object-contain";
+                                    }}
+                                    className="max-h-[70vh] w-full object-contain"
                                 />
-                            </figure>
-                            <CardBody>
-                                <h3 className="font-bold text-lg">{filteredGallery[lightboxIndex].title}</h3>
-                                {filteredGallery[lightboxIndex].description && (
-                                    <p className="text-sm text-base-content/70">{filteredGallery[lightboxIndex].description}</p>
-                                )}
-                                {filteredGallery[lightboxIndex].category && (
-                                    <span className="badge badge-primary badge-sm">{filteredGallery[lightboxIndex].category}</span>
-                                )}
-                            </CardBody>
-                            <div className="absolute top-3 right-3">
-                                <button className="btn btn-ghost btn-sm btn-circle bg-base-100/80" onClick={closeLightbox}>
-                                    <X size={18} />
-                                </button>
                             </div>
-                            <button
-                                className="absolute left-3 top-1/2 -translate-y-1/2 btn btn-ghost btn-sm btn-circle bg-base-100/80"
-                                onClick={(e) => { e.stopPropagation(); prevImage(); }}
-                            >
-                                <ChevronLeft size={18} />
+                            <div className="border-t border-base-300 p-5">
+                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">
+                                    {filteredGallery[lightboxIndex].category || "Gallery"}
+                                </p>
+                                <h3 className="mt-1 text-xl font-bold text-primary">{filteredGallery[lightboxIndex].title}</h3>
+                                {filteredGallery[lightboxIndex].description && (
+                                    <p className="mt-2 text-sm leading-relaxed text-base-content/65">{filteredGallery[lightboxIndex].description}</p>
+                                )}
+                            </div>
+                            <button className="btn btn-ghost btn-sm btn-circle absolute right-3 top-3 bg-base-100/90" onClick={closeLightbox} aria-label="Close gallery image">
+                                <X size={18} />
                             </button>
-                            <button
-                                className="absolute right-3 top-1/2 -translate-y-1/2 btn btn-ghost btn-sm btn-circle bg-base-100/80"
-                                onClick={(e) => { e.stopPropagation(); nextImage(); }}
-                            >
-                                <ChevronRight size={18} />
-                            </button>
-                            </Card>
+                            {filteredGallery.length > 1 && (
+                                <>
+                                    <button
+                                        className="btn btn-ghost btn-sm btn-circle absolute left-3 top-1/2 -translate-y-1/2 bg-base-100/90"
+                                        onClick={(event) => { event.stopPropagation(); prevImage(); }}
+                                        aria-label="Previous gallery image"
+                                    >
+                                        <ChevronLeft size={18} />
+                                    </button>
+                                    <button
+                                        className="btn btn-ghost btn-sm btn-circle absolute right-3 top-1/2 -translate-y-1/2 bg-base-100/90"
+                                        onClick={(event) => { event.stopPropagation(); nextImage(); }}
+                                        aria-label="Next gallery image"
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </>
+                            )}
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* CTA */}
-            <section className="py-16 bg-gradient-to-br from-[#001B50] via-[#002870] to-[#1E3A8A] text-primary-content">
+            <section className="relative overflow-hidden bg-primary py-16 text-primary-content md:py-24">
+                <div
+                    className="absolute inset-0 opacity-[0.06]"
+                    style={{
+                        backgroundImage: "linear-gradient(90deg, currentColor 1px, transparent 1px), linear-gradient(currentColor 1px, transparent 1px)",
+                        backgroundSize: "42px 42px",
+                    }}
+                />
+                <img src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -bottom-36 -right-16 h-[420px] w-[420px] object-contain opacity-[0.1]" />
                 <ScrollReveal>
-                    <div className="max-w-3xl mx-auto px-4 text-center">
-                        <h2 className="text-3xl font-bold mb-4">Proud of Our School?</h2>
-                        <p className="opacity-90 mb-6">Join UPOSA and help us continue building on the legacy of {schoolInfo.name}.</p>
-                        <div className="flex flex-wrap gap-3 justify-center">
-                            <a href="/membership" className="btn btn-secondary">Join UPOSA</a>
-                            <a href="/donate" className="btn btn-outline border-current text-current hover:bg-current/10">Support the School</a>
+                    <div className="relative mx-auto max-w-4xl px-4 text-center">
+                        <div className="mb-6 inline-flex items-center gap-2 border border-primary-content/12 bg-primary-content/10 px-4 py-2">
+                            <School size={14} className="text-secondary" />
+                            <span className="text-sm font-semibold text-primary-content/80">School support</span>
+                        </div>
+                        <h2 className="text-4xl font-bold leading-tight md:text-5xl">Proud of our school? Keep building its legacy.</h2>
+                        <p className="mx-auto mt-5 max-w-xl text-primary-content/70">
+                            Join UPOSA and help support the next generation of {schoolInfo.name} students.
+                        </p>
+                        <div className="mt-9 flex flex-wrap justify-center gap-3">
+                            <Link to="/membership" className="btn btn-secondary">
+                                Join UPOSA
+                            </Link>
+                            <Link to="/donate" className="btn border-primary-content/20 bg-primary-content/10 text-primary-content hover:bg-primary-content/20">
+                                Support the school
+                            </Link>
                         </div>
                     </div>
                 </ScrollReveal>

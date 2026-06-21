@@ -26,8 +26,8 @@ export const createPaymentMethodSchema = z.object({
     isEnabled: z.boolean().optional(),
     supportedCurrencies: z.array(z.string()).min(1, 'At least one currency required'),
     countries: z.array(z.string()).min(1, 'At least one country required'),
-    credentials: z.record(z.string()).optional(),
-    config: z.record(z.unknown()).optional(),
+    credentials: z.record(z.string(), z.string()).optional(),
+    config: z.record(z.string(), z.unknown()).optional(),
   }),
 });
 
@@ -38,8 +38,8 @@ export const updatePaymentMethodSchema = z.object({
     isEnabled: z.boolean().optional(),
     supportedCurrencies: z.array(z.string()).optional(),
     countries: z.array(z.string()).optional(),
-    credentials: z.record(z.string()).optional(),
-    config: z.record(z.unknown()).optional(),
+    credentials: z.record(z.string(), z.string()).optional(),
+    config: z.record(z.string(), z.unknown()).optional(),
   }),
 });
 

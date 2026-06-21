@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { RouteRequest } from '../../types/request.types';
 import {
   listGalleryItems,
   createGalleryItem,
@@ -18,14 +19,14 @@ import { uploadToCloudinary } from '../../utils/cloudinary.utils';
 //  PUBLIC
 // ═══════════════════════════════════════════════════════════
 
-export async function listGalleryHandler(req: Request, res: Response): Promise<void> {
+export async function listGalleryHandler(req: RouteRequest, res: Response): Promise<void> {
   const category = req.query.category as string | undefined;
   const categoryId = req.query.categoryId as string | undefined;
   const items = await listGalleryItems({ category, categoryId });
   successResponse(res, 'Gallery items retrieved', items);
 }
 
-export async function listPublicCategoriesHandler(_req: Request, res: Response): Promise<void> {
+export async function listPublicCategoriesHandler(req: RouteRequest, res: Response): Promise<void> {
   const categories = await listGalleryCategories();
   successResponse(res, 'Gallery categories retrieved', categories);
 }
@@ -34,17 +35,17 @@ export async function listPublicCategoriesHandler(_req: Request, res: Response):
 //  ADMIN — CATEGORIES
 // ═══════════════════════════════════════════════════════════
 
-export async function adminListCategoriesHandler(_req: Request, res: Response): Promise<void> {
+export async function adminListCategoriesHandler(req: RouteRequest, res: Response): Promise<void> {
   const categories = await listGalleryCategories();
   successResponse(res, 'Gallery categories retrieved', categories);
 }
 
-export async function adminGetCategoryHandler(req: Request, res: Response): Promise<void> {
+export async function adminGetCategoryHandler(req: RouteRequest, res: Response): Promise<void> {
   const cat = await getCategoryById(req.params.id);
   successResponse(res, 'Category retrieved', cat);
 }
 
-export async function adminCreateCategoryHandler(req: Request, res: Response): Promise<void> {
+export async function adminCreateCategoryHandler(req: RouteRequest, res: Response): Promise<void> {
   const { name, description } = req.body;
   if (!name) {
     errorResponse(res, 'Name is required', 400);
@@ -55,7 +56,7 @@ export async function adminCreateCategoryHandler(req: Request, res: Response): P
   successResponse(res, 'Category created', cat, 201);
 }
 
-export async function adminUpdateCategoryHandler(req: Request, res: Response): Promise<void> {
+export async function adminUpdateCategoryHandler(req: RouteRequest, res: Response): Promise<void> {
   const { name, description, order } = req.body;
   const coverImageUrl = req.file ? await uploadToCloudinary(req.file, 'gallery/categories') : undefined;
   const data: Record<string, unknown> = {};
@@ -67,7 +68,7 @@ export async function adminUpdateCategoryHandler(req: Request, res: Response): P
   successResponse(res, 'Category updated', cat);
 }
 
-export async function adminDeleteCategoryHandler(req: Request, res: Response): Promise<void> {
+export async function adminDeleteCategoryHandler(req: RouteRequest, res: Response): Promise<void> {
   const result = await deleteGalleryCategory(req.params.id);
   successResponse(res, result.message);
 }
@@ -76,14 +77,14 @@ export async function adminDeleteCategoryHandler(req: Request, res: Response): P
 //  ADMIN — GALLERY ITEMS
 // ═══════════════════════════════════════════════════════════
 
-export async function adminListGalleryHandler(req: Request, res: Response): Promise<void> {
+export async function adminListGalleryHandler(req: RouteRequest, res: Response): Promise<void> {
   const category = req.query.category as string | undefined;
   const categoryId = req.query.categoryId as string | undefined;
   const items = await listGalleryItems({ category, categoryId });
   successResponse(res, 'Gallery items retrieved', items);
 }
 
-export async function adminBulkUploadHandler(req: Request, res: Response): Promise<void> {
+export async function adminBulkUploadHandler(req: RouteRequest, res: Response): Promise<void> {
   const files = req.files as Express.Multer.File[] | undefined;
 
   if (!files || files.length === 0) {
@@ -116,7 +117,7 @@ export async function adminBulkUploadHandler(req: Request, res: Response): Promi
   successResponse(res, `${created.length} image(s) uploaded`, created, 201);
 }
 
-export async function adminUpdateItemHandler(req: Request, res: Response): Promise<void> {
+export async function adminUpdateItemHandler(req: RouteRequest, res: Response): Promise<void> {
   const { title, caption, description } = req.body;
   const data: Record<string, unknown> = {};
   if (title !== undefined) data.title = title;
@@ -126,12 +127,12 @@ export async function adminUpdateItemHandler(req: Request, res: Response): Promi
   successResponse(res, 'Gallery item updated', item);
 }
 
-export async function adminDeleteGalleryHandler(req: Request, res: Response): Promise<void> {
+export async function adminDeleteGalleryHandler(req: RouteRequest, res: Response): Promise<void> {
   const result = await deleteGalleryItem(req.params.id);
   successResponse(res, result.message);
 }
 
-export async function adminBulkDeleteHandler(req: Request, res: Response): Promise<void> {
+export async function adminBulkDeleteHandler(req: RouteRequest, res: Response): Promise<void> {
   const { ids } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) {
     errorResponse(res, 'ids array is required', 400);

@@ -1,432 +1,642 @@
-import { Layout } from "../components/layout/Layout.tsx";
-import { Mail, Phone, MapPin, Send, FileText, Clock, ArrowRight, CheckCircle2, MessageCircle, Sparkles, Globe, Users } from "lucide-react";
-import { useState, useRef } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    ArrowRight,
+    CheckCircle2,
+    ChevronRight,
+    Clock,
+    FileText,
+    Globe,
+    Mail,
+    MapPin,
+    MessageCircle,
+    Phone,
+    Send,
+    ShieldCheck,
+    Users,
+} from "lucide-react";
+import { Layout } from "../components/layout/Layout.tsx";
 import { ScrollReveal } from "../components/common/ScrollReveal.tsx";
-import HeroBanner from "../components/common/HeroBanner.tsx";
+import { StaggerChildren } from "../components/common/StaggerChildren.tsx";
+import { HeroReveal } from "../components/common/HeroReveal.tsx";
+import SEO from "../components/common/SEO.tsx";
 import { useSiteData } from "../context/SiteDataContext.tsx";
 import { submitContact, submitTranscriptRequest, subscribeNewsletter } from "../api/client.ts";
 import SplashScreen from "../components/common/SplashScreen.tsx";
-import { Card, CardAccent, CardBody } from "../components/ui/Card.tsx";
+import { SkeletonBlock } from "../components/common/Skeleton.tsx";
+
+function formValue(formData: FormData, key: string) {
+    return String(formData.get(key) || "").trim();
+}
+
+function SuccessPanel({
+    icon,
+    title,
+    description,
+    action,
+}: {
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    action: React.ReactNode;
+}) {
+    return (
+        <motion.div
+            key="success"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className="relative overflow-hidden border border-success/20 bg-success/5 p-8 text-center"
+        >
+            <span aria-hidden="true" className="absolute left-4 top-4 h-5 w-5 border-l-2 border-t-2 border-success/20" />
+            <span aria-hidden="true" className="absolute bottom-4 right-4 h-5 w-5 border-b-2 border-r-2 border-success/20" />
+            <motion.div
+                initial={{ scale: 0.86 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 220, damping: 18 }}
+                className="mx-auto mb-5 grid h-20 w-20 place-items-center bg-success/10 text-success"
+            >
+                {icon}
+            </motion.div>
+            <h3 className="text-2xl font-bold text-primary">{title}</h3>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-base-content/60">{description}</p>
+            <div className="mt-7">{action}</div>
+        </motion.div>
+    );
+}
 
 const Contact = () => {
     const { data, loading } = useSiteData();
     const [searchParams] = useSearchParams();
     const [contactSent, setContactSent] = useState(false);
     const [contactLoading, setContactLoading] = useState(false);
-    const [contactError, setContactError] = useState('');
+    const [contactError, setContactError] = useState("");
     const [transcriptSent, setTranscriptSent] = useState(false);
     const [transcriptLoading, setTranscriptLoading] = useState(false);
-    const [transcriptError, setTranscriptError] = useState('');
+    const [transcriptError, setTranscriptError] = useState("");
     const [newsletterDone, setNewsletterDone] = useState(false);
     const [newsletterLoading, setNewsletterLoading] = useState(false);
+    const [newsletterError, setNewsletterError] = useState("");
     const contactFormRef = useRef<HTMLFormElement>(null);
+    const transcriptFormRef = useRef<HTMLFormElement>(null);
 
     if (loading || !data) {
         return <SplashScreen />;
     }
 
     const contact = data.config.contact;
+    const primaryEmail = contact.emails.general || "info@uposa.org";
+    const primaryPhone = contact.phones[0] || "0244036676";
+    const phones = contact.phones.length > 0 ? contact.phones : [primaryPhone];
+    const emailEntries = Object.entries(contact.emails).filter(([, email]) => Boolean(email));
+
+    const handleContactSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setContactLoading(true);
+        setContactError("");
+        const formData = new FormData(event.currentTarget);
+
+        try {
+            await submitContact({
+                name: formValue(formData, "name"),
+                email: formValue(formData, "email"),
+                subject: formValue(formData, "subject") || "General Inquiry",
+                message: formValue(formData, "message"),
+            });
+            setContactSent(true);
+            contactFormRef.current?.reset();
+        } catch (err) {
+            setContactError(err instanceof Error ? err.message : "Failed to send message");
+        } finally {
+            setContactLoading(false);
+        }
+    };
+
+    const handleTranscriptSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setTranscriptLoading(true);
+        setTranscriptError("");
+        const formData = new FormData(event.currentTarget);
+
+        try {
+            await submitTranscriptRequest({
+                fullName: formValue(formData, "fullName"),
+                email: formValue(formData, "email"),
+                phone: formValue(formData, "phone") || undefined,
+                yearGroup: formValue(formData, "yearGroup"),
+                notes: formValue(formData, "notes") || undefined,
+            });
+            setTranscriptSent(true);
+            transcriptFormRef.current?.reset();
+        } catch (err) {
+            setTranscriptError(err instanceof Error ? err.message : "Failed to submit request");
+        } finally {
+            setTranscriptLoading(false);
+        }
+    };
+
+    const handleNewsletterSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setNewsletterLoading(true);
+        setNewsletterError("");
+        const formData = new FormData(event.currentTarget);
+
+        try {
+            await subscribeNewsletter(formValue(formData, "email"));
+            setNewsletterDone(true);
+            event.currentTarget.reset();
+        } catch (err) {
+            setNewsletterError(err instanceof Error ? err.message : "Failed to subscribe");
+        } finally {
+            setNewsletterLoading(false);
+        }
+    };
+
+    const contactCards = [
+        {
+            icon: Mail,
+            label: "Email",
+            value: primaryEmail,
+            detail: "General enquiries and association support",
+            href: `mailto:${primaryEmail}`,
+        },
+        {
+            icon: Phone,
+            label: "Phone",
+            value: phones.join(" / "),
+            detail: "Call the UPOSA desk during office hours",
+            href: `tel:${primaryPhone.replace(/\s/g, "")}`,
+        },
+        {
+            icon: MapPin,
+            label: "Location",
+            value: contact.address,
+            detail: "University Practice SHS and alumni coordination",
+            href: undefined,
+        },
+    ];
+
+    const serviceSteps = [
+        { title: "Submit your details", description: "Share your full name, year group, contact, and notes.", icon: Send },
+        { title: "UPOSA coordinates", description: "The request is routed through the association desk.", icon: Users },
+        { title: "Document follow-up", description: "You receive next steps for pickup or email delivery.", icon: Globe },
+    ];
 
     return (
         <Layout>
-            <HeroBanner icon={Mail} title="Contact Us" description="Have a question, suggestion, or need help? We'd love to hear from you." />
+            <SEO
+                title="Contact"
+                description="Reach the UPOSA desk for enquiries, transcript requests, alumni support, and association updates."
+                canonicalPath="/contact"
+            />
 
-            {/* Contact Info Strip */}
-            <section className="relative -mt-8 z-10 pb-4">
-                <div className="max-w-5xl mx-auto px-4">
-                    <motion.div
-                        className="bg-base-100 rounded-2xl shadow-xl border border-base-300/60 overflow-hidden"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                    >
-                        <div className="h-1 bg-gradient-to-r from-primary via-accent/80 to-secondary/60" />
-                        <div className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-base-300/50">
-                            {[
-                                { icon: Mail, label: "Email", value: contact.emails.general || "info@uposa.org", href: `mailto:${contact.emails.general || "info@uposa.org"}`, color: "from-primary/10 to-accent/5" },
-                                { icon: Phone, label: "Phone", value: contact.phones.join(" / "), href: `tel:${contact.phones[0]?.replace(/\s/g, '')}`, color: "from-secondary/10 to-secondary/5" },
-                                { icon: MapPin, label: "Location", value: contact.address, href: undefined, color: "from-accent/10 to-primary/5" },
-                            ].map((item, i) => (
-                                <motion.div
-                                    key={item.label}
-                                    className="flex items-center gap-3.5 p-5 group"
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.3 + i * 0.1 }}
-                                >
-                                    <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
-                                        <item.icon size={18} className="text-primary" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-[11px] text-base-content/40 font-medium uppercase tracking-wider">{item.label}</p>
-                                        {item.href ? (
-                                            <a href={item.href} className="text-sm font-semibold truncate block hover:text-primary transition-colors">{item.value}</a>
-                                        ) : (
-                                            <p className="text-sm font-semibold truncate">{item.value}</p>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            ))}
+            <section className="relative overflow-hidden bg-base-100 text-primary">
+                <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
+                <div
+                    className="absolute inset-0 opacity-[0.05]"
+                    style={{
+                        backgroundImage: "linear-gradient(90deg, #001B50 1px, transparent 1px), linear-gradient(#001B50 1px, transparent 1px)",
+                        backgroundSize: "44px 44px",
+                    }}
+                />
+                <img
+                    src="/logo.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -right-24 top-8 h-[520px] w-[520px] object-contain opacity-[0.08] md:h-[680px] md:w-[680px]"
+                />
+
+                <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 md:py-24 lg:grid-cols-[1fr_430px] lg:items-center">
+                    <HeroReveal>
+                        <div className="max-w-4xl">
+                            <div className="mb-8 inline-flex items-center gap-3 border border-primary/15 bg-base-200 px-4 py-2">
+                                <img src="/logo.png" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">Contact desk</p>
+                                    <p className="text-sm font-semibold text-primary/70">Messages, documents, and alumni support</p>
+                                </div>
+                            </div>
+
+                            <p className="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-[0.24em] text-secondary">
+                                <MessageCircle size={16} />
+                                We are listening
+                            </p>
+                            <h1 className="max-w-5xl text-5xl font-bold leading-[0.98] md:text-7xl">
+                                One front desk for every alumni request.
+                            </h1>
+                            <p className="mt-7 max-w-2xl text-lg leading-relaxed text-base-content/65 md:text-xl">
+                                Ask a question, request transcript support, share an opportunity, or subscribe for association updates from the same UPOSA service desk.
+                            </p>
+
+                            <div className="mt-9 flex flex-wrap gap-3">
+                                <a href="#message" className="btn btn-primary btn-lg">
+                                    Send a message <ArrowRight size={18} />
+                                </a>
+                                <a href="#transcripts" className="btn btn-secondary btn-lg">
+                                    Request transcript
+                                </a>
+                            </div>
                         </div>
-                    </motion.div>
+                    </HeroReveal>
+
+                    <ScrollReveal direction="left">
+                        <div className="border border-primary/15 bg-primary p-4 text-primary-content shadow-2xl">
+                            <div className="border border-primary-content/10 bg-primary-content/10 p-5">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-secondary">Response desk</p>
+                                        <h2 className="mt-3 text-2xl font-bold">Route the right request to the right association channel.</h2>
+                                    </div>
+                                    <ShieldCheck className="text-secondary" size={34} />
+                                </div>
+
+                                <div className="mt-8 grid gap-3">
+                                    {[
+                                        { label: "General messages", value: "Contact form", icon: MessageCircle },
+                                        { label: "Document support", value: "Transcript path", icon: FileText },
+                                        { label: "Association updates", value: "Newsletter", icon: Mail },
+                                    ].map((item) => {
+                                        const Icon = item.icon;
+                                        return (
+                                            <a
+                                                key={item.label}
+                                                href={item.label === "Document support" ? "#transcripts" : item.label === "Association updates" ? "#newsletter" : "#message"}
+                                                className="group flex items-center gap-4 border border-primary-content/10 bg-primary-content/10 p-4 transition hover:bg-primary-content/15"
+                                            >
+                                                <div className="grid h-12 w-12 place-items-center bg-secondary text-secondary-content">
+                                                    <Icon size={20} />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary-content/45">{item.label}</p>
+                                                    <p className="mt-1 font-bold">{item.value}</p>
+                                                </div>
+                                                <ChevronRight size={18} className="text-primary-content/35 transition group-hover:text-secondary" />
+                                            </a>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </ScrollReveal>
                 </div>
             </section>
 
-            {/* Contact Form + Sidebar */}
-            <section className="py-16">
-                <div className="max-w-6xl mx-auto px-4">
-                    <div className="grid lg:grid-cols-5 gap-10">
-                        {/* Form */}
-                        <div className="lg:col-span-3">
-                            <ScrollReveal>
-                                <div className="flex items-center gap-2.5 mb-6">
-                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/10 to-accent/5 flex items-center justify-center">
-                                        <MessageCircle size={18} className="text-primary" />
+            <section className="bg-primary text-primary-content">
+                <div className="mx-auto max-w-7xl px-4 py-6">
+                    <StaggerChildren className="grid gap-3 md:grid-cols-3">
+                        {contactCards.map((item) => {
+                            const Icon = item.icon;
+                            const content = (
+                                <>
+                                    <div className="grid h-12 w-12 shrink-0 place-items-center bg-secondary text-secondary-content">
+                                        <Icon size={22} />
                                     </div>
-                                    <div>
-                                        <h2 className="text-2xl font-bold">Send us a message</h2>
-                                        <p className="text-base-content/50 text-sm">We'll get back to you within 24 hours.</p>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-content/45">{item.label}</p>
+                                        <p className="mt-1 truncate text-lg font-bold">{item.value}</p>
+                                        <p className="mt-1 text-xs leading-relaxed text-primary-content/50">{item.detail}</p>
                                     </div>
+                                </>
+                            );
+
+                            return item.href ? (
+                                <a key={item.label} href={item.href} className="flex items-start gap-4 border border-primary-content/10 bg-primary-content/10 p-4 transition hover:bg-primary-content/15">
+                                    {content}
+                                </a>
+                            ) : (
+                                <div key={item.label} className="flex items-start gap-4 border border-primary-content/10 bg-primary-content/10 p-4">
+                                    {content}
                                 </div>
-                            </ScrollReveal>
+                            );
+                        })}
+                    </StaggerChildren>
+                </div>
+            </section>
+
+            <section id="message" className="bg-base-200 py-16 md:py-24">
+                <div className="mx-auto grid max-w-7xl gap-8 px-4 lg:grid-cols-[1fr_390px] lg:items-start">
+                    <ScrollReveal>
+                        <div>
+                            <div className="mb-8">
+                                <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Send a message</p>
+                                <h2 className="max-w-3xl text-4xl font-bold leading-tight text-primary md:text-5xl">
+                                    Tell the UPOSA desk what you need.
+                                </h2>
+                                <p className="mt-4 max-w-2xl text-base leading-relaxed text-base-content/60">
+                                    Use this for enquiries, suggestions, member support, job or news submissions, and association matters.
+                                </p>
+                            </div>
 
                             <AnimatePresence mode="wait">
                                 {contactSent ? (
-                                    <motion.div
-                                        key="success"
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
-                                    >
-                                        <Card hover={false}>
-                                            <div className="absolute inset-0 bg-gradient-to-br from-success/5 via-transparent to-success/3 pointer-events-none rounded-[20px_4px_20px_4px]" />
-                                            <CardBody className="text-center py-12 relative">
-                                                <motion.div
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    transition={{ type: 'spring', stiffness: 200, delay: 0.1 }}
-                                                    className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4"
-                                                >
-                                                    <CheckCircle2 size={40} className="text-success" />
-                                                </motion.div>
-                                                <h3 className="text-xl font-bold mb-2">Message Sent!</h3>
-                                                <p className="text-base-content/60 text-sm max-w-sm mx-auto">We'll get back to you as soon as possible.</p>
-                                                <button className="btn btn-ghost btn-sm mt-4" onClick={() => setContactSent(false)}>Send another</button>
-                                            </CardBody>
-                                        </Card>
-                                    </motion.div>
+                                    <SuccessPanel
+                                        icon={<CheckCircle2 size={40} />}
+                                        title="Message sent"
+                                        description="Thanks for reaching out. The UPOSA desk will follow up through the contact details you shared."
+                                        action={
+                                            <button type="button" className="btn btn-primary" onClick={() => setContactSent(false)}>
+                                                Send another message
+                                            </button>
+                                        }
+                                    />
                                 ) : (
-                                    <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                                        <Card hover={false}>
-                                            <CardAccent />
-                                            <CardBody>
-                                                <form ref={contactFormRef} className="space-y-4" onSubmit={async (e) => {
-                                                    e.preventDefault();
-                                                    setContactLoading(true);
-                                                    setContactError('');
-                                                    const fd = new FormData(e.currentTarget);
-                                                    try {
-                                                        await submitContact({
-                                                            name: fd.get('name') as string,
-                                                            email: fd.get('email') as string,
-                                                            subject: fd.get('subject') as string || 'General Inquiry',
-                                                            message: fd.get('message') as string,
-                                                        });
-                                                        setContactSent(true);
-                                                        contactFormRef.current?.reset();
-                                                    } catch (err) {
-                                                        setContactError(err instanceof Error ? err.message : 'Failed to send message');
-                                                    } finally {
-                                                        setContactLoading(false);
-                                                    }
-                                                }}>
-                                                    <div className="grid sm:grid-cols-2 gap-4">
-                                                        <div className="form-control">
-                                                            <label className="label"><span className="label-text font-medium text-sm">Full Name *</span></label>
-                                                            <input name="name" type="text" placeholder="Your name" className="input input-bordered" required />
-                                                        </div>
-                                                        <div className="form-control">
-                                                            <label className="label"><span className="label-text font-medium text-sm">Email *</span></label>
-                                                            <input name="email" type="email" placeholder="you@example.com" className="input input-bordered" required />
-                                                        </div>
-                                                    </div>
-                                                    <div className="form-control">
-                                                        <label className="label"><span className="label-text font-medium text-sm">Subject</span></label>
-                                                        <input name="subject" type="text" placeholder="What is this about?" className="input input-bordered" defaultValue={searchParams.get("subject") || ""} />
-                                                    </div>
-                                                    <div className="form-control">
-                                                        <label className="label"><span className="label-text font-medium text-sm">Message *</span></label>
-                                                        <textarea name="message" className="textarea textarea-bordered h-32" placeholder="Tell us what's on your mind..." required></textarea>
-                                                    </div>
-                                                    {contactError && <p className="text-error text-sm">{contactError}</p>}
-                                                    <button type="submit" className={`btn btn-primary gap-2 ${contactLoading ? 'loading' : ''}`} disabled={contactLoading}>
-                                                        {contactLoading ? 'Sending...' : <>Send Message <Send size={16} /></>}
-                                                    </button>
-                                                </form>
-                                            </CardBody>
-                                        </Card>
-                                    </motion.div>
+                                    <motion.form
+                                        key="contact-form"
+                                        ref={contactFormRef}
+                                        initial={{ opacity: 0, y: 12 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -12 }}
+                                        className="border border-base-300 bg-base-100 p-5 shadow-sm md:p-7"
+                                        onSubmit={handleContactSubmit}
+                                    >
+                                        <div className="grid gap-4 sm:grid-cols-2">
+                                            <label className="form-control">
+                                                <span className="label pb-2">
+                                                    <span className="label-text text-sm font-bold text-primary">Full name *</span>
+                                                </span>
+                                                <input name="name" type="text" placeholder="Your name" className="input input-bordered bg-base-200" required />
+                                            </label>
+                                            <label className="form-control">
+                                                <span className="label pb-2">
+                                                    <span className="label-text text-sm font-bold text-primary">Email *</span>
+                                                </span>
+                                                <input name="email" type="email" placeholder="you@example.com" className="input input-bordered bg-base-200" required />
+                                            </label>
+                                        </div>
+
+                                        <label className="form-control mt-4">
+                                            <span className="label pb-2">
+                                                <span className="label-text text-sm font-bold text-primary">Subject</span>
+                                            </span>
+                                            <input
+                                                name="subject"
+                                                type="text"
+                                                placeholder="What is this about?"
+                                                className="input input-bordered bg-base-200"
+                                                defaultValue={searchParams.get("subject") || ""}
+                                            />
+                                        </label>
+
+                                        <label className="form-control mt-4">
+                                            <span className="label pb-2">
+                                                <span className="label-text text-sm font-bold text-primary">Message *</span>
+                                            </span>
+                                            <textarea
+                                                name="message"
+                                                className="textarea textarea-bordered min-h-40 bg-base-200"
+                                                placeholder="Tell us what is on your mind..."
+                                                required
+                                            />
+                                        </label>
+
+                                        {contactError && <p className="mt-4 border border-error/20 bg-error/5 p-3 text-sm font-semibold text-error">{contactError}</p>}
+
+                                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <p className="text-sm leading-relaxed text-base-content/50">
+                                                Messages are stored for association follow-up and internal response tracking.
+                                            </p>
+                                            <button type="submit" className="btn btn-primary shrink-0 gap-2" disabled={contactLoading}>
+                                                {contactLoading ? <SkeletonBlock className="h-4 w-24 bg-primary-content/25" /> : <>Send message <Send size={16} /></>}
+                                            </button>
+                                        </div>
+                                    </motion.form>
                                 )}
                             </AnimatePresence>
                         </div>
+                    </ScrollReveal>
 
-                        {/* Sidebar */}
-                        <div className="lg:col-span-2 space-y-5">
-                            {/* Office Hours */}
-                            <ScrollReveal delay={0.1}>
-                                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-accent/3 border border-primary/10 p-6">
-                                    <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-primary/5 to-transparent rounded-bl-[40px] pointer-events-none" />
-                                    <div className="flex items-center gap-2.5 mb-3 relative">
-                                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                            <Clock size={14} className="text-primary" />
-                                        </div>
-                                        <h3 className="font-bold text-sm">Office Hours</h3>
+                    <aside className="space-y-5">
+                        <ScrollReveal direction="left">
+                            <div className="border border-base-300 bg-base-100 p-5 shadow-sm">
+                                <div className="mb-5 flex items-start gap-4">
+                                    <div className="grid h-12 w-12 place-items-center bg-secondary text-secondary-content">
+                                        <Clock size={22} />
                                     </div>
-                                    <p className="text-sm text-base-content/60 leading-relaxed relative">{contact.officeHours}</p>
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">Office hours</p>
+                                        <h3 className="mt-1 text-xl font-bold text-primary">When to expect a response</h3>
+                                    </div>
                                 </div>
-                            </ScrollReveal>
+                                <p className="leading-relaxed text-base-content/60">{contact.officeHours}</p>
+                            </div>
+                        </ScrollReveal>
 
-                            {/* Quick Contacts */}
-                            <ScrollReveal delay={0.2}>
-                                <div className="space-y-2.5">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Sparkles size={13} className="text-secondary" />
-                                        <h3 className="font-bold text-sm">Quick Contacts</h3>
-                                    </div>
-                                    {Object.entries(contact.emails).map(([key, email]) => (
+                        <ScrollReveal direction="left" delay={0.08}>
+                            <div className="border border-base-300 bg-base-100 p-5 shadow-sm">
+                                <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-secondary">Quick contacts</p>
+                                <div className="space-y-3">
+                                    {emailEntries.map(([key, email]) => (
                                         <a
                                             key={key}
                                             href={`mailto:${email}`}
-                                            className="flex items-center gap-3 p-3.5 rounded-xl bg-base-100 border border-base-300/50 hover:border-primary/15 hover:shadow-[0_4px_16px_rgba(0,27,80,0.06)] transition-all duration-200 group"
+                                            className="group flex items-center gap-3 border border-base-300 bg-base-200 p-3 transition hover:border-primary/20 hover:bg-base-100"
                                         >
-                                            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/8 to-accent/5 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                                <Mail size={14} className="text-primary/70" />
+                                            <div className="grid h-10 w-10 shrink-0 place-items-center bg-primary/5 text-primary">
+                                                <Mail size={16} />
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <p className="text-[11px] text-base-content/35 capitalize font-medium">{key}</p>
-                                                <p className="text-sm font-medium truncate">{email}</p>
+                                                <p className="text-xs font-bold uppercase tracking-[0.12em] text-base-content/35">{key}</p>
+                                                <p className="truncate text-sm font-bold text-primary">{email}</p>
                                             </div>
-                                            <ArrowRight size={14} className="text-base-content/20 group-hover:text-primary/50 group-hover:translate-x-0.5 transition-all shrink-0" />
+                                            <ArrowRight size={15} className="text-base-content/25 transition group-hover:translate-x-1 group-hover:text-secondary" />
                                         </a>
                                     ))}
-                                    {contact.phones.map((phone, i) => (
+                                    {phones.map((phone) => (
                                         <a
-                                            key={i}
-                                            href={`tel:${phone.replace(/\s/g, '')}`}
-                                            className="flex items-center gap-3 p-3.5 rounded-xl bg-base-100 border border-base-300/50 hover:border-primary/15 hover:shadow-[0_4px_16px_rgba(0,27,80,0.06)] transition-all duration-200 group"
+                                            key={phone}
+                                            href={`tel:${phone.replace(/\s/g, "")}`}
+                                            className="group flex items-center gap-3 border border-base-300 bg-base-200 p-3 transition hover:border-primary/20 hover:bg-base-100"
                                         >
-                                            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-secondary/8 to-secondary/3 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                                <Phone size={14} className="text-secondary/70" />
+                                            <div className="grid h-10 w-10 shrink-0 place-items-center bg-secondary/10 text-secondary">
+                                                <Phone size={16} />
                                             </div>
-                                            <p className="text-sm font-medium flex-1">{phone}</p>
-                                            <ArrowRight size={14} className="text-base-content/20 group-hover:text-primary/50 group-hover:translate-x-0.5 transition-all shrink-0" />
+                                            <p className="min-w-0 flex-1 truncate text-sm font-bold text-primary">{phone}</p>
+                                            <ArrowRight size={15} className="text-base-content/25 transition group-hover:translate-x-1 group-hover:text-secondary" />
                                         </a>
                                     ))}
                                 </div>
-                            </ScrollReveal>
+                            </div>
+                        </ScrollReveal>
 
-                            {/* Map */}
-                            <ScrollReveal delay={0.3}>
-                                <div className="rounded-2xl overflow-hidden border border-base-300/60 shadow-sm">
-                                    <div className="h-0.5 bg-gradient-to-r from-primary/30 via-accent/20 to-transparent" />
-                                    <iframe
-                                        title="University Practice SHS Location"
-                                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3970.4!2d-0.1925!3d5.6505!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xfdf9c7ebaeabe93%3A0x5765d0e0f05ef088!2sUniversity%20of%20Ghana!5e0!3m2!1sen!2sgh!4v1710000000000!5m2!1sen!2sgh"
-                                        width="100%"
-                                        height="200"
-                                        style={{ border: 0 }}
-                                        allowFullScreen
-                                        loading="lazy"
-                                        referrerPolicy="no-referrer-when-downgrade"
-                                    />
+                        <ScrollReveal direction="left" delay={0.16}>
+                            <div className="overflow-hidden border border-base-300 bg-base-100 shadow-sm">
+                                <div className="border-b border-base-300 p-5">
+                                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">Location</p>
+                                    <h3 className="mt-1 text-xl font-bold text-primary">University Practice SHS</h3>
                                 </div>
-                            </ScrollReveal>
-                        </div>
-                    </div>
+                                <iframe
+                                    title="University Practice SHS Location"
+                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3970.4!2d-0.1925!3d5.6505!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xfdf9c7ebaeabe93%3A0x5765d0e0f05ef088!2sUniversity%20of%20Ghana!5e0!3m2!1sen!2sgh!4v1710000000000!5m2!1sen!2sgh"
+                                    width="100%"
+                                    height="260"
+                                    style={{ border: 0 }}
+                                    allowFullScreen
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                />
+                            </div>
+                        </ScrollReveal>
+                    </aside>
                 </div>
             </section>
 
-            {/* Transcript Request */}
-            <section id="transcripts" className="py-16 bg-base-200">
-                <div className="max-w-5xl mx-auto px-4">
-                    <div className="grid lg:grid-cols-2 gap-10 items-start">
-                        {/* Info */}
-                        <ScrollReveal>
-                            <div className="flex items-center gap-3.5 mb-6">
-                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/5 flex items-center justify-center shadow-sm">
-                                    <FileText size={24} className="text-primary" />
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold">Transcript Requests</h2>
-                                    <p className="text-sm text-base-content/50">We help you get your academic records</p>
-                                </div>
-                            </div>
-
-                            <p className="text-base-content/60 mb-8 leading-relaxed">
-                                Need a copy of your academic transcript? Submit a request and UPOSA will coordinate with the school administration on your behalf.
+            <section id="transcripts" className="bg-base-100 py-16 md:py-24">
+                <div className="mx-auto grid max-w-7xl gap-10 px-4 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+                    <ScrollReveal direction="right">
+                        <div className="sticky top-24">
+                            <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Transcript requests</p>
+                            <h2 className="text-4xl font-bold leading-tight text-primary md:text-5xl">
+                                Start official document support through UPOSA.
+                            </h2>
+                            <p className="mt-5 leading-relaxed text-base-content/60">
+                                Submit your details and the association will coordinate with the appropriate school office on your behalf.
                             </p>
 
-                            <div className="space-y-5">
-                                {[
-                                    { step: "1", title: "Submit your request", desc: "Fill in your details and year group", icon: Send },
-                                    { step: "2", title: "We coordinate", desc: "UPOSA liaises with the school office", icon: Users },
-                                    { step: "3", title: "Receive your document", desc: "Get it via email or physical pickup", icon: Globe },
-                                ].map((item, i) => (
-                                    <motion.div
-                                        key={item.step}
-                                        className="flex items-start gap-4"
-                                        initial={{ opacity: 0, x: -20 }}
-                                        whileInView={{ opacity: 1, x: 0 }}
-                                        viewport={{ once: true }}
-                                        transition={{ delay: i * 0.15 }}
-                                    >
-                                        <div className="relative shrink-0">
-                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md shadow-primary/20">
-                                                <item.icon size={16} className="text-primary-content" />
+                            <div className="mt-8 space-y-4">
+                                {serviceSteps.map((step, index) => {
+                                    const Icon = step.icon;
+                                    return (
+                                        <div key={step.title} className="grid grid-cols-[56px_1fr] gap-4">
+                                            <div className="relative">
+                                                <div className="grid h-12 w-12 place-items-center bg-primary text-primary-content">
+                                                    <Icon size={19} />
+                                                </div>
+                                                <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center bg-secondary text-[10px] font-bold text-secondary-content">
+                                                    {index + 1}
+                                                </span>
                                             </div>
-                                            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-secondary text-secondary-content text-[10px] font-bold flex items-center justify-center shadow-sm">
-                                                {item.step}
-                                            </span>
+                                            <div>
+                                                <h3 className="font-bold text-primary">{step.title}</h3>
+                                                <p className="mt-1 text-sm leading-relaxed text-base-content/55">{step.description}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-semibold text-sm">{item.title}</p>
-                                            <p className="text-xs text-base-content/50 mt-0.5">{item.desc}</p>
-                                        </div>
-                                    </motion.div>
-                                ))}
+                                    );
+                                })}
                             </div>
-                        </ScrollReveal>
+                        </div>
+                    </ScrollReveal>
 
-                        {/* Form */}
-                        <ScrollReveal delay={0.2}>
-                            <Card hover={false}>
-                                <CardAccent color="accent" />
-                                <CardBody>
-                                    <AnimatePresence mode="wait">
-                                        {transcriptSent ? (
-                                            <motion.div
-                                                key="success"
-                                                initial={{ opacity: 0, scale: 0.95 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                className="text-center py-8"
-                                            >
-                                                <motion.div
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    transition={{ type: 'spring', stiffness: 200, delay: 0.1 }}
-                                                    className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4"
-                                                >
-                                                    <CheckCircle2 size={32} className="text-success" />
-                                                </motion.div>
-                                                <h3 className="text-xl font-bold mb-2">Request Submitted!</h3>
-                                                <p className="text-base-content/60 text-sm">We'll be in touch regarding your transcript.</p>
-                                                <button className="btn btn-ghost btn-sm mt-4" onClick={() => setTranscriptSent(false)}>Submit another</button>
-                                            </motion.div>
-                                        ) : (
-                                            <motion.form
-                                                key="form"
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                className="space-y-4"
-                                                onSubmit={async (e) => {
-                                                    e.preventDefault();
-                                                    setTranscriptLoading(true);
-                                                    setTranscriptError('');
-                                                    const fd = new FormData(e.currentTarget);
-                                                    try {
-                                                        await submitTranscriptRequest({
-                                                            fullName: fd.get('fullName') as string,
-                                                            email: fd.get('email') as string,
-                                                            phone: (fd.get('phone') as string) || undefined,
-                                                            yearGroup: fd.get('yearGroup') as string,
-                                                            notes: (fd.get('notes') as string) || undefined,
-                                                        });
-                                                        setTranscriptSent(true);
-                                                    } catch (err) {
-                                                        setTranscriptError(err instanceof Error ? err.message : 'Failed to submit request');
-                                                    } finally {
-                                                        setTranscriptLoading(false);
-                                                    }
-                                                }}
-                                            >
-                                                <h3 className="font-bold mb-1 flex items-center gap-2">
-                                                    <FileText size={16} className="text-primary/60" />
-                                                    Request Form
-                                                </h3>
-                                                <div className="form-control">
-                                                    <label className="label"><span className="label-text font-medium text-sm">Full Name *</span></label>
-                                                    <input name="fullName" type="text" placeholder="Your full name" className="input input-bordered" required />
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="form-control">
-                                                        <label className="label"><span className="label-text font-medium text-sm">Year Group *</span></label>
-                                                        <input name="yearGroup" type="text" placeholder="e.g. 2010" className="input input-bordered" required />
-                                                    </div>
-                                                    <div className="form-control">
-                                                        <label className="label"><span className="label-text font-medium text-sm">Phone</span></label>
-                                                        <input name="phone" type="tel" placeholder="Your number" className="input input-bordered" />
-                                                    </div>
-                                                </div>
-                                                <div className="form-control">
-                                                    <label className="label"><span className="label-text font-medium text-sm">Email *</span></label>
-                                                    <input name="email" type="email" placeholder="you@example.com" className="input input-bordered" required />
-                                                </div>
-                                                <div className="form-control">
-                                                    <label className="label"><span className="label-text font-medium text-sm">Additional Notes</span></label>
-                                                    <textarea name="notes" className="textarea textarea-bordered" rows={3} placeholder="Any special instructions..."></textarea>
-                                                </div>
-                                                {transcriptError && <p className="text-error text-sm">{transcriptError}</p>}
-                                                <button type="submit" className={`btn btn-primary w-full gap-2 ${transcriptLoading ? 'loading' : ''}`} disabled={transcriptLoading}>
-                                                    {transcriptLoading ? 'Submitting...' : <>Submit Request <ArrowRight size={16} /></>}
-                                                </button>
-                                            </motion.form>
-                                        )}
-                                    </AnimatePresence>
-                                </CardBody>
-                            </Card>
-                        </ScrollReveal>
-                    </div>
+                    <ScrollReveal delay={0.12}>
+                        <div className="border border-base-300 bg-base-200 p-5 shadow-sm md:p-7">
+                            <AnimatePresence mode="wait">
+                                {transcriptSent ? (
+                                    <SuccessPanel
+                                        icon={<CheckCircle2 size={38} />}
+                                        title="Transcript request submitted"
+                                        description="We have received your request. The UPOSA desk will contact you about the next document steps."
+                                        action={
+                                            <button type="button" className="btn btn-primary" onClick={() => setTranscriptSent(false)}>
+                                                Submit another request
+                                            </button>
+                                        }
+                                    />
+                                ) : (
+                                    <motion.form
+                                        key="transcript-form"
+                                        ref={transcriptFormRef}
+                                        initial={{ opacity: 0, y: 12 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -12 }}
+                                        className="bg-base-100 p-5 md:p-7"
+                                        onSubmit={handleTranscriptSubmit}
+                                    >
+                                        <div className="mb-6 flex items-start gap-4">
+                                            <div className="grid h-12 w-12 shrink-0 place-items-center bg-secondary text-secondary-content">
+                                                <FileText size={22} />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">Request form</p>
+                                                <h3 className="mt-1 text-2xl font-bold text-primary">Academic records support</h3>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid gap-4 md:grid-cols-2">
+                                            <label className="form-control md:col-span-2">
+                                                <span className="label pb-2">
+                                                    <span className="label-text text-sm font-bold text-primary">Full name *</span>
+                                                </span>
+                                                <input name="fullName" type="text" placeholder="Your full name" className="input input-bordered bg-base-200" required />
+                                            </label>
+                                            <label className="form-control">
+                                                <span className="label pb-2">
+                                                    <span className="label-text text-sm font-bold text-primary">Year group *</span>
+                                                </span>
+                                                <input name="yearGroup" type="text" placeholder="e.g. 2010" className="input input-bordered bg-base-200" required />
+                                            </label>
+                                            <label className="form-control">
+                                                <span className="label pb-2">
+                                                    <span className="label-text text-sm font-bold text-primary">Phone</span>
+                                                </span>
+                                                <input name="phone" type="tel" placeholder="Your number" className="input input-bordered bg-base-200" />
+                                            </label>
+                                            <label className="form-control md:col-span-2">
+                                                <span className="label pb-2">
+                                                    <span className="label-text text-sm font-bold text-primary">Email *</span>
+                                                </span>
+                                                <input name="email" type="email" placeholder="you@example.com" className="input input-bordered bg-base-200" required />
+                                            </label>
+                                            <label className="form-control md:col-span-2">
+                                                <span className="label pb-2">
+                                                    <span className="label-text text-sm font-bold text-primary">Additional notes</span>
+                                                </span>
+                                                <textarea name="notes" className="textarea textarea-bordered min-h-28 bg-base-200" placeholder="Any special instructions..." />
+                                            </label>
+                                        </div>
+
+                                        {transcriptError && <p className="mt-4 border border-error/20 bg-error/5 p-3 text-sm font-semibold text-error">{transcriptError}</p>}
+
+                                        <button type="submit" className="btn btn-primary mt-6 w-full gap-2" disabled={transcriptLoading}>
+                                            {transcriptLoading ? <SkeletonBlock className="h-4 w-32 bg-primary-content/25" /> : <>Submit request <ArrowRight size={16} /></>}
+                                        </button>
+                                    </motion.form>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </ScrollReveal>
                 </div>
             </section>
 
-            {/* Newsletter */}
-            <section className="py-16 relative overflow-hidden">
-                <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-1/2 left-1/4 w-72 h-72 bg-primary/3 rounded-full blur-3xl" />
-                    <div className="absolute top-1/2 right-1/4 w-64 h-64 bg-secondary/3 rounded-full blur-3xl" />
-                </div>
-                <div className="max-w-3xl mx-auto px-4 text-center relative">
+            <section id="newsletter" className="bg-primary text-primary-content">
+                <div className="mx-auto grid max-w-7xl gap-8 px-4 py-16 md:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
                     <ScrollReveal>
-                        <motion.div
-                            className="w-12 h-12 rounded-xl bg-gradient-to-br from-secondary/10 to-secondary/5 flex items-center justify-center mx-auto mb-4"
-                            whileHover={{ rotate: 12, scale: 1.1 }}
-                        >
-                            <Mail size={20} className="text-secondary" />
-                        </motion.div>
-                        <h2 className="text-2xl font-bold mb-2">Stay Updated</h2>
-                        <p className="text-base-content/50 text-sm mb-6">Subscribe to receive announcements, event invitations, and UPOSA news.</p>
-                        {newsletterDone ? (
-                            <p className="text-success font-medium text-sm">You're subscribed! We'll keep you posted.</p>
-                        ) : (
-                            <form className="flex gap-2 max-w-md mx-auto" onSubmit={async (e) => {
-                                e.preventDefault();
-                                setNewsletterLoading(true);
-                                const fd = new FormData(e.currentTarget);
-                                try {
-                                    await subscribeNewsletter(fd.get('email') as string);
-                                    setNewsletterDone(true);
-                                } catch { /* silent */ } finally {
-                                    setNewsletterLoading(false);
-                                }
-                            }}>
-                                <input name="email" type="email" placeholder="Your email address" className="input input-bordered flex-1" required />
-                                <button type="submit" className={`btn btn-primary ${newsletterLoading ? 'loading' : ''}`} disabled={newsletterLoading}>
-                                    {newsletterLoading ? '...' : 'Subscribe'}
-                                </button>
-                            </form>
-                        )}
+                        <div>
+                            <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Stay updated</p>
+                            <h2 className="text-4xl font-bold leading-tight md:text-5xl">Get association updates in your inbox.</h2>
+                            <p className="mt-5 max-w-2xl leading-relaxed text-primary-content/60">
+                                Subscribe for announcements, event invitations, dues reminders, and UPOSA news.
+                            </p>
+                        </div>
+                    </ScrollReveal>
+
+                    <ScrollReveal direction="left">
+                        <div className="border border-primary-content/10 bg-primary-content/10 p-5 md:p-6">
+                            {newsletterDone ? (
+                                <div className="flex items-center gap-4">
+                                    <div className="grid h-14 w-14 shrink-0 place-items-center bg-secondary text-secondary-content">
+                                        <CheckCircle2 size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold">You are subscribed.</h3>
+                                        <p className="mt-1 text-sm text-primary-content/55">We will keep you posted on the next UPOSA update.</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <form className="grid gap-3 sm:grid-cols-[1fr_auto]" onSubmit={handleNewsletterSubmit}>
+                                    <input
+                                        name="email"
+                                        type="email"
+                                        placeholder="Your email address"
+                                        className="input input-bordered border-primary-content/10 bg-primary-content/10 text-primary-content placeholder:text-primary-content/40"
+                                        required
+                                    />
+                                    <button type="submit" className="btn btn-secondary" disabled={newsletterLoading}>
+                                        {newsletterLoading ? <SkeletonBlock className="h-4 w-24 bg-secondary-content/25" /> : "Subscribe"}
+                                    </button>
+                                    {newsletterError && <p className="text-sm font-semibold text-error sm:col-span-2">{newsletterError}</p>}
+                                </form>
+                            )}
+                        </div>
                     </ScrollReveal>
                 </div>
             </section>

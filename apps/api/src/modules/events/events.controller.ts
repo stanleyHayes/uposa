@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { RouteRequest } from '../../types/request.types';
 import { createEventSchema, updateEventSchema, rsvpSchema } from './events.validation';
 import {
   listEvents,
@@ -22,28 +23,28 @@ function parseFormDataBody(body: Record<string, unknown>): Record<string, unknow
   return result;
 }
 
-export async function listEventsHandler(req: Request, res: Response): Promise<void> {
+export async function listEventsHandler(req: RouteRequest, res: Response): Promise<void> {
   const result = await listEvents(req.query as Record<string, string | undefined>);
   successResponse(res, 'Events retrieved', result.data, 200, result.meta);
 }
 
-export async function getUpcomingEventsHandler(req: Request, res: Response): Promise<void> {
+export async function getUpcomingEventsHandler(req: RouteRequest, res: Response): Promise<void> {
   const result = await getUpcomingEvents(req.query as Record<string, string | undefined>);
   successResponse(res, 'Upcoming events retrieved', result.data, 200, result.meta);
 }
 
-export async function getPastEventsHandler(req: Request, res: Response): Promise<void> {
+export async function getPastEventsHandler(req: RouteRequest, res: Response): Promise<void> {
   const result = await getPastEvents(req.query as Record<string, string | undefined>);
   successResponse(res, 'Past events retrieved', result.data, 200, result.meta);
 }
 
-export async function getEventBySlugHandler(req: Request, res: Response): Promise<void> {
+export async function getEventBySlugHandler(req: RouteRequest, res: Response): Promise<void> {
   const { slug } = req.params;
   const event = await getEventBySlug(slug);
   successResponse(res, 'Event retrieved', event);
 }
 
-export async function rsvpToEventHandler(req: Request, res: Response): Promise<void> {
+export async function rsvpToEventHandler(req: RouteRequest, res: Response): Promise<void> {
   const { id } = req.params;
   const parsed = rsvpSchema.parse({ body: req.body });
   const memberId = req.user?.id;
@@ -51,7 +52,7 @@ export async function rsvpToEventHandler(req: Request, res: Response): Promise<v
   successResponse(res, 'RSVP submitted successfully', rsvp, 201);
 }
 
-export async function createEventHandler(req: Request, res: Response): Promise<void> {
+export async function createEventHandler(req: RouteRequest, res: Response): Promise<void> {
   if (!req.admin) {
     errorResponse(res, 'Unauthorized', 401);
     return;
@@ -63,7 +64,7 @@ export async function createEventHandler(req: Request, res: Response): Promise<v
   successResponse(res, 'Event created successfully', event, 201);
 }
 
-export async function updateEventHandler(req: Request, res: Response): Promise<void> {
+export async function updateEventHandler(req: RouteRequest, res: Response): Promise<void> {
   const { id } = req.params;
   const body = parseFormDataBody(req.body);
   const parsed = updateEventSchema.parse({ body });
@@ -72,13 +73,13 @@ export async function updateEventHandler(req: Request, res: Response): Promise<v
   successResponse(res, 'Event updated successfully', event);
 }
 
-export async function deleteEventHandler(req: Request, res: Response): Promise<void> {
+export async function deleteEventHandler(req: RouteRequest, res: Response): Promise<void> {
   const { id } = req.params;
   const result = await deleteEvent(id);
   successResponse(res, result.message);
 }
 
-export async function getEventRsvpsHandler(req: Request, res: Response): Promise<void> {
+export async function getEventRsvpsHandler(req: RouteRequest, res: Response): Promise<void> {
   const { id } = req.params;
   const result = await getEventRsvps(id, req.query as Record<string, string | undefined>);
   successResponse(res, 'RSVPs retrieved', result.data, 200, result.meta);
