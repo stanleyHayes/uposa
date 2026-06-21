@@ -57,7 +57,7 @@ import NewsletterPage from './pages/newsletter/NewsletterPage'
 export default function App() {
   return (
     <ErrorBoundary>
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter>
       <ToastContainer />
       <Routes>
         <Route path="/login" element={<LoginPage />} />

@@ -1,12 +1,11 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
 @font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Light.ttf') format('truetype'); font-weight: 300; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Medium.ttf') format('truetype'); font-weight: 500; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A SemiBold.ttf') format('truetype'); font-weight: 600; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 * {
   font-family: 'Euclid Circular A', ui-sans-serif, system-ui, sans-serif;

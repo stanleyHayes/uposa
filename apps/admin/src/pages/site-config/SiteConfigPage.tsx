@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import {
   Globe, Phone, CreditCard, GraduationCap, BarChart3, BookOpen,
-  Save, Facebook, Instagram, MessageCircle, History, School,
+  Save, AtSign, Camera, MessageCircle, History, School,
   PlusCircle, Trash2, Heart,
 } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
+import Select from '../../components/ui/Select'
 import Textarea from '../../components/ui/Textarea'
 import Card from '../../components/ui/Card'
 import { Skeleton } from '../../components/ui/Skeleton'
@@ -34,6 +35,7 @@ export default function SiteConfigPage() {
     bank: { bank: '', accountNo: '', accountName: '', branch: '' },
   })
   const [dues, setDues] = useState({ annual: 120, lifetime: 1000, currency: 'GHS' })
+  const [platformFee, setPlatformFee] = useState({ enabled: true, percent: 1, fixed: 0 })
   const [mission, setMission] = useState({ mission: '', vision: '' })
   const [stats, setStats] = useState({ members: 0, years: 0, projects: 0, events: 0 })
   const [donationAllocation, setDonationAllocation] = useState<Array<{ title: string; percentage: number; description: string }>>([])
@@ -65,6 +67,11 @@ export default function SiteConfigPage() {
         if (configs.social) setSocial(configs.social)
         if (configs.payment) setPayment(configs.payment)
         if (configs.dues) setDues(configs.dues)
+        setPlatformFee({
+          enabled: String(configs.PAYMENT_PLATFORM_FEE_ENABLED ?? 'true') === 'true',
+          percent: Number(configs.PAYMENT_PLATFORM_FEE_PERCENT ?? 1),
+          fixed: Number(configs.PAYMENT_PLATFORM_FEE_FIXED ?? 0),
+        })
         if (configs.mission) setMission(configs.mission)
         if (configs.stats) setStats(configs.stats)
         if (configs.donationAllocation) setDonationAllocation(configs.donationAllocation)
@@ -87,6 +94,22 @@ export default function SiteConfigPage() {
     try {
       await client.put(`/admin/site/config/${key}`, { value })
       toast.success('Saved', `${key} config updated`)
+    } catch {
+      toast.error('Failed to save')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const savePlatformFee = async () => {
+    setSaving(true)
+    try {
+      await Promise.all([
+        client.put('/admin/site/config/PAYMENT_PLATFORM_FEE_ENABLED', { value: platformFee.enabled ? 'true' : 'false' }),
+        client.put('/admin/site/config/PAYMENT_PLATFORM_FEE_PERCENT', { value: platformFee.percent }),
+        client.put('/admin/site/config/PAYMENT_PLATFORM_FEE_FIXED', { value: platformFee.fixed }),
+      ])
+      toast.success('Saved', 'Platform fee updated')
     } catch {
       toast.error('Failed to save')
     } finally {
@@ -182,8 +205,8 @@ export default function SiteConfigPage() {
         {activeTab === 'social' && (
           <Card title="Social Media Links">
             <div className="space-y-4">
-              <div className="flex items-center gap-3"><Facebook size={18} className="text-blue-600 shrink-0" /><Input label="Facebook URL" value={social.facebook} onChange={(e) => setSocial({ ...social, facebook: e.target.value })} /></div>
-              <div className="flex items-center gap-3"><Instagram size={18} className="text-pink-500 shrink-0" /><Input label="Instagram URL" value={social.instagram} onChange={(e) => setSocial({ ...social, instagram: e.target.value })} /></div>
+              <div className="flex items-center gap-3"><AtSign size={18} className="text-blue-600 shrink-0" /><Input label="Facebook URL" value={social.facebook} onChange={(e) => setSocial({ ...social, facebook: e.target.value })} /></div>
+              <div className="flex items-center gap-3"><Camera size={18} className="text-pink-500 shrink-0" /><Input label="Instagram URL" value={social.instagram} onChange={(e) => setSocial({ ...social, instagram: e.target.value })} /></div>
               <div className="flex items-center gap-3"><MessageCircle size={18} className="text-green-500 shrink-0" /><Input label="WhatsApp Channel URL" value={social.whatsapp} onChange={(e) => setSocial({ ...social, whatsapp: e.target.value })} /></div>
               <div className="flex justify-end pt-2">
                 <Button loading={saving} onClick={() => saveConfig('social', social)}><Save size={14} className="mr-1" /> Save Social Links</Button>
@@ -213,6 +236,29 @@ export default function SiteConfigPage() {
             <div className="flex justify-end">
               <Button loading={saving} onClick={() => saveConfig('payment', payment)}><Save size={14} className="mr-1" /> Save Payment Info</Button>
             </div>
+
+            <Card title="Online Payment Fee (Paystack)">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                A platform fee added on top of online (Paystack) payments. The payer covers this charge, so UPOSA receives the full amount.
+              </p>
+              <div className="grid grid-cols-3 gap-4">
+                <Input label="Fee Percent (%)" type="number" step="0.1" value={String(platformFee.percent)} onChange={(e) => setPlatformFee({ ...platformFee, percent: Number(e.target.value) })} />
+                <Input label="Fixed Fee (GHS)" type="number" step="0.01" value={String(platformFee.fixed)} onChange={(e) => setPlatformFee({ ...platformFee, fixed: Number(e.target.value) })} />
+                <Select
+                  label="Enabled"
+                  value={platformFee.enabled ? 'true' : 'false'}
+                  onChange={(e) => setPlatformFee({ ...platformFee, enabled: e.target.value === 'true' })}
+                  options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]}
+                />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 pt-3">
+                Example: a {dues.currency} 100 payment charges the payer {dues.currency}{' '}
+                {platformFee.enabled ? (100 + (100 * platformFee.percent) / 100 + platformFee.fixed).toFixed(2) : '100.00'}.
+              </p>
+              <div className="flex justify-end pt-4">
+                <Button loading={saving} onClick={savePlatformFee}><Save size={14} className="mr-1" /> Save Fee</Button>
+              </div>
+            </Card>
           </div>
         )}
 

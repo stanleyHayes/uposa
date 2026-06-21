@@ -4,13 +4,29 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
-  Eye, EyeOff, UserPlus, User, GraduationCap, ShieldCheck, ArrowLeft, ArrowRight,
-  Mail, Lock, Phone, MapPin, Briefcase, HeartPulse, CheckCircle2,
+  ArrowLeft,
+  ArrowRight,
+  BadgeCheck,
+  BookOpen,
+  CheckCircle2,
+  Clock3,
+  Eye,
+  EyeOff,
+  GraduationCap,
+  HeartPulse,
+  Lock,
+  Mail,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  Sparkles,
+  User,
+  UserPlus,
+  Briefcase,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { authApi } from '../../api/services'
 import { useToast } from '../../hooks/useToast'
-import { GraduationCapIllustration } from '../../components/auth/AuthGraphics'
 import SEO from '../../components/common/SEO'
 
 const EXPERTISE_OPTIONS = [
@@ -86,6 +102,18 @@ const stepFields: Record<number, string[]> = {
   6: [],
 }
 
+const registerStats = [
+  { label: 'Profile steps', value: '06' },
+  { label: 'Member record', value: '360' },
+  { label: 'School link', value: 'UP' },
+]
+
+const registerNotes = [
+  { icon: BadgeCheck, label: 'Verified alumni profile' },
+  { icon: BookOpen, label: 'Academic and year-group record' },
+  { icon: Clock3, label: 'Takes a few focused minutes' },
+]
+
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -158,148 +186,224 @@ export default function RegisterPage() {
 
   const StepIcon = stepInfo[step - 1].icon
 
-  // Common input class
   const inputCls = (hasError?: boolean) =>
-    `input input-bordered w-full h-11 bg-base-200/50 border-base-300 focus:border-primary focus:bg-base-100 transition-colors ${hasError ? 'input-error' : ''}`
-  const selectCls = 'select select-bordered w-full h-11 bg-base-200/50 border-base-300 focus:border-primary focus:bg-base-100 transition-colors'
+    `input input-bordered h-12 w-full border-base-300 bg-base-200/45 text-base-content transition-colors focus:border-primary focus:bg-base-100 ${hasError ? 'input-error' : ''}`
+  const selectCls = 'select select-bordered h-12 w-full border-base-300 bg-base-200/45 text-base-content transition-colors focus:border-primary focus:bg-base-100'
 
   return (
     <>
-    <SEO title="Register" description="Create your UPOSA alumni account to join the University Practice Old Students' Association network." />
-    <div className="min-h-screen flex bg-base-200">
-      {/* Left: Branding panel */}
-      <div className="hidden lg:flex lg:w-5/12 flex-col justify-between p-12 text-primary bg-[#FFF8DC] relative">
-        <div>
-          <GraduationCapIllustration />
-        </div>
-        <div>
-          <h2 className="text-4xl font-bold leading-tight mb-4">
-            Join the<br />Legit Elites.
-          </h2>
-          <p className="text-primary/60 text-lg leading-relaxed max-w-sm">
-            Register as an alumnus to connect with fellow graduates, contribute to projects, and stay in touch with your alma mater.
-          </p>
-        </div>
-        {/* Step indicators — connected vertical stepper */}
-        <div className="relative">
-          {stepInfo.map((s, i) => {
-            const num = i + 1
-            const done = step > num
-            const active = step === num
-            const isLast = i === stepInfo.length - 1
-            const SIcon = s.icon
-            return (
-              <motion.div
-                key={s.label}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + i * 0.05 }}
-                className="flex gap-3"
-              >
-                {/* Node + connector line */}
-                <div className="flex flex-col items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
-                    done
-                      ? 'bg-secondary text-primary'
-                      : active
-                        ? 'bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-base-200'
-                        : 'bg-primary/5'
-                  }`}>
-                    {done ? (
-                      <CheckCircle2 size={16} className="text-primary" />
-                    ) : (
-                      <SIcon size={14} className={active ? 'text-primary' : 'text-primary/30'} />
-                    )}
-                  </div>
-                  {!isLast && (
-                    <div className="w-0.5 flex-1 min-h-[20px] my-1 rounded-full transition-colors duration-300" style={{ backgroundColor: done ? 'var(--color-secondary)' : 'rgba(0,27,80,0.1)' }} />
-                  )}
-                </div>
-                {/* Label */}
-                <div className={`pt-1 pb-3 transition-opacity duration-300 ${!active && !done ? 'opacity-40' : ''}`}>
-                  <p className={`text-sm font-semibold leading-tight ${active ? 'text-primary' : 'text-primary/50'}`}>
-                    {s.label}
-                  </p>
-                  {active && (
-                    <motion.p
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="text-xs text-primary/40 mt-0.5"
-                    >
-                      {s.desc}
-                    </motion.p>
-                  )}
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
+      <SEO title="Register" description="Create your UPOSA alumni account to join the University Practice Old Students' Association network." />
+      <div className="min-h-screen bg-base-100 text-base-content">
+        <div className="grid min-h-screen lg:grid-cols-[minmax(0,0.95fr)_minmax(520px,0.9fr)]">
+          <section className="relative flex min-h-[48vh] overflow-hidden bg-primary px-5 py-8 text-primary-content sm:px-8 lg:min-h-screen lg:px-12 lg:py-10">
+            <img
+              src="/logo.png"
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute -left-20 top-12 h-72 w-72 object-contain opacity-[0.035] sm:h-96 sm:w-96 lg:-left-24 lg:top-20"
+            />
+            <img
+              src="/logo.png"
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute -bottom-28 right-0 h-80 w-80 object-contain opacity-[0.045] sm:h-[30rem] sm:w-[30rem] lg:-right-20"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-secondary/70 to-transparent"
+            />
 
-        {/* Wavy edge divider */}
-        <svg className="absolute top-0 right-0 h-full w-12 translate-x-[1px]" viewBox="0 0 48 800" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M0 0 C24 0, 48 50, 24 100 C0 150, 48 200, 24 250 C0 300, 48 350, 24 400 C0 450, 48 500, 24 550 C0 600, 48 650, 24 700 C0 750, 24 800, 48 800 L48 0 Z" className="fill-base-100" />
-        </svg>
-      </div>
+            <div className="relative z-10 flex w-full flex-col justify-between gap-10">
+              <div className="flex items-center justify-between gap-4">
+                <Link to="/" className="flex items-center gap-3">
+                  <span className="grid h-12 w-12 place-items-center bg-base-100 p-1.5 shadow-lg shadow-black/10">
+                    <img src="/logo.png" alt="UPOSA" className="h-full w-full object-contain" />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-bold leading-tight">UPOSA Alumni</span>
+                    <span className="block text-xs text-primary-content/55">The Legit Elites</span>
+                  </span>
+                </Link>
+                <span className="hidden border border-primary-content/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-secondary sm:inline-flex">
+                  Registration desk
+                </span>
+              </div>
 
-      {/* Right: Form panel */}
-      <div className="flex-1 flex flex-col bg-base-100">
-        {/* Top bar (mobile) */}
-        <div className="flex items-center justify-between px-6 py-4 lg:py-6">
-          <Link to="/login" className="flex items-center gap-2.5 text-base-content/60 hover:text-base-content transition-colors">
-            <img src="/logo.png" alt="UPOSA" className="w-9 h-9 rounded-lg" />
-            <div className="hidden sm:block lg:block">
-              <span className="font-bold text-sm block leading-tight text-base-content">UPOSA</span>
-              <span className="text-[10px] text-base-content/40">The Legit Elites</span>
-            </div>
-          </Link>
-          <Link to="/login" className="text-sm text-base-content/50 hover:text-base-content transition-colors">
-            Have an account? <span className="font-semibold text-primary">Sign in</span>
-          </Link>
-        </div>
-
-        {/* Scrollable form area */}
-        <div className="flex-1 overflow-y-auto px-6 sm:px-10 pb-8">
-          <div className="max-w-lg mx-auto">
-            {/* Step header */}
-            <div className="mb-6">
-              <motion.div
-                key={step}
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-3"
-              >
-                <StepIcon size={22} className="text-primary" />
-              </motion.div>
-              <AnimatePresence mode="wait">
-                <motion.div key={step} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                  <h1 className="text-2xl font-bold text-base-content">{stepInfo[step - 1].title}</h1>
-                  <p className="text-base-content/50 text-sm mt-1">{stepInfo[step - 1].desc}</p>
+              <div className="max-w-3xl">
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45 }}
+                  className="mb-5 inline-flex items-center gap-2 border border-primary-content/15 bg-primary-content/10 px-3 py-2 text-xs font-semibold text-primary-content/70"
+                >
+                  <Sparkles className="h-4 w-4 text-secondary" />
+                  Join the network
                 </motion.div>
-              </AnimatePresence>
-            </div>
+                <motion.h1
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.05 }}
+                  className="max-w-2xl text-4xl font-bold leading-[0.95] sm:text-5xl lg:text-6xl"
+                >
+                  Create your alumni record with care.
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className="mt-5 max-w-xl text-base leading-relaxed text-primary-content/62 sm:text-lg"
+                >
+                  Add the details that help UPOSA verify your profile, connect your year group, and keep you close to the school.
+                </motion.p>
+              </div>
 
-            {/* Progress bar (mobile) */}
-            <div className="flex gap-1.5 mb-6 lg:hidden">
-              {stepInfo.map((_, i) => (
-                <div key={i} className="flex-1 h-1.5 rounded-full overflow-hidden bg-base-300">
-                  <motion.div
-                    className={`h-full rounded-full ${i < step ? 'bg-secondary' : i === step - 1 ? 'bg-secondary' : ''}`}
-                    initial={{ width: '0%' }}
-                    animate={{ width: i <= step - 1 ? '100%' : '0%' }}
-                    transition={{ duration: 0.4, ease: 'easeOut' }}
-                  />
+              <div className="space-y-5">
+                <div className="grid gap-px overflow-hidden border border-primary-content/10 bg-primary-content/10 sm:grid-cols-3">
+                  {registerStats.map((stat, index) => (
+                    <motion.div
+                      key={stat.label}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.18 + index * 0.06 }}
+                      className="bg-primary/65 px-5 py-4"
+                    >
+                      <p className="text-2xl font-bold text-secondary">{stat.value}</p>
+                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary-content/45">{stat.label}</p>
+                    </motion.div>
+                  ))}
                 </div>
-              ))}
+
+                <div className="grid gap-3">
+                  {registerNotes.map((note, index) => (
+                    <motion.div
+                      key={note.label}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.28 + index * 0.06 }}
+                      className="flex items-center gap-4 border border-primary-content/10 bg-primary-content/[0.06] p-4"
+                    >
+                      <span className="grid h-10 w-10 shrink-0 place-items-center bg-secondary text-primary">
+                        <note.icon className="h-5 w-5" />
+                      </span>
+                      <span className="text-sm font-semibold text-primary-content/70">{note.label}</span>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
             </div>
+          </section>
 
-            {/* Step label */}
-            <p className="text-xs font-medium text-base-content/40 uppercase tracking-wider mb-4">
-              Step {step} of {TOTAL_STEPS}
-            </p>
+          <section className="relative flex min-h-screen overflow-hidden bg-base-100 px-5 py-10 sm:px-8 lg:px-12 lg:py-12">
+            <img
+              src="/logo.png"
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-24 top-20 h-80 w-80 object-contain opacity-[0.035]"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary/15 to-transparent"
+            />
 
-            {/* Form */}
-            <form onSubmit={handleSubmit(onSubmit)}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="relative z-10 mx-auto flex w-full max-w-[680px] flex-col"
+            >
+              <div className="mb-7 flex items-center justify-between gap-4">
+                <Link to="/" className="flex items-center gap-3 lg:hidden">
+                  <span className="grid h-11 w-11 place-items-center bg-primary p-1.5">
+                    <img src="/logo.png" alt="UPOSA" className="h-full w-full bg-base-100 object-contain" />
+                  </span>
+                  <div>
+                    <span className="block font-bold leading-tight">UPOSA Alumni</span>
+                    <span className="text-xs text-base-content/45">Registration desk</span>
+                  </div>
+                </Link>
+                <Link to="/login" className="ml-auto text-sm font-semibold text-base-content/50 transition-colors hover:text-primary">
+                  Have an account? <span className="text-primary">Sign in</span>
+                </Link>
+              </div>
+
+              <div className="mb-5 grid gap-2 sm:grid-cols-6">
+                {stepInfo.map((s, i) => {
+                  const num = i + 1
+                  const done = step > num
+                  const active = step === num
+                  const SIcon = s.icon
+                  return (
+                    <button
+                      key={s.label}
+                      type="button"
+                      onClick={() => {
+                        if (done || active) setStep(num)
+                      }}
+                      className={`flex min-h-16 items-center gap-3 border px-3 py-3 text-left transition-colors sm:flex-col sm:items-start ${
+                        active
+                          ? 'border-primary/20 bg-primary text-primary-content shadow-[0_12px_32px_rgba(0,27,80,0.14)]'
+                          : done
+                            ? 'border-secondary/35 bg-secondary/15 text-primary'
+                            : 'border-primary/8 bg-base-100/75 text-base-content/45'
+                      }`}
+                      aria-current={active ? 'step' : undefined}
+                    >
+                      <span className={`grid h-8 w-8 shrink-0 place-items-center ${
+                        active ? 'bg-secondary text-primary' : done ? 'bg-secondary text-primary' : 'bg-base-200 text-base-content/40'
+                      }`}
+                      >
+                        {done ? <CheckCircle2 className="h-4 w-4" /> : <SIcon className="h-4 w-4" />}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-xs font-bold uppercase tracking-[0.14em]">0{num}</span>
+                        <span className="block truncate text-sm font-bold leading-tight">{s.label}</span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="overflow-hidden border border-primary/10 bg-base-100/95 shadow-[0_22px_80px_rgba(0,27,80,0.12)] backdrop-blur rounded-[20px_4px_20px_4px]">
+                <div className="h-1 bg-gradient-to-r from-secondary via-primary to-secondary" />
+                <div className="p-6 sm:p-8">
+                  <div className="mb-7 flex items-start justify-between gap-6">
+                    <div>
+                      <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-secondary">
+                        Step {step} of {TOTAL_STEPS}
+                      </p>
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={step}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                        >
+                          <h1 className="text-2xl font-bold leading-tight text-base-content sm:text-3xl">{stepInfo[step - 1].title}</h1>
+                          <p className="mt-2 max-w-md text-sm leading-relaxed text-base-content/55">{stepInfo[step - 1].desc}</p>
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
+                    <motion.span
+                      key={step}
+                      initial={{ scale: 0.86, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.25 }}
+                      className="hidden h-12 w-12 shrink-0 place-items-center bg-primary/8 text-primary sm:grid"
+                    >
+                      <StepIcon className="h-6 w-6" />
+                    </motion.span>
+                  </div>
+
+                  <div className="mb-7 h-1.5 overflow-hidden bg-base-300/70">
+                    <motion.div
+                      className="h-full bg-secondary"
+                      initial={false}
+                      animate={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
+                      transition={{ duration: 0.35, ease: 'easeOut' }}
+                    />
+                  </div>
+
+                  <form onSubmit={handleSubmit(onSubmit)}>
               <AnimatePresence mode="wait" custom={step}>
                 {/* STEP 1: Personal + Account */}
                 {step === 1 && (
@@ -312,7 +416,7 @@ export default function RegisterPage() {
                       </div>
                       {errors.fullName && <p className="text-error text-xs mt-1">{errors.fullName.message}</p>}
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="form-control">
                         <label className="label pb-1"><span className="label-text font-medium text-sm">Gender</span></label>
                         <select className={selectCls} {...register('gender')}>
@@ -348,7 +452,7 @@ export default function RegisterPage() {
                       </div>
                       {errors.email && <p className="text-error text-xs mt-1">{errors.email.message}</p>}
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="form-control">
                         <label className="label pb-1"><span className="label-text font-medium text-sm">Password *</span></label>
                         <div className="relative">
@@ -375,7 +479,7 @@ export default function RegisterPage() {
                 {/* STEP 2: Contact */}
                 {step === 2 && (
                   <motion.div key="step2" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="form-control">
                         <label className="label pb-1"><span className="label-text font-medium text-sm">Mobile Number *</span></label>
                         <div className="relative">
@@ -399,7 +503,7 @@ export default function RegisterPage() {
                         <input type="text" className={`${inputCls()} pl-11`} placeholder="Street address" {...register('residentialAddress')} />
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <div className="form-control">
                         <label className="label pb-1"><span className="label-text font-medium text-sm">Region</span></label>
                         <select className={selectCls} {...register('region')}>
@@ -483,7 +587,7 @@ export default function RegisterPage() {
                         <option value="PRIVATE_WORKER">Private Worker</option>
                       </select>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="form-control">
                         <label className="label pb-1"><span className="label-text font-medium text-sm">Occupation</span></label>
                         <input type="text" className={inputCls()} placeholder="e.g. Teacher, Engineer" {...register('occupation')} />
@@ -519,7 +623,7 @@ export default function RegisterPage() {
                 {step === 5 && (
                   <motion.div key="step5" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="space-y-4">
                     <p className="text-xs font-medium text-base-content/40 uppercase tracking-wider">Emergency Contact</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="form-control">
                         <label className="label pb-1"><span className="label-text font-medium text-sm">Contact Number</span></label>
                         <input type="tel" className={inputCls()} {...register('emergencyContactNumber')} />
@@ -534,7 +638,7 @@ export default function RegisterPage() {
                       <label className="label pb-1"><span className="label-text font-medium text-sm">Full Name</span></label>
                       <input type="text" className={inputCls()} {...register('nextOfKinName')} />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="form-control">
                         <label className="label pb-1"><span className="label-text font-medium text-sm">Contact Number</span></label>
                         <input type="tel" className={inputCls()} {...register('nextOfKinContact')} />
@@ -624,29 +728,58 @@ export default function RegisterPage() {
                 )}
               </AnimatePresence>
 
-              {/* Navigation */}
-              <div className="flex gap-3 mt-8 pt-5 border-t border-base-300/50">
-                {step > 1 && (
-                  <motion.button type="button" className="btn btn-ghost flex-1 h-12" onClick={() => setStep(step - 1)} whileTap={{ scale: 0.98 }}>
-                    <ArrowLeft className="w-4 h-4" /> Back
-                  </motion.button>
-                )}
-                {step < TOTAL_STEPS ? (
-                  <motion.button type="button" className="btn btn-primary flex-1 h-12 text-base" onClick={nextStep} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
-                    Continue <ArrowRight className="w-4 h-4" />
-                  </motion.button>
-                ) : (
-                  <motion.button type="submit" className={`btn btn-primary flex-1 h-12 text-base ${loading ? 'loading' : ''}`} disabled={loading} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
-                    {!loading && <UserPlus className="w-4 h-4" />}
-                    {loading ? 'Creating account...' : 'Create Account'}
-                  </motion.button>
-                )}
+                    {/* Navigation */}
+                    <div className="mt-8 flex flex-col gap-3 border-t border-base-300/50 pt-5 sm:flex-row">
+                      {step > 1 && (
+                        <motion.button
+                          type="button"
+                          className="btn h-12 flex-1 justify-between border-primary/10 bg-base-200/45 px-5 text-base text-base-content hover:border-primary/20 hover:bg-base-200"
+                          onClick={() => setStep(step - 1)}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <ArrowLeft className="h-4 w-4" />
+                          Back
+                        </motion.button>
+                      )}
+                      {step < TOTAL_STEPS ? (
+                        <motion.button
+                          type="button"
+                          className="btn btn-primary h-12 flex-1 justify-between px-5 text-base"
+                          onClick={nextStep}
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          Continue <ArrowRight className="h-4 w-4" />
+                        </motion.button>
+                      ) : (
+                        <motion.button
+                          type="submit"
+                          className="btn btn-primary h-12 flex-1 justify-between px-5 text-base"
+                          disabled={loading}
+                          whileHover={{ scale: loading ? 1 : 1.01 }}
+                          whileTap={{ scale: loading ? 1 : 0.98 }}
+                        >
+                          {loading ? (
+                            <span className="flex w-full items-center justify-between gap-4">
+                              <span>Creating account</span>
+                              <span className="loading loading-dots loading-sm" />
+                            </span>
+                          ) : (
+                            <>
+                              Create account
+                              <UserPlus className="h-4 w-4" />
+                            </>
+                          )}
+                        </motion.button>
+                      )}
+                    </div>
+                  </form>
+                </div>
               </div>
-            </form>
-          </div>
+            </motion.div>
+          </section>
         </div>
       </div>
-    </div>
     </>
   )
 }

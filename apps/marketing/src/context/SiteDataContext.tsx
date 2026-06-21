@@ -207,6 +207,25 @@ export function SiteDataProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
+  // If the API is unreachable, don't leave visitors on an endless splash —
+  // pages gate on `!data`, so show a recoverable error instead.
+  if (error && !data) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-5 bg-base-100 px-6 text-center text-primary">
+        <img src="/logo.png" alt="UPOSA" className="h-16 w-16 object-contain opacity-80" />
+        <div>
+          <h1 className="text-2xl font-bold">We couldn't load the site right now</h1>
+          <p className="mt-2 max-w-md text-base-content/60">
+            The UPOSA server didn't respond. Check your connection and try again in a moment.
+          </p>
+        </div>
+        <button className="btn btn-primary" onClick={() => window.location.reload()}>
+          Try again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <SiteDataContext.Provider value={{ data, loading, error }}>
       {children}

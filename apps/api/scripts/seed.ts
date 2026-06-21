@@ -93,7 +93,7 @@ async function main() {
     },
     { key: 'stats', value: { members: 5000, years: 50, projects: 20, events: 100 } },
     { key: 'PAYMENT_PLATFORM_FEE_ENABLED', value: 'true' },
-    { key: 'PAYMENT_PLATFORM_FEE_PERCENT', value: 2.5 },
+    { key: 'PAYMENT_PLATFORM_FEE_PERCENT', value: 1 },
     { key: 'PAYMENT_PLATFORM_FEE_FIXED', value: 0 },
     {
       key: 'schoolInfo',
@@ -804,7 +804,7 @@ async function main() {
       provider: 'PAYSTACK',
       displayName: 'Paystack',
       description: 'Pay with Mobile Money, Bank Transfer, or Card (Ghana & Nigeria)',
-      isEnabled: false,
+      isEnabled: true,
       supportedCurrencies: ['GHS', 'NGN'],
       countries: ['GH', 'NG'],
       credentials: null,

@@ -39,7 +39,8 @@ const projectSchema = z.object({
   endDate: z.string().optional(),
 })
 
-type ProjectForm = z.infer<typeof projectSchema>
+type ProjectFormInput = z.input<typeof projectSchema>
+type ProjectForm = z.output<typeof projectSchema>
 
 const statusOptions: { value: ProjectStatus; label: string }[] = [
   { value: 'ONGOING', label: 'Ongoing' },
@@ -47,7 +48,7 @@ const statusOptions: { value: ProjectStatus; label: string }[] = [
   { value: 'PAUSED', label: 'Paused' },
 ]
 
-function toFormValues(project?: Project): ProjectForm {
+function toFormValues(project?: Project): ProjectFormInput {
   if (!project) return { title: '', slug: '', description: '', content: '', imageUrl: '', gallery: '', milestones: [], goalAmount: 0, raisedAmount: 0, status: 'ONGOING', isFeatured: false, startDate: '', endDate: '' }
   return {
     title: project.title,
@@ -78,7 +79,7 @@ export default function ProjectFormPage() {
 
   const editingProject = isEdit ? projects.find((p) => p.id === id) : undefined
 
-  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<ProjectForm>({
+  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<ProjectFormInput, unknown, ProjectForm>({
     resolver: zodResolver(projectSchema),
     defaultValues: toFormValues(),
   })

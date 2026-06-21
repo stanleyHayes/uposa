@@ -29,7 +29,8 @@ const donationSchema = z.object({
   notes: z.string().optional(),
 })
 
-type DonationForm = z.infer<typeof donationSchema>
+type DonationFormInput = z.input<typeof donationSchema>
+type DonationForm = z.output<typeof donationSchema>
 
 const channelOptions: { value: DonationChannel; label: string }[] = [
   { value: 'MOMO', label: 'Mobile Money (MoMo)' },
@@ -55,7 +56,7 @@ const currencyOptions = [
   { value: 'EUR', label: 'EUR - Euro' },
 ]
 
-function toFormValues(donation?: Donation): DonationForm {
+function toFormValues(donation?: Donation): DonationFormInput {
   if (!donation) {
     return {
       memberId: '',
@@ -97,7 +98,7 @@ export default function DonationFormPage() {
   const isEditing = Boolean(id)
   const existingDonation = isEditing ? donations.find((d) => d.id === id) : undefined
 
-  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<DonationForm>({
+  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<DonationFormInput, unknown, DonationForm>({
     resolver: zodResolver(donationSchema),
     defaultValues: toFormValues(existingDonation),
   })

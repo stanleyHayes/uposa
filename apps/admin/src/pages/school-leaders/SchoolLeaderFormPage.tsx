@@ -22,7 +22,8 @@ const leaderSchema = z.object({
   order: z.coerce.number().int().min(0, 'Order must be at least 0'),
 })
 
-type LeaderForm = z.infer<typeof leaderSchema>
+type LeaderFormInput = z.input<typeof leaderSchema>
+type LeaderForm = z.output<typeof leaderSchema>
 
 const positionOptions = [
   // Tier 0 — Head of School
@@ -84,7 +85,7 @@ export default function SchoolLeaderFormPage() {
     reset,
     control,
     formState: { errors, isSubmitting },
-  } = useForm<LeaderForm>({
+  } = useForm<LeaderFormInput, unknown, LeaderForm>({
     resolver: zodResolver(leaderSchema),
     defaultValues: { name: '', position: '', isActive: 'true', order: 0 },
   })

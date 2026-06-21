@@ -30,27 +30,27 @@
     "seed": "npm run seed -w apps/api"
   },
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^10.0.3"
   },
   "overrides": {
     "react-native": {
-      "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "react": "19.2.7",
+      "react-dom": "19.2.7"
     },
     "expo-router": {
-      "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "react": "19.2.7",
+      "react-dom": "19.2.7"
     },
     "expo": {
-      "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "react": "19.2.7",
+      "react-dom": "19.2.7"
     },
     "react-native-web": {
-      "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "react": "19.2.7",
+      "react-dom": "19.2.7"
     }
   }
 }

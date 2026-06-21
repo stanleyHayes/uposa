@@ -1,10 +1,18 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export async function fetchSiteData() {
-  const res = await fetch(`${API_BASE}/public/site-data`);
-  if (!res.ok) throw new Error('Failed to fetch site data');
-  const json = await res.json();
-  return json.data;
+  // Time the request out so an unreachable API (e.g. a stale/localhost
+  // VITE_API_URL in production) surfaces as an error instead of hanging forever.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  try {
+    const res = await fetch(`${API_BASE}/public/site-data`, { signal: controller.signal });
+    if (!res.ok) throw new Error('Failed to fetch site data');
+    const json = await res.json();
+    return json.data;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function submitContact(data: { name: string; email: string; subject: string; message: string }) {
