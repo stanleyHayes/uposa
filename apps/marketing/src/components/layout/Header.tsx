@@ -17,10 +17,12 @@ import {
     Megaphone,
     Menu,
     MessageSquare,
+    Moon,
     Newspaper,
     PanelTop,
     School,
     Search,
+    Sun,
     UserPlus,
     Users,
     X,
@@ -29,6 +31,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { useSiteData } from "../../context/SiteDataContext.tsx";
+import { useTheme } from "../../hooks/useTheme.ts";
 
 interface NavChild {
     label: string;
@@ -97,6 +100,9 @@ export const Header = () => {
     const dropdownRef = useRef<HTMLDivElement>(null);
     const notifRef = useRef<HTMLDivElement>(null);
     const { data } = useSiteData();
+    const { theme, toggle } = useTheme();
+    const themeLabel = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+    const ThemeIcon = theme === "dark" ? Sun : Moon;
 
     const notifications = [
         ...(data?.upcomingEvents?.slice(0, 2).map((event) => ({
@@ -181,7 +187,7 @@ export const Header = () => {
             <div
                 className="pointer-events-none absolute inset-0 opacity-[0.06]"
                 style={{
-                    backgroundImage: "linear-gradient(90deg, #FFF8DC 1px, transparent 1px), linear-gradient(#FFF8DC 1px, transparent 1px)",
+                    backgroundImage: "linear-gradient(90deg, var(--uposa-nav-grid) 1px, transparent 1px), linear-gradient(var(--uposa-nav-grid) 1px, transparent 1px)",
                     backgroundSize: "40px 40px",
                 }}
             />
@@ -287,6 +293,16 @@ export const Header = () => {
                     </nav>
 
                     <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            className="grid h-10 w-10 place-items-center border border-primary-content/10 bg-primary-content/10 transition hover:bg-primary-content/15"
+                            onClick={toggle}
+                            aria-label={themeLabel}
+                            title={themeLabel}
+                        >
+                            <ThemeIcon size={17} />
+                        </button>
+
                         <div className="relative" ref={notifRef}>
                             <button
                                 type="button"
@@ -357,7 +373,7 @@ export const Header = () => {
                         <Link to="/donate" className="btn btn-secondary btn-sm hidden min-h-10 border-0 px-4 sm:inline-flex">
                             Donate
                         </Link>
-                        <Link to="/membership" className="btn btn-sm hidden min-h-10 border-primary-content/20 bg-primary-content text-primary hover:bg-white sm:inline-flex">
+                        <Link to="/membership" className="btn btn-sm hidden min-h-10 border-primary-content/20 bg-primary-content text-primary hover:bg-primary-content/90 sm:inline-flex">
                             Register
                         </Link>
                         <button

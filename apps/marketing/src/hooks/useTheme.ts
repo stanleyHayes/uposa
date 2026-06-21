@@ -6,8 +6,11 @@ const THEME_MAP = { light: "uposa-light", dark: "uposa-dark" } as const;
 
 export function useTheme() {
     const [theme, setTheme] = useState<Theme>(() => {
+        if (typeof window === "undefined") return "light";
+
         const stored = localStorage.getItem("uposa-theme") as Theme | null;
-        if (stored) return stored;
+        if (stored === "light" || stored === "dark") return stored;
+
         return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     });
 

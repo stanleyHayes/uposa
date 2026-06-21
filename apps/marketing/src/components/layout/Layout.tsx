@@ -14,7 +14,7 @@ const SiteWatermarks = () => (
         <div
             className="absolute inset-0 opacity-[0.018]"
             style={{
-                backgroundImage: "radial-gradient(circle at 1px 1px, rgba(0,27,80,0.26) 1px, transparent 0)",
+                backgroundImage: "radial-gradient(circle at 1px 1px, var(--uposa-watermark-grid) 1px, transparent 0)",
                 backgroundSize: "64px 64px",
             }}
         />

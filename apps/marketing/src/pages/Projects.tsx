@@ -216,7 +216,7 @@ const Projects = () => {
                 <div
                     className="absolute inset-0 opacity-[0.05]"
                     style={{
-                        backgroundImage: "linear-gradient(90deg, #001B50 1px, transparent 1px), linear-gradient(#001B50 1px, transparent 1px)",
+                        backgroundImage: "linear-gradient(90deg, var(--uposa-hero-grid) 1px, transparent 1px), linear-gradient(var(--uposa-hero-grid) 1px, transparent 1px)",
                         backgroundSize: "44px 44px",
                     }}
                 />

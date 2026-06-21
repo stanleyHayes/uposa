@@ -3,11 +3,11 @@
    (including the large apps/mobile tree), which stalls the Vite dev server. */
 @import "tailwindcss" source("../");
 @plugin "daisyui" {
-  themes: uposa --default;
+  themes: uposa-light --default, uposa-dark --prefersdark;
 }
 
 @plugin "daisyui/theme" {
-  name: "uposa";
+  name: "uposa-light";
   default: true;
   color-scheme: light;
   --color-primary: #001B50;
@@ -32,6 +32,47 @@
   --color-error-content: #ffffff;
 }
 
+@plugin "daisyui/theme" {
+  name: "uposa-dark";
+  prefersdark: true;
+  color-scheme: dark;
+  --color-primary: #061946;
+  --color-primary-content: #FFF8DC;
+  --color-secondary: #D4AF37;
+  --color-secondary-content: #061946;
+  --color-accent: #4668B7;
+  --color-accent-content: #FFF8DC;
+  --color-neutral: #0B1120;
+  --color-neutral-content: #FFF8DC;
+  --color-base-100: #071225;
+  --color-base-200: #0C1830;
+  --color-base-300: #1A2B4D;
+  --color-base-content: #F8EFCF;
+  --color-info: #60A5FA;
+  --color-info-content: #061946;
+  --color-success: #4ADE80;
+  --color-success-content: #061946;
+  --color-warning: #FBBF24;
+  --color-warning-content: #061946;
+  --color-error: #F87171;
+  --color-error-content: #061946;
+}
+
+:root,
+[data-theme="uposa-light"] {
+  color-scheme: light;
+  --uposa-hero-grid: rgba(0, 27, 80, 0.26);
+  --uposa-nav-grid: rgba(255, 248, 220, 0.78);
+  --uposa-watermark-grid: rgba(0, 27, 80, 0.26);
+}
+
+[data-theme="uposa-dark"] {
+  color-scheme: dark;
+  --uposa-hero-grid: rgba(255, 248, 220, 0.18);
+  --uposa-nav-grid: rgba(255, 248, 220, 0.42);
+  --uposa-watermark-grid: rgba(255, 248, 220, 0.2);
+}
+
 @font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Light.ttf') format('truetype'); font-weight: 300; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Light Italic.ttf') format('truetype'); font-weight: 300; font-style: italic; font-display: swap; }
 @font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
@@ -49,6 +90,11 @@
 
 html {
   scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-base-100);
+  color: var(--color-base-content);
 }
 
 .form-control .input,
