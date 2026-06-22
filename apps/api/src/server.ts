@@ -15,15 +15,20 @@ async function startServer(): Promise<void> {
     initSocket(httpServer);
 
     httpServer.listen(PORT, () => {
+      const isProd = env.NODE_ENV === 'production';
+      const where = isProd
+        ? `  Listening:   0.0.0.0:${PORT} (served behind your platform/proxy)
+  Health:      /health`
+        : `  URL:         http://localhost:${PORT}
+  Health:      http://localhost:${PORT}/health
+  WebSocket:   ws://localhost:${PORT}`;
       console.log(`
 ====================================================
   UPOSA API Server
 ====================================================
   Environment: ${env.NODE_ENV}
   Port:        ${PORT}
-  URL:         http://localhost:${PORT}
-  Health:      http://localhost:${PORT}/health
-  WebSocket:   ws://localhost:${PORT}
+${where}
 ====================================================
       `);
     });
