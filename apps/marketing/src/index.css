@@ -337,10 +337,15 @@ h6 {
   display: flex;
 }
 
-/* Ensure icons inside input wrappers don't block input clicks */
-.form-control .relative > .absolute {
+/* Ensure icons inside input wrappers don't block input clicks, but keep
+   interactive controls (e.g. password show/hide buttons) clickable */
+.form-control .relative > .absolute:not(button):not(a):not([role="button"]) {
   z-index: 10;
   pointer-events: none;
+}
+.form-control .relative > button.absolute,
+.form-control .relative > a.absolute {
+  z-index: 10;
 }
 .form-control .relative > input.input,
 .form-control .relative > select.select {

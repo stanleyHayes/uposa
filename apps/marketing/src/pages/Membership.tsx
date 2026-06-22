@@ -43,6 +43,7 @@ const Membership = () => {
     const [regLoading, setRegLoading] = useState(false);
     const [regError, setRegError] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const regFormRef = useRef<HTMLFormElement>(null);
 
     if (loading || !data) {
@@ -380,7 +381,15 @@ const Membership = () => {
                                                         <label className="label pb-1"><span className="label-text font-semibold text-primary">Confirm password *</span></label>
                                                         <div className="relative">
                                                             <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary/35" />
-                                                            <input name="confirmPassword" type="password" placeholder="Repeat password" className={`${inputClass} pl-10`} required minLength={8} />
+                                                            <input name="confirmPassword" type={showConfirmPassword ? "text" : "password"} placeholder="Repeat password" className={`${inputClass} pl-10 pr-10`} required minLength={8} />
+                                                            <button
+                                                                type="button"
+                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-primary/40 transition-colors hover:text-primary"
+                                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                                                            >
+                                                                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 </div>

@@ -597,7 +597,14 @@ const Community = () => {
                                                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-secondary">Recent discussions</p>
                                                     <h3 className="mt-2 text-2xl font-bold text-primary">Community topics</h3>
                                                 </div>
-                                                <button className="btn btn-primary btn-sm">New topic</button>
+                                                <a
+                                                    href={`${import.meta.env.VITE_ALUMNI_URL || "https://alumni.uposa.org"}/forum`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="btn btn-primary btn-sm"
+                                                >
+                                                    New topic
+                                                </a>
                                             </div>
                                             <div className="space-y-3">
                                                 {discussions.length > 0 ? discussions.map((discussion) => (
