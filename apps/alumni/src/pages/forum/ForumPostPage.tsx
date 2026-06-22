@@ -1,3 +1,4 @@
+import { BouncingDots } from "../../components/ui/BouncingDots";
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import {
@@ -260,7 +261,7 @@ export default function ForumPostPage() {
                     }}
                   />
                   <button className="btn btn-primary min-h-11 gap-2" onClick={handleComment} disabled={!comment.trim() || submitting}>
-                    {submitting ? <span className="h-4 w-16 animate-pulse bg-primary-content/35" /> : <Send className="h-4 w-4" />}
+                    {submitting ? <BouncingDots /> : <Send className="h-4 w-4" />}
                   </button>
                 </div>
               ) : (

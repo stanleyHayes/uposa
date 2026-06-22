@@ -1,3 +1,4 @@
+import { BouncingDots } from "../../components/ui/BouncingDots";
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useForm } from 'react-hook-form'
@@ -762,7 +763,7 @@ export default function RegisterPage() {
                           {loading ? (
                             <span className="flex w-full items-center justify-between gap-4">
                               <span>Creating account</span>
-                              <span className="loading loading-dots loading-sm" />
+                              <BouncingDots />
                             </span>
                           ) : (
                             <>

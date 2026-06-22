@@ -30,7 +30,7 @@ import { motion } from "framer-motion";
 import { useSiteData } from "../../context/SiteDataContext.tsx";
 import { ScrollReveal } from "../common/ScrollReveal.tsx";
 import { subscribeNewsletter } from "../../api/client.ts";
-import { SkeletonBlock } from "../common/Skeleton.tsx";
+import { BouncingDots } from "../common/BouncingDots.tsx";
 
 const fadeUp = {
     hidden: { opacity: 0, y: 18 },
@@ -180,7 +180,7 @@ export const Footer = () => {
                                         required
                                     />
                                     <button type="submit" className="btn btn-secondary" disabled={newsletterLoading}>
-                                        {newsletterLoading ? <SkeletonBlock className="h-4 w-24 bg-secondary-content/25" /> : <>Subscribe <Send size={15} /></>}
+                                        {newsletterLoading ? <BouncingDots /> : <>Subscribe <Send size={15} /></>}
                                     </button>
                                     {newsletterError && <p className="text-sm font-semibold text-error sm:col-span-2">{newsletterError}</p>}
                                 </form>

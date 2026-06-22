@@ -37,7 +37,7 @@ import EmptyState from "../components/common/EmptyState.tsx";
 import { useSiteData } from "../context/SiteDataContext.tsx";
 import { subscribeNewsletter } from "../api/client.ts";
 import SplashScreen from "../components/common/SplashScreen.tsx";
-import { SkeletonBlock } from "../components/common/Skeleton.tsx";
+import { BouncingDots } from "../components/common/BouncingDots.tsx";
 import { Card, CardAccent, CardBody } from "../components/ui/Card.tsx";
 
 const formatDate = (value?: string | null, options?: Intl.DateTimeFormatOptions) => {
@@ -865,7 +865,7 @@ const Home = () => {
                                     required
                                 />
                                 <button type="submit" className="btn btn-secondary w-full sm:w-auto" disabled={nlLoading}>
-                                    {nlLoading ? <SkeletonBlock className="h-4 w-24 bg-secondary-content/25" /> : (
+                                    {nlLoading ? <BouncingDots /> : (
                                         <>
                                             Subscribe <Send size={15} />
                                         </>

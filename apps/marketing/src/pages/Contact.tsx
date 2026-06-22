@@ -24,7 +24,7 @@ import SEO from "../components/common/SEO.tsx";
 import { useSiteData } from "../context/SiteDataContext.tsx";
 import { submitContact, submitTranscriptRequest, subscribeNewsletter } from "../api/client.ts";
 import SplashScreen from "../components/common/SplashScreen.tsx";
-import { SkeletonBlock } from "../components/common/Skeleton.tsx";
+import { BouncingDots } from "../components/common/BouncingDots.tsx";
 
 function formValue(formData: FormData, key: string) {
     return String(formData.get(key) || "").trim();
@@ -397,7 +397,7 @@ const Contact = () => {
                                                 Messages are stored for association follow-up and internal response tracking.
                                             </p>
                                             <button type="submit" className="btn btn-primary shrink-0 gap-2" disabled={contactLoading}>
-                                                {contactLoading ? <SkeletonBlock className="h-4 w-24 bg-primary-content/25" /> : <>Send message <Send size={16} /></>}
+                                                {contactLoading ? <BouncingDots /> : <>Send message <Send size={16} /></>}
                                             </button>
                                         </div>
                                     </motion.form>
@@ -587,7 +587,7 @@ const Contact = () => {
                                         {transcriptError && <p className="mt-4 border border-error/20 bg-error/5 p-3 text-sm font-semibold text-error">{transcriptError}</p>}
 
                                         <button type="submit" className="btn btn-primary mt-6 w-full gap-2" disabled={transcriptLoading}>
-                                            {transcriptLoading ? <SkeletonBlock className="h-4 w-32 bg-primary-content/25" /> : <>Submit request <ArrowRight size={16} /></>}
+                                            {transcriptLoading ? <BouncingDots /> : <>Submit request <ArrowRight size={16} /></>}
                                         </button>
                                     </motion.form>
                                 )}
@@ -631,7 +631,7 @@ const Contact = () => {
                                         required
                                     />
                                     <button type="submit" className="btn btn-secondary" disabled={newsletterLoading}>
-                                        {newsletterLoading ? <SkeletonBlock className="h-4 w-24 bg-secondary-content/25" /> : "Subscribe"}
+                                        {newsletterLoading ? <BouncingDots /> : "Subscribe"}
                                     </button>
                                     {newsletterError && <p className="text-sm font-semibold text-error sm:col-span-2">{newsletterError}</p>}
                                 </form>

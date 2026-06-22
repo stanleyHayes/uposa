@@ -27,6 +27,7 @@ import { useSiteData } from "../context/SiteDataContext.tsx";
 import type { SiteData } from "../context/SiteDataContext.tsx";
 import SplashScreen from "../components/common/SplashScreen.tsx";
 import { SkeletonBlock } from "../components/common/Skeleton.tsx";
+import { BouncingDots } from "../components/common/BouncingDots.tsx";
 import { getPlatformFeePreview } from "../api/client.ts";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
@@ -1017,7 +1018,7 @@ const Donate = () => {
                                                 disabled={initiating || (!!isOnlineMethod && !donorEmail.trim())}
                                                 onClick={handleConfirm}
                                             >
-                                                {initiating ? <SkeletonBlock className="h-4 w-32 bg-primary-content/25" /> : isOnlineMethod ? "Proceed to payment" : "I've made the transfer"}
+                                                {initiating ? <BouncingDots /> : isOnlineMethod ? "Proceed to payment" : "I've made the transfer"}
                                             </button>
                                         </div>
                                     </div>

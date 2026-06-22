@@ -135,7 +135,11 @@ export default function LoginPage() {
           rightIcon={!isSubmitting && <ArrowRight size={18} />}
         >
           {isSubmitting ? (
-            <span className="h-4 w-28 animate-pulse bg-brand-950/20" aria-label="Signing in" />
+            <span className="flex items-center gap-1.5" aria-label="Signing in">
+              <span className="h-2 w-2 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
+              <span className="h-2 w-2 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
+              <span className="h-2 w-2 rounded-full bg-current animate-bounce" />
+            </span>
           ) : (
             'Sign in'
           )}

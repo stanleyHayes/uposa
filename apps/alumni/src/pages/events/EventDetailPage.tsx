@@ -1,3 +1,4 @@
+import { BouncingDots } from "../../components/ui/BouncingDots";
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import {
@@ -264,7 +265,7 @@ export default function EventDetailPage() {
           </label>
 
           <button type="submit" className="btn btn-primary min-h-12 w-full" disabled={rsvpLoading}>
-            {rsvpLoading ? <span className="h-4 w-28 animate-pulse bg-primary-content/35" /> : 'Confirm RSVP'}
+            {rsvpLoading ? <BouncingDots /> : 'Confirm RSVP'}
           </button>
         </form>
       </Modal>

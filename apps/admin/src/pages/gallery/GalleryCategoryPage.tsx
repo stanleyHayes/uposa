@@ -1,6 +1,7 @@
+import { BouncingDots } from "../../components/ui/BouncingDots";
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ImagePlus, Trash2, Images, X, CheckSquare, Square, Loader2 } from 'lucide-react'
+import { ArrowLeft, ImagePlus, Trash2, Images, X, CheckSquare, Square } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import Button from '../../components/ui/Button'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
@@ -229,7 +230,7 @@ export default function GalleryCategoryPage() {
               </div>
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-500 dark:text-gray-400">{uploadFiles.length} file(s) selected</p>
-                <Button onClick={handleUpload} disabled={uploading} leftIcon={uploading ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}>
+                <Button onClick={handleUpload} disabled={uploading} leftIcon={uploading ? <BouncingDots /> : <ImagePlus size={16} />}>
                   {uploading ? 'Uploading...' : `Upload ${uploadFiles.length} Image${uploadFiles.length > 1 ? 's' : ''}`}
                 </Button>
               </div>

@@ -31,7 +31,6 @@ import { HeroReveal } from "../components/common/HeroReveal.tsx";
 import SEO from "../components/common/SEO.tsx";
 import { useSiteData } from "../context/SiteDataContext.tsx";
 import SplashScreen from "../components/common/SplashScreen.tsx";
-import { SkeletonBlock } from "../components/common/Skeleton.tsx";
 import { registerMember } from "../api/client.ts";
 
 const inputClass = "input input-bordered w-full border-primary/15 bg-base-100 focus:border-secondary";
@@ -485,7 +484,13 @@ const Membership = () => {
                                             {regError && <p className="border border-error/20 bg-error/10 p-3 text-sm font-semibold text-error">{regError}</p>}
 
                                             <button type="submit" className="btn btn-primary h-12 w-full gap-2 text-base" disabled={regLoading}>
-                                                {regLoading ? <SkeletonBlock className="h-4 w-36 bg-primary-content/25" /> : <><UserPlus size={18} /> Submit registration</>}
+                                                {regLoading ? (
+                                                    <span className="flex items-center gap-1.5" aria-label="Submitting registration">
+                                                        <span className="h-2 w-2 rounded-full bg-current animate-bounce [animation-delay:-0.3s]" />
+                                                        <span className="h-2 w-2 rounded-full bg-current animate-bounce [animation-delay:-0.15s]" />
+                                                        <span className="h-2 w-2 rounded-full bg-current animate-bounce" />
+                                                    </span>
+                                                ) : (<><UserPlus size={18} /> Submit registration</>)}
                                             </button>
                                         </form>
                                     </div>

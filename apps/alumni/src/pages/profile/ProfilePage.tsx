@@ -1,3 +1,4 @@
+import { BouncingDots } from "../../components/ui/BouncingDots";
 import { useRef, useState, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -249,7 +250,7 @@ export default function ProfilePage() {
                     className="absolute -bottom-2 -right-2 grid h-10 w-10 place-items-center bg-secondary text-primary shadow-lg transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 rounded-[14px_3px_14px_3px]"
                     aria-label="Upload profile photo"
                   >
-                    {uploading ? <span className="h-4 w-4 animate-pulse bg-primary/40" /> : <Camera className="h-4 w-4" />}
+                    {uploading ? <BouncingDots /> : <Camera className="h-4 w-4" />}
                   </button>
                   <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoUpload} />
                 </div>

@@ -1,6 +1,7 @@
+import { BouncingDots } from "../../components/ui/BouncingDots";
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FolderPlus, Images, Trash2, Upload, X, Loader2, Image as ImageIcon } from 'lucide-react'
+import { FolderPlus, Images, Trash2, Upload, X, Image as ImageIcon } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import Button from '../../components/ui/Button'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
@@ -171,7 +172,7 @@ export default function GalleryPage() {
             </div>
           </div>
           <div className="flex justify-end mt-4">
-            <Button onClick={handleCreate} disabled={creating} leftIcon={creating ? <Loader2 size={16} className="animate-spin" /> : <FolderPlus size={16} />}>
+            <Button onClick={handleCreate} disabled={creating} leftIcon={creating ? <BouncingDots /> : <FolderPlus size={16} />}>
               {creating ? 'Creating...' : 'Create Category'}
             </Button>
           </div>

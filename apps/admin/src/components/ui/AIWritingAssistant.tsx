@@ -1,5 +1,6 @@
+import { BouncingDots } from "./BouncingDots";
 import { useMemo, useState } from 'react'
-import { ArrowDownToLine, Check, Clipboard, Copy, Loader2, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowDownToLine, Check, Clipboard, Copy, Sparkles, Trash2 } from 'lucide-react'
 import { adminAiApi, type AIWritingAction } from '../../api/services'
 import { cn } from '../../utils/cn'
 
@@ -207,7 +208,7 @@ export default function AIWritingAssistant({
             disabled={disabled || loading}
             className="inline-flex h-9 items-center justify-center gap-2 bg-brand-950 px-3 text-xs font-black text-cream-100 transition-colors hover:bg-cream-500 hover:text-brand-950 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-cream-100 dark:text-brand-950 dark:hover:bg-cream-500"
           >
-            {loading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {loading ? <BouncingDots /> : <Sparkles size={14} />}
             {loading ? 'Writing' : 'Run'}
           </button>
         </div>

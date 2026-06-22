@@ -23,6 +23,7 @@ import { rsvpToEvent } from "../api/client.ts";
 import SplashScreen from "../components/common/SplashScreen.tsx";
 import EmptyState from "../components/common/EmptyState.tsx";
 import { SkeletonBlock, SkeletonCardGrid } from "../components/common/Skeleton.tsx";
+import { BouncingDots } from "../components/common/BouncingDots.tsx";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 const PER_PAGE = 4;
@@ -629,7 +630,7 @@ const Events = () => {
                                         </div>
                                         {rsvpError && <p className="border border-error/20 bg-error/10 p-3 text-sm font-semibold text-error">{rsvpError}</p>}
                                         <button type="submit" className="btn btn-primary h-12 w-full" disabled={rsvpLoading}>
-                                            {rsvpLoading ? <SkeletonBlock className="h-4 w-28 bg-primary-content/25" /> : "Confirm RSVP"}
+                                            {rsvpLoading ? <BouncingDots /> : "Confirm RSVP"}
                                         </button>
                                     </form>
                                 </div>
