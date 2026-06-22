@@ -109,7 +109,7 @@ function StepMarker({ currentStep }: { currentStep: DonationStep }) {
     const success = currentStep === "success";
 
     return (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid gap-2 sm:grid-cols-3">
             {steps.map((item, index) => {
                 const active = success || index <= activeIndex;
                 return (
@@ -138,6 +138,7 @@ const Donate = () => {
     const [donorName, setDonorName] = useState("");
     const [feePreview, setFeePreview] = useState<PlatformFeePreview | null>(null);
     const [feeLoading, setFeeLoading] = useState(false);
+    const [paymentError, setPaymentError] = useState<string | null>(null);
     const modalRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -182,6 +183,7 @@ const Donate = () => {
         setDonorEmail("");
         setDonorName("");
         setFeePreview(null);
+        setPaymentError(null);
         setModalOpen(true);
     };
 
@@ -210,6 +212,7 @@ const Donate = () => {
     }, [isOnlineMethod, finalAmount]);
 
     const handleConfirm = async () => {
+        setPaymentError(null);
         if (isOnlineMethod && selectedOnlineMethod) {
             if (!donorEmail.trim()) return;
             setInitiating(true);
@@ -228,7 +231,13 @@ const Donate = () => {
                     }),
                 });
                 const donationJson = await donationResponse.json();
+                if (!donationResponse.ok) {
+                    throw new Error(donationJson.message || "Could not create donation record.");
+                }
                 const donationId = donationJson.data?.id;
+                if (!donationId) {
+                    throw new Error("Donation record was not created.");
+                }
 
                 const paymentResponse = await fetch(`${API_BASE}/payments/initialize`, {
                     method: "POST",
@@ -245,15 +254,18 @@ const Donate = () => {
                     }),
                 });
                 const paymentJson = await paymentResponse.json();
+                if (!paymentResponse.ok) {
+                    throw new Error(paymentJson.message || "Could not initialize payment.");
+                }
 
                 if (paymentJson.data?.authorizationUrl) {
                     window.location.href = paymentJson.data.authorizationUrl;
                     return;
                 }
 
-                setStep("success");
-            } catch {
-                setStep("success");
+                throw new Error("Payment provider did not return a checkout link.");
+            } catch (error) {
+                setPaymentError(error instanceof Error ? error.message : "Could not start online payment.");
             } finally {
                 setInitiating(false);
             }
@@ -321,7 +333,7 @@ const Donate = () => {
                 <div
                     className="absolute inset-0 opacity-[0.05]"
                     style={{
-                        backgroundImage: "linear-gradient(90deg, #001B50 1px, transparent 1px), linear-gradient(#001B50 1px, transparent 1px)",
+                        backgroundImage: "linear-gradient(90deg, var(--uposa-hero-grid) 1px, transparent 1px), linear-gradient(var(--uposa-hero-grid) 1px, transparent 1px)",
                         backgroundSize: "44px 44px",
                     }}
                 />
@@ -804,7 +816,7 @@ const Donate = () => {
                                                         <button
                                                             key={method.id}
                                                             type="button"
-                                                            className={`grid grid-cols-[48px_1fr_auto] items-center gap-3 border p-3 text-left transition ${
+                                                            className={`grid grid-cols-[42px_minmax(0,1fr)_auto] items-center gap-3 border p-3 text-left transition sm:grid-cols-[48px_minmax(0,1fr)_auto] ${
                                                                 active ? "border-secondary bg-secondary/10" : "border-base-300 bg-base-200 hover:border-primary/25"
                                                             }`}
                                                             onClick={() => setPaymentMethod(method.id)}
@@ -812,7 +824,7 @@ const Donate = () => {
                                                             <span className={`grid h-12 w-12 place-items-center ${active ? "bg-secondary text-secondary-content" : "bg-primary/5 text-primary"}`}>
                                                                 <Icon size={20} />
                                                             </span>
-                                                            <span>
+                                                            <span className="min-w-0">
                                                                 <span className="block font-bold text-primary">{method.title}</span>
                                                                 <span className="mt-1 block text-sm text-base-content/50">{method.description}</span>
                                                             </span>
@@ -828,7 +840,7 @@ const Donate = () => {
                                                         <button
                                                             key={method.id}
                                                             type="button"
-                                                            className={`grid grid-cols-[48px_1fr_auto] items-center gap-3 border p-3 text-left transition ${
+                                                            className={`grid grid-cols-[42px_minmax(0,1fr)_auto] items-center gap-3 border p-3 text-left transition sm:grid-cols-[48px_minmax(0,1fr)_auto] ${
                                                                 active ? "border-secondary bg-secondary/10" : "border-base-300 bg-base-200 hover:border-primary/25"
                                                             }`}
                                                             onClick={() => setPaymentMethod(method.provider)}
@@ -836,7 +848,7 @@ const Donate = () => {
                                                             <span className={`grid h-12 w-12 place-items-center ${active ? "bg-secondary text-secondary-content" : "bg-primary/5 text-primary"}`}>
                                                                 <Icon size={20} />
                                                             </span>
-                                                            <span>
+                                                            <span className="min-w-0">
                                                                 <span className="block font-bold text-primary">{method.displayName}</span>
                                                                 <span className="mt-1 block text-sm text-base-content/50">{method.description || "Secure online payment"}</span>
                                                             </span>
@@ -954,6 +966,12 @@ const Donate = () => {
                                                 <p className="text-sm leading-relaxed text-base-content/60">
                                                     You will be redirected to {selectedOnlineMethod.displayName} to complete your donation securely.
                                                 </p>
+
+                                                {paymentError && (
+                                                    <div className="mt-4 border border-error/25 bg-error/10 p-3 text-sm font-semibold text-error">
+                                                        {paymentError}
+                                                    </div>
+                                                )}
 
                                                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                                                     <label className="form-control">

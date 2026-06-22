@@ -1,13 +1,19 @@
 import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
-import { env } from './env';
+import { isCorsOriginAllowed } from './cors';
 
 let io: Server;
 
 export function initSocket(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
     cors: {
-      origin: [env.CLIENT_URL, env.ADMIN_URL],
+      origin: (origin, callback) => {
+        if (isCorsOriginAllowed(origin)) {
+          callback(null, true);
+        } else {
+          callback(null, false);
+        }
+      },
       methods: ['GET', 'POST'],
       credentials: true,
     },

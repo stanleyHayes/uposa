@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { Shield, Users, BarChart3, Globe } from 'lucide-react'
+import { HandCoins, Newspaper, ShieldCheck, Users } from 'lucide-react'
 
 interface AuthLayoutProps {
   children: ReactNode
@@ -8,114 +8,142 @@ interface AuthLayoutProps {
 }
 
 const features = [
-  { icon: Users, text: 'Manage alumni & members' },
-  { icon: BarChart3, text: 'Track donations & dues' },
-  { icon: Globe, text: 'Publish events & news' },
-  { icon: Shield, text: 'Role-based access control' },
+  { icon: Users, label: 'Members', text: 'Registrations, profiles, chapters' },
+  { icon: HandCoins, label: 'Finance', text: 'Dues, donations, payment rails' },
+  { icon: Newspaper, label: 'Updates', text: 'News, events, projects, gallery' },
+  { icon: ShieldCheck, label: 'Access', text: 'Roles, permissions, audit trails' },
 ]
 
 export default function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen flex">
-      {/* Left branded panel */}
-      <div className="hidden lg:flex lg:w-[45%] xl:w-[40%] relative bg-brand-950 overflow-hidden">
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-[0.04]">
-          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
-        </div>
-
-        {/* Gradient orbs */}
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-brand-400/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-32 -right-32 w-[30rem] h-[30rem] bg-cream-300/5 rounded-full blur-3xl" />
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-between w-full p-12 xl:p-16">
-          {/* Logo + branding */}
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <img src="/logo.png" alt="UPOSA" className="w-11 h-11 rounded-xl" />
-              <span className="text-xl font-black text-white tracking-tight">UPOSA</span>
+    <div className="min-h-screen bg-cream-50 text-gray-900 dark:bg-dark-bg dark:text-gray-100">
+      <div className="grid min-h-screen lg:grid-cols-[minmax(420px,0.92fr)_1.08fr]">
+        <aside className="relative hidden overflow-hidden bg-brand-950 text-cream-100 lg:flex">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.06]"
+            style={{
+              backgroundImage: 'linear-gradient(90deg, rgba(255,248,220,.72) 1px, transparent 1px), linear-gradient(rgba(255,248,220,.72) 1px, transparent 1px)',
+              backgroundSize: '44px 44px',
+            }}
+          />
+          <img
+            src="/logo.png"
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-24 top-20 h-[520px] w-[520px] object-contain opacity-[0.045]"
+          />
+          <div className="relative z-10 flex min-h-full w-full flex-col justify-between p-10 xl:p-14">
+            <div className="flex items-center gap-3">
+              <span className="grid h-12 w-12 place-items-center border border-cream-100/10 bg-cream-100/10">
+                <img src="/logo.png" alt="UPOSA" className="h-10 w-10 object-contain" />
+              </span>
+              <div>
+                <p className="text-lg font-black tracking-tight text-white">UPOSA</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cream-100/40">Admin Portal</p>
+              </div>
             </div>
-            <p className="text-brand-300/70 text-sm ml-14">Admin Portal</p>
-          </div>
 
-          {/* Middle section */}
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-3xl xl:text-4xl font-bold text-white leading-tight">
-                Powering the alumni
-                <br />
-                <span className="text-cream-300">community.</span>
-              </h2>
-              <p className="mt-4 text-brand-200/60 text-sm leading-relaxed max-w-sm">
-                Manage every aspect of the UPOSA alumni network from one centralized dashboard.
+            <div className="max-w-xl">
+              <div className="mb-6 inline-flex items-center gap-2 border border-cream-100/10 bg-cream-100/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cream-300">
+                <ShieldCheck size={15} />
+                Secretariat console
+              </div>
+              <h1 className="max-w-md text-4xl font-black leading-[1.02] tracking-tight text-white xl:text-5xl">
+                Keep the association desk moving.
+              </h1>
+              <p className="mt-5 max-w-md text-sm leading-7 text-cream-100/[0.58]">
+                A focused workspace for the people publishing updates, reviewing members, tracking dues, and coordinating school support.
               </p>
+
+              <div className="mt-9 grid gap-3">
+                {features.map(({ icon: Icon, label, text }) => (
+                  <div key={label} className="grid grid-cols-[44px_1fr] items-center gap-4 border border-cream-100/10 bg-cream-100/[0.055] p-3">
+                    <span className="grid h-11 w-11 place-items-center bg-cream-100/10 text-cream-300">
+                      <Icon size={18} />
+                    </span>
+                    <span>
+                      <span className="block text-sm font-bold text-white">{label}</span>
+                      <span className="mt-0.5 block text-xs leading-relaxed text-cream-100/[0.45]">{text}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Feature list */}
-            <div className="space-y-3">
-              {features.map(({ icon: Icon, text }) => (
-                <div key={text} className="flex items-center gap-3 text-brand-200/70">
-                  <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0">
-                    <Icon size={15} className="text-cream-300/80" />
-                  </div>
-                  <span className="text-sm">{text}</span>
+            <div className="grid grid-cols-3 border border-cream-100/10 bg-cream-100/[0.045]">
+              {[
+                ['24/7', 'Desk'],
+                ['RBAC', 'Access'],
+                ['Live', 'Updates'],
+              ].map(([value, label]) => (
+                <div key={label} className="border-r border-cream-100/10 p-4 last:border-r-0">
+                  <p className="text-lg font-black text-cream-300">{value}</p>
+                  <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-cream-100/[0.35]">{label}</p>
                 </div>
               ))}
             </div>
           </div>
+        </aside>
 
-          {/* Footer */}
-          <p className="text-brand-300/30 text-xs">
-            &copy; {new Date().getFullYear()} UPOSA. All rights reserved.
-          </p>
-        </div>
-      </div>
+        <main className="relative flex min-h-screen flex-col overflow-hidden bg-cream-50 dark:bg-dark-bg">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.045] dark:opacity-[0.035]"
+            style={{
+              backgroundImage: 'linear-gradient(90deg, rgba(0,27,80,.42) 1px, transparent 1px), linear-gradient(rgba(0,27,80,.42) 1px, transparent 1px)',
+              backgroundSize: '44px 44px',
+            }}
+          />
+          <img
+            src="/logo.png"
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-24 bottom-8 h-[380px] w-[380px] object-contain opacity-[0.035] dark:opacity-[0.03]"
+          />
 
-      {/* Right form panel */}
-      <div className="flex-1 flex flex-col bg-gray-50 dark:bg-dark-bg">
-        {/* Mobile header */}
-        <div className="lg:hidden px-6 pt-8 pb-4">
-          <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="UPOSA" className="w-9 h-9 rounded-xl" />
-            <span className="text-lg font-black text-brand-950 dark:text-white tracking-tight">UPOSA</span>
-          </div>
-        </div>
-
-        {/* Form area */}
-        <div className="flex-1 flex items-center justify-center px-6 py-8 sm:px-12">
-          <div className="w-full max-w-[420px]">
-            {/* Title area */}
-            {(title || subtitle) && (
-              <div className="mb-8">
-                {title && (
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-50 tracking-tight">
-                    {title}
-                  </h2>
-                )}
-                {subtitle && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">
-                    {subtitle}
-                  </p>
-                )}
+          <div className="relative z-10 border-b border-brand-950/10 bg-cream-50/80 px-5 py-4 backdrop-blur dark:border-white/10 dark:bg-dark-bg/80 lg:hidden">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center border border-brand-950/10 bg-white dark:border-white/10 dark:bg-dark-card">
+                <img src="/logo.png" alt="UPOSA" className="h-8 w-8 object-contain" />
+              </span>
+              <div>
+                <p className="text-sm font-black text-brand-950 dark:text-white">UPOSA</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-500">Admin Portal</p>
               </div>
-            )}
-
-            {children}
-
-            {/* Bottom text */}
-            <p className="mt-10 text-center text-xs text-gray-400 dark:text-gray-600">
-              UPOSA Admin Dashboard &mdash; Contact your administrator for access.
-            </p>
+            </div>
           </div>
-        </div>
+
+          <div className="relative z-10 flex flex-1 items-center justify-center px-5 py-10 sm:px-8">
+            <div className="w-full max-w-[480px]">
+              <div className="mb-4 inline-flex items-center gap-2 border border-brand-950/10 bg-white/80 px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-brand-800 shadow-sm dark:border-white/10 dark:bg-dark-card/80 dark:text-cream-200">
+                <ShieldCheck size={14} />
+                Admin access
+              </div>
+
+              <section className="border border-brand-950/10 bg-white/[0.92] p-6 shadow-[0_22px_70px_rgba(0,27,80,0.13)] backdrop-blur dark:border-white/10 dark:bg-dark-card/95 dark:shadow-black/25 sm:p-8">
+                {(title || subtitle) && (
+                  <div className="mb-7">
+                    {title && (
+                      <h2 className="text-3xl font-black leading-tight tracking-tight text-brand-950 dark:text-gray-50">
+                        {title}
+                      </h2>
+                    )}
+                    {subtitle && (
+                      <p className="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">
+                        {subtitle}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {children}
+              </section>
+
+              <p className="mt-6 text-center text-xs font-medium text-gray-400 dark:text-gray-600">
+                UPOSA Admin Dashboard. Contact your administrator for access.
+              </p>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   )

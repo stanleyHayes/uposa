@@ -14,7 +14,7 @@ const SiteWatermarks = () => (
         <div
             className="absolute inset-0 opacity-[0.018]"
             style={{
-                backgroundImage: "radial-gradient(circle at 1px 1px, rgba(0,27,80,0.26) 1px, transparent 0)",
+                backgroundImage: "radial-gradient(circle at 1px 1px, var(--uposa-watermark-grid) 1px, transparent 0)",
                 backgroundSize: "64px 64px",
             }}
         />
@@ -47,10 +47,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
     return (
         <PageTransition>
-            <div className="min-h-screen flex flex-col">
+            <div className="flex min-h-screen min-w-0 flex-col overflow-x-hidden">
                 <SiteWatermarks />
                 <Header />
-                <main className="flex-1">{children}</main>
+                <main className="min-w-0 flex-1 overflow-x-hidden">{children}</main>
                 <Footer />
             </div>
         </PageTransition>

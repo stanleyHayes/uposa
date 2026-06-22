@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect } from 'react'
-import { Users, MapPin, GraduationCap, Globe, Hash } from 'lucide-react'
+import { useState, useMemo, useEffect, type ElementType } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowRight, BriefcaseBusiness, Building2, GraduationCap, Globe, Hash, Mail, MapPin, ShieldCheck, Users } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import SearchInput from '../../components/ui/SearchInput'
 import Select from '../../components/ui/Select'
@@ -7,7 +8,7 @@ import Pagination from '../../components/ui/Pagination'
 import EmptyState from '../../components/ui/EmptyState'
 import PageStats from '../../components/ui/PageStats'
 import { useAlumniStore } from '../../stores/alumni.store'
-import type { Programme, House } from '../../types'
+import type { AlumniRegistration, Programme, House } from '../../types'
 
 const ITEMS_PER_PAGE = 12
 
@@ -55,7 +56,159 @@ function formatEnum(value: string): string {
     .join(' ')
 }
 
+function getInitials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+}
+
+function MemberAvatar({ member, size = 'md' }: { member: AlumniRegistration; size?: 'md' | 'lg' }) {
+  const sizeClass = size === 'lg' ? 'h-28 w-28 text-4xl' : 'h-20 w-20 text-2xl'
+
+  return (
+    <div className="relative shrink-0">
+      {member.photoUrl ? (
+        <img
+          src={member.photoUrl}
+          alt={member.fullName}
+          className={`${sizeClass} border border-brand-950/10 object-cover dark:border-white/10`}
+        />
+      ) : (
+        <div className={`${sizeClass} grid place-items-center border border-brand-950/10 bg-brand-950 text-cream-100 dark:border-white/10`}>
+          <span className="font-black leading-none">{getInitials(member.fullName)}</span>
+        </div>
+      )}
+      <span className="absolute bottom-0 right-0 h-4 w-4 border-2 border-cream-50 bg-emerald-500 dark:border-dark-card" />
+    </div>
+  )
+}
+
+function MemberFact({ icon: Icon, label, value }: { icon: ElementType; label: string; value: string | number }) {
+  return (
+    <div className="min-w-0 border border-brand-950/10 bg-brand-950/[0.03] p-3 dark:border-white/10 dark:bg-white/[0.03]">
+      <div className="mb-2 flex items-center gap-2 text-brand-950/40 dark:text-cream-100/40">
+        <Icon size={14} />
+        <span className="text-[10px] font-black uppercase tracking-[0.14em]">{label}</span>
+      </div>
+      <p className="truncate text-sm font-black text-brand-950 dark:text-gray-100">{value}</p>
+    </div>
+  )
+}
+
+function FeaturedMemberCard({ member, onOpen }: { member: AlumniRegistration; onOpen: () => void }) {
+  const location = [member.city, member.country].filter(Boolean).join(', ') || 'Location not provided'
+
+  return (
+    <article className="admin-card-surface relative flex min-h-[26rem] flex-col overflow-hidden bg-brand-950 text-cream-100 dark:bg-dark-surface">
+      <div className="absolute inset-x-0 top-0 h-1.5 bg-cream-500" />
+      <img
+        src="/logo.png"
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 object-contain opacity-[0.035]"
+      />
+      <div className="relative z-10 flex flex-1 flex-col p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="inline-flex items-center gap-2 border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-cream-100/60">
+            <ShieldCheck size={14} className="text-emerald-400" />
+            Featured record
+          </div>
+          <button
+            type="button"
+            onClick={onOpen}
+            className="grid h-10 w-10 place-items-center border border-white/10 bg-white/[0.06] text-cream-100/70 transition-colors hover:bg-cream-100 hover:text-brand-950"
+            aria-label={`Open ${member.fullName}`}
+          >
+            <ArrowRight size={18} />
+          </button>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-5 sm:flex-row sm:items-end">
+          <MemberAvatar member={member} size="lg" />
+          <div className="min-w-0">
+            <h2 className="text-3xl font-black leading-tight text-white">{member.fullName}</h2>
+            <p className="mt-2 text-base font-semibold text-cream-100/58">{member.occupation || member.employmentType ? member.occupation || formatEnum(member.employmentType) : 'Occupation not provided'}</p>
+          </div>
+        </div>
+
+        <div className="mt-7 grid gap-3 sm:grid-cols-2">
+          <div className="border border-white/10 bg-white/[0.045] p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cream-100/40">Academic lane</p>
+            <p className="mt-2 text-lg font-black text-white">{formatEnum(member.programme)}</p>
+            <p className="mt-1 text-sm font-semibold text-cream-100/52">Class of {member.yearGroup || 'N/A'} / {formatEnum(member.house)}</p>
+          </div>
+          <div className="border border-white/10 bg-white/[0.045] p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cream-100/40">Location</p>
+            <p className="mt-2 text-lg font-black text-white">{location}</p>
+            <p className="mt-1 text-sm font-semibold text-cream-100/52">{member.isAvailableAsMentor ? 'Available for mentorship' : 'Member profile active'}</p>
+          </div>
+        </div>
+
+        <div className="mt-auto pt-7">
+          <button
+            type="button"
+            onClick={onOpen}
+            className="inline-flex w-full items-center justify-between border border-cream-500/35 bg-cream-500/20 px-4 py-3 text-sm font-black text-cream-100 transition-colors hover:bg-cream-100 hover:text-brand-950"
+          >
+            Open full registration
+            <ArrowRight size={17} />
+          </button>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function MemberRecordCard({ member, onOpen }: { member: AlumniRegistration; onOpen: () => void }) {
+  const location = [member.city, member.country].filter(Boolean).join(', ') || 'Location not provided'
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="card-enter admin-card-surface group flex min-h-[17rem] w-full flex-col p-5 text-left transition-all duration-300 hover:-translate-y-0.5"
+    >
+      <div className="flex items-start gap-4">
+        <MemberAvatar member={member} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="truncate text-xl font-black text-brand-950 dark:text-gray-100">{member.fullName}</h3>
+              <p className="mt-1 truncate text-sm font-semibold text-brand-950/52 dark:text-gray-400">
+                {member.occupation || formatEnum(member.employmentType)}
+              </p>
+            </div>
+            <ArrowRight size={18} className="mt-1 shrink-0 text-brand-950/25 transition-transform group-hover:translate-x-1 dark:text-cream-100/35" />
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 bg-brand-950/[0.04] px-2.5 py-1 text-xs font-black text-brand-950/68 dark:bg-white/[0.05] dark:text-cream-100/72">
+              <GraduationCap size={13} />
+              {formatEnum(member.programme)} / {member.yearGroup || 'N/A'}
+            </span>
+            <span className="inline-flex bg-cream-100 px-2.5 py-1 text-xs font-black text-brand-950/68 dark:bg-white/[0.05] dark:text-cream-100/72">
+              {formatEnum(member.house)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-2 sm:grid-cols-2">
+        <MemberFact icon={MapPin} label="Location" value={location} />
+        <MemberFact icon={Mail} label="Email" value={member.email} />
+        <MemberFact icon={BriefcaseBusiness} label="Work" value={member.organization || 'Not provided'} />
+        <MemberFact icon={Building2} label="Expertise" value={member.areaOfExpertise?.[0] || 'Not provided'} />
+      </div>
+    </button>
+  )
+}
+
 export default function MembersDirectoryPage() {
+  const navigate = useNavigate()
   const { registrations, fetchRegistrations } = useAlumniStore()
   const members = registrations.filter((r) => r.status === 'approved')
 
@@ -91,8 +244,18 @@ export default function MembersDirectoryPage() {
     })
   }, [members, search, yearFilter, programmeFilter, houseFilter, countryFilter])
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
-  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
+  const currentPage = Math.min(page, totalPages)
+  const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+  const featuredMember = paginated[0]
+  const supportingMembers = paginated.slice(1)
+  const openMember = (id: string) => navigate(`/alumni-registrations/${id}`)
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages)
+    }
+  }, [page, totalPages])
 
   return (
     <div className="page-enter">
@@ -104,24 +267,35 @@ export default function MembersDirectoryPage() {
       <PageStats
         stats={[
           { label: 'Total Members', value: stats.total, icon: Users, color: 'text-brand-600', bg: 'bg-brand-50', border: 'border-brand-100' },
-          { label: 'Top Programme', value: stats.topProgrammeCount, icon: GraduationCap, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100' },
+          { label: 'Top Programme', value: stats.topProgrammeCount, icon: GraduationCap, color: 'text-brand-600', bg: 'bg-brand-50', border: 'border-brand-100' },
           { label: 'Countries', value: stats.countries, icon: Globe, color: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-100' },
           { label: 'Year Groups', value: stats.years, icon: Hash, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-100' },
         ]}
       />
 
-      <div className="flex flex-wrap gap-3 mb-5">
-        <SearchInput
-          value={search}
-          onChange={(v) => { setSearch(v); setPage(1) }}
-          placeholder="Search members..."
-          className="w-64"
-        />
-        <Select options={yearOptions} value={yearFilter} onChange={(e) => { setYearFilter(e.target.value); setPage(1) }} className="w-32" />
-        <Select options={programmeOptions} value={programmeFilter} onChange={(e) => { setProgrammeFilter(e.target.value as Programme | ''); setPage(1) }} className="w-40" />
-        <Select options={houseOptions} value={houseFilter} onChange={(e) => { setHouseFilter(e.target.value as House | ''); setPage(1) }} className="w-32" />
-        <Select options={countryOptions} value={countryFilter} onChange={(e) => { setCountryFilter(e.target.value); setPage(1) }} className="w-40" />
-      </div>
+      <section className="admin-card-surface mb-5 overflow-visible p-4">
+        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-brand-950/45 dark:text-gray-500">Directory controls</p>
+            <h2 className="mt-1 text-lg font-black text-brand-950 dark:text-gray-100">Find approved alumni records</h2>
+          </div>
+          <p className="text-xs font-bold text-brand-950/45 dark:text-gray-500">
+            Showing {filtered.length} of {members.length}
+          </p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(18rem,1fr)_9rem_12rem_9rem_12rem]">
+          <SearchInput
+            value={search}
+            onChange={(v) => { setSearch(v); setPage(1) }}
+            placeholder="Search name or email..."
+            className="w-full"
+          />
+          <Select options={yearOptions} value={yearFilter} onChange={(e) => { setYearFilter(e.target.value); setPage(1) }} className="w-full" />
+          <Select options={programmeOptions} value={programmeFilter} onChange={(e) => { setProgrammeFilter(e.target.value as Programme | ''); setPage(1) }} className="w-full" />
+          <Select options={houseOptions} value={houseFilter} onChange={(e) => { setHouseFilter(e.target.value as House | ''); setPage(1) }} className="w-full" />
+          <Select options={countryOptions} value={countryFilter} onChange={(e) => { setCountryFilter(e.target.value); setPage(1) }} className="w-full" />
+        </div>
+      </section>
 
       {filtered.length === 0 ? (
         <EmptyState
@@ -131,47 +305,39 @@ export default function MembersDirectoryPage() {
         />
       ) : (
         <>
-          <div className="stagger grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
-            {paginated.map((member) => (
-              <div
-                key={member.id}
-                className="card-enter card-lift bg-white dark:bg-dark-card rounded-2xl border border-gray-200/80 dark:border-dark-border shadow-[0_1px_4px_rgba(0,27,80,0.05)] hover:shadow-[0_8px_30px_rgba(0,27,80,0.07)] hover:-translate-y-0.5 transition-all duration-300 ease-out p-4 flex items-start gap-4"
-              >
-                {/* Avatar with status ring */}
-                <div className="relative shrink-0">
-                  <img
-                    src={member.photoUrl ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(member.fullName)}&background=001B50&color=FFF8DC&size=128&font-size=0.4`}
-                    alt={member.fullName}
-                    className="w-14 h-14 rounded-xl object-cover"
-                  />
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-dark-card" />
+          <section className="mb-4 grid gap-5 xl:grid-cols-[minmax(22rem,0.82fr)_minmax(0,1.18fr)]">
+            {featuredMember && (
+              <FeaturedMemberCard member={featuredMember} onOpen={() => openMember(featuredMember.id)} />
+            )}
+
+            <div className="admin-card-surface overflow-hidden">
+              <div className="flex flex-col gap-2 border-b border-brand-950/10 bg-cream-100/60 p-5 dark:border-dark-border dark:bg-white/[0.03] sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-brand-950/45 dark:text-gray-500">Visible records</p>
+                  <h2 className="mt-1 text-xl font-black text-brand-950 dark:text-gray-100">Member cards</h2>
                 </div>
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{member.fullName}</h3>
-                  {member.occupation && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{member.occupation}</p>
-                  )}
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-900/30 px-2 py-0.5 rounded-full">
-                      <GraduationCap size={10} /> {formatEnum(member.programme)} &middot; {member.yearGroup}
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/30 px-2 py-0.5 rounded-full">
-                      {formatEnum(member.house)}
-                    </span>
-                  </div>
-                  {(member.city || member.country) && (
-                    <p className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500 mt-1.5">
-                      <MapPin size={10} className="shrink-0" />
-                      <span className="truncate">{[member.city, member.country].filter(Boolean).join(', ')}</span>
-                    </p>
-                  )}
-                </div>
+                <span className="w-fit border border-brand-950/10 bg-brand-950/[0.04] px-3 py-1.5 text-xs font-black text-brand-950/60 dark:border-white/10 dark:bg-white/[0.04] dark:text-cream-100/60">
+                  Page {currentPage} of {totalPages}
+                </span>
               </div>
-            ))}
-          </div>
+
+              {supportingMembers.length > 0 ? (
+                <div className="grid gap-4 p-5 lg:grid-cols-2">
+                  {supportingMembers.map((member) => (
+                    <MemberRecordCard key={member.id} member={member} onOpen={() => openMember(member.id)} />
+                  ))}
+                </div>
+              ) : (
+                <div className="p-5">
+                  <div className="border border-brand-950/10 bg-brand-950/[0.03] p-6 text-sm font-semibold text-brand-950/55 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-400">
+                    Only one member matches the current filters.
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
           <Pagination
-            currentPage={page}
+            currentPage={currentPage}
             totalPages={totalPages}
             totalItems={filtered.length}
             itemsPerPage={ITEMS_PER_PAGE}

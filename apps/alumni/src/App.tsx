@@ -38,6 +38,7 @@ const ContactPage = lazy(() => import('./pages/contact/ContactPage'))
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
 const RequestsPage = lazy(() => import('./pages/requests/RequestsPage'))
 const GalleryPage = lazy(() => import('./pages/gallery/GalleryPage'))
+const HelpPage = lazy(() => import('./pages/help/HelpPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 function PageLoader() {
@@ -84,6 +85,7 @@ export default function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/requests" element={<RequestsPage />} />
             <Route path="/gallery" element={<GalleryPage />} />
+            <Route path="/help" element={<HelpPage />} />
           </Route>
 
           {/* Redirects */}

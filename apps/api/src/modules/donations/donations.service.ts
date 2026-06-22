@@ -1,4 +1,5 @@
-// @ts-nocheck
+import { escapeRegex } from '../../utils/search.utils';
+import mongoose from 'mongoose';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { notify } from '../../utils/notify';
@@ -25,7 +26,7 @@ export async function submitDonation(data: CreateDonationInput, memberId?: strin
 
   // Attach project info
   if (donation.projectId) {
-    const project = await repos.projects.findById(donation.projectId, { projection: 'title' });
+    const project = await repos.projects.findById(String(donation.projectId), { projection: 'title' });
     return { ...donation, project: project ? { id: project.id, title: project.title } : null };
   }
   return { ...donation, project: null };
@@ -36,7 +37,7 @@ export async function getMyDonations(memberId: string, query: Record<string, str
   const repos = getRepos();
 
   const pipeline = [
-    { $match: { memberId } },
+    { $match: { memberId: new mongoose.Types.ObjectId(memberId) } },
     { $sort: { createdAt: -1 as const } },
     { $skip: skip },
     { $limit: limit },
@@ -45,7 +46,7 @@ export async function getMyDonations(memberId: string, query: Record<string, str
         from: 'projects',
         let: { pid: '$projectId' },
         pipeline: [
-          { $match: { $expr: { $eq: [{ $toString: '$_id' }, '$$pid'] } } },
+          { $match: { $expr: { $eq: [{ $toString: '$_id' }, { $toString: '$$pid' }] } } },
           { $project: { _id: 0, id: { $toString: '$_id' }, title: 1 } },
         ],
         as: '_project',
@@ -80,9 +81,9 @@ export async function adminListDonations(query: Record<string, string | undefine
   if (projectId) where.projectId = projectId;
   if (search) {
     where.$or = [
-      { donorName: { $regex: search, $options: 'i' } },
-      { donorEmail: { $regex: search, $options: 'i' } },
-      { transactionRef: { $regex: search, $options: 'i' } },
+      { donorName: { $regex: escapeRegex(search), $options: 'i' } },
+      { donorEmail: { $regex: escapeRegex(search), $options: 'i' } },
+      { transactionRef: { $regex: escapeRegex(search), $options: 'i' } },
     ];
   }
 
@@ -100,13 +101,13 @@ export async function adminListDonations(query: Record<string, string | undefine
     projectIds.length > 0 ? repos.projects.findMany({ _id: { $in: projectIds } }, { projection: 'title' }) : [],
   ]);
 
-  const memberMap = new Map(memberDocs.map((m: any) => [m.id, { id: m.id, fullName: m.fullName, email: m.email }]));
-  const projectMap = new Map(projectDocs.map((p: any) => [p.id, { id: p.id, title: p.title }]));
+  const memberMap = new Map(memberDocs.map((m: any) => [String(m.id), { id: m.id, fullName: m.fullName, email: m.email }]));
+  const projectMap = new Map(projectDocs.map((p: any) => [String(p.id), { id: p.id, title: p.title }]));
 
   const data = rawData.map((d: any) => ({
     ...d,
-    member: d.memberId ? memberMap.get(d.memberId) || null : null,
-    project: d.projectId ? projectMap.get(d.projectId) || null : null,
+    member: d.memberId ? memberMap.get(String(d.memberId)) || null : null,
+    project: d.projectId ? projectMap.get(String(d.projectId)) || null : null,
   }));
 
   return { data, meta: buildPaginationMeta(page, limit, total) };

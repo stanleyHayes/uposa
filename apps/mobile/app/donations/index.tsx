@@ -1,24 +1,28 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, Text, View } from 'react-native';
 
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { paymentsApi, projectsApi } from '@/lib/api';
+import { donationsApi, paymentMethodsApi, paymentsApi, projectsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
-import type { Project } from '@/lib/types';
+import type { PaymentMethod, PaymentProvider, Project } from '@/lib/types';
+import {
+  EmptyState,
+  Field,
+  HeroPanel,
+  LoadingState,
+  PrimaryButton,
+  ProgressBar,
+  ScreenScroll,
+  SectionTitle,
+  SkeletonBar,
+  Surface,
+  formatMoney,
+} from '@/components/mobile-ui';
 
-const PROVIDERS = ['PAYSTACK', 'STRIPE'] as const;
+function getPreferredCurrency(method?: PaymentMethod) {
+  return method?.supportedCurrencies?.find((currency) => currency === 'GHS') ?? method?.supportedCurrencies?.[0] ?? 'GHS';
+}
 
 export default function DonationsScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -26,22 +30,33 @@ export default function DonationsScreen() {
   const user = useAuthStore((s) => s.user);
 
   const [projects, setProjects] = useState<Project[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [name, setName] = useState(user?.fullName ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
   const [amount, setAmount] = useState('');
-  const [provider, setProvider] = useState<(typeof PROVIDERS)[number]>('PAYSTACK');
+  const [provider, setProvider] = useState<PaymentProvider | ''>('');
   const [submitting, setSubmitting] = useState(false);
   const [feePreview, setFeePreview] = useState<{ amount: number; platformFee: number; totalAmount: number; percent: number; fixed: number; enabled: boolean } | null>(null);
   const [feeLoading, setFeeLoading] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const res = await projectsApi.ongoing();
-      setProjects(res.data.data ?? []);
+      const [projectsRes, methodsRes] = await Promise.allSettled([
+        projectsApi.ongoing(),
+        paymentMethodsApi.list(),
+      ]);
+      setProjects(projectsRes.status === 'fulfilled' ? projectsRes.value.data.data ?? [] : []);
+      const enabledMethods = methodsRes.status === 'fulfilled' ? methodsRes.value.data.data ?? [] : [];
+      setPaymentMethods(enabledMethods);
+      setProvider((current) => {
+        if (current && enabledMethods.some((method) => method.provider === current)) return current;
+        return enabledMethods[0]?.provider ?? '';
+      });
     } catch {
       setProjects([]);
+      setPaymentMethods([]);
+      setProvider('');
     } finally {
       setLoading(false);
     }
@@ -70,15 +85,33 @@ export default function DonationsScreen() {
       Alert.alert('Missing details', 'Provide your name, email, and a positive amount.');
       return;
     }
+    const selectedMethod = paymentMethods.find((method) => method.provider === provider);
+    if (!provider || !selectedMethod) {
+      Alert.alert('Payment unavailable', 'No online payment provider is enabled right now.');
+      return;
+    }
+    const currency = getPreferredCurrency(selectedMethod);
     setSubmitting(true);
     try {
+      const donationRes = await donationsApi.create({
+        donorName: name.trim(),
+        donorEmail: email.trim().toLowerCase(),
+        amount: amt,
+        currency,
+        channel: provider,
+        purpose: 'Alumni app donation',
+      });
+      const donation = donationRes.data.data;
+      if (!donation?.id) throw new Error('Donation record was not created.');
+
       const res = await paymentsApi.initialize({
         provider,
         purpose: 'DONATION',
         amount: amt,
-        currency: provider === 'PAYSTACK' ? 'GHS' : 'USD',
+        currency,
         email: email.trim().toLowerCase(),
         name: name.trim(),
+        donationId: donation.id,
       });
       const url = res.data.data?.authorizationUrl;
       if (url) {
@@ -94,233 +127,111 @@ export default function DonationsScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <ActivityIndicator color={palette.tint} />
-      </View>
-    );
-  }
+  if (loading) return <LoadingState palette={palette} title="Donations" />;
+
+  const selectedMethod = paymentMethods.find((method) => method.provider === provider);
+  const selectedCurrency = getPreferredCurrency(selectedMethod);
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.background }}
-      contentContainerStyle={styles.scroll}
-      keyboardShouldPersistTaps="handled"
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: palette.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={[styles.heroCard, { backgroundColor: Brand.navy }]}>
-        <Ionicons name="heart" size={28} color={Brand.gold} />
-        <Text style={styles.heroTitle}>Support UPOSA</Text>
-        <Text style={styles.heroBody}>
-          Your contribution funds scholarships, infrastructure, and community impact projects.
-        </Text>
-      </View>
-
-      <Text style={[styles.sectionTitle, { color: palette.text }]}>Ongoing projects</Text>
-      {projects.length === 0 ? (
-        <View style={[styles.empty, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-          <Text style={{ color: palette.textMuted }}>No ongoing projects right now.</Text>
-        </View>
-      ) : (
-        projects.map((p) => {
-          const pct = p.goalAmount > 0 ? Math.min(100, Math.round((p.raisedAmount / p.goalAmount) * 100)) : 0;
-          return (
-            <View
-              key={p.id}
-              style={[styles.projectCard, { backgroundColor: palette.surface, borderColor: palette.border }]}
-            >
-              <Text style={[styles.projectTitle, { color: palette.text }]} numberOfLines={2}>
-                {p.title}
-              </Text>
-              <Text style={[styles.projectDesc, { color: palette.textMuted }]} numberOfLines={2}>
-                {p.description}
-              </Text>
-              <View style={[styles.progressTrack, { backgroundColor: palette.surfaceMuted }]}>
-                <View style={[styles.progressFill, { width: `${pct}%` }]} />
-              </View>
-              <Text style={[styles.progressLabel, { color: palette.textMuted }]}>
-                GHS {p.raisedAmount.toLocaleString()} / GHS {p.goalAmount.toLocaleString()} ({pct}%)
-              </Text>
-            </View>
-          );
-        })
-      )}
-
-      <Text style={[styles.sectionTitle, { color: palette.text, marginTop: 18 }]}>Make a donation</Text>
-      <View style={[styles.formCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-        <Text style={[styles.label, { color: palette.textMuted }]}>Full name</Text>
-        <TextInput
-          value={name}
-          onChangeText={setName}
-          placeholderTextColor={palette.textMuted}
-          style={[
-            styles.input,
-            { color: palette.text, borderColor: palette.border, backgroundColor: palette.background },
-          ]}
+      <ScreenScroll palette={palette} keyboardShouldPersistTaps="handled">
+        <HeroPanel
+          palette={palette}
+          eyebrow="School support"
+          title="Give toward visible UPOSA work."
+          body="Fund infrastructure, learning resources, welfare, events, and projects that move the school forward."
+          icon="heart-outline"
         />
 
-        <Text style={[styles.label, { color: palette.textMuted, marginTop: 10 }]}>Email</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          placeholderTextColor={palette.textMuted}
-          style={[
-            styles.input,
-            { color: palette.text, borderColor: palette.border, backgroundColor: palette.background },
-          ]}
-        />
-
-        <Text style={[styles.label, { color: palette.textMuted, marginTop: 10 }]}>Amount</Text>
-        <TextInput
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="numeric"
-          placeholder="100"
-          placeholderTextColor={palette.textMuted}
-          style={[
-            styles.input,
-            { color: palette.text, borderColor: palette.border, backgroundColor: palette.background },
-          ]}
-        />
-        {feeLoading && (
-          <ActivityIndicator color={palette.tint} style={{ marginTop: 8 }} />
-        )}
-        {feePreview && feePreview.enabled && feePreview.platformFee > 0 && (
-          <View style={[styles.feeCard, { backgroundColor: palette.surfaceMuted, borderColor: palette.border }]}>
-            <View style={styles.feeRow}>
-              <Text style={{ color: palette.textMuted, fontSize: 13 }}>Donation</Text>
-              <Text style={{ color: palette.text, fontSize: 13, fontWeight: '600' }}>
-                {provider === 'PAYSTACK' ? 'GHS' : 'USD'} {feePreview.amount.toLocaleString()}
-              </Text>
-            </View>
-            <View style={styles.feeRow}>
-              <Text style={{ color: palette.textMuted, fontSize: 13 }}>Platform Fee ({feePreview.percent}%)</Text>
-              <Text style={{ color: palette.text, fontSize: 13, fontWeight: '600' }}>
-                {provider === 'PAYSTACK' ? 'GHS' : 'USD'} {feePreview.platformFee.toLocaleString()}
-              </Text>
-            </View>
-            <View style={[styles.feeRow, { borderTopWidth: 1, borderTopColor: palette.border, paddingTop: 6, marginTop: 4 }]}>
-              <Text style={{ color: palette.text, fontSize: 14, fontWeight: '700' }}>Total to Pay</Text>
-              <Text style={{ color: Brand.gold, fontSize: 14, fontWeight: '700' }}>
-                {provider === 'PAYSTACK' ? 'GHS' : 'USD'} {feePreview.totalAmount.toLocaleString()}
-              </Text>
-            </View>
+        <SectionTitle palette={palette} title="Active projects" />
+        {projects.length === 0 ? (
+          <EmptyState palette={palette} icon="construct-outline" title="No active projects" description="You can still make a general donation through the form below." />
+        ) : (
+          <View style={{ gap: 10 }}>
+            {projects.slice(0, 3).map((project) => {
+              const pct = project.goalAmount > 0 ? Math.min(100, Math.round((project.raisedAmount / project.goalAmount) * 100)) : 0;
+              return (
+                <Surface key={project.id} palette={palette} style={{ padding: 14, gap: 8 }}>
+                  <Text style={{ color: palette.text, fontSize: 15, fontWeight: '900' }} numberOfLines={2}>{project.title}</Text>
+                  <ProgressBar palette={palette} percent={pct} />
+                  <Text style={{ color: palette.textMuted, fontSize: 12, fontWeight: '700' }}>
+                    {formatMoney(project.raisedAmount)} / {formatMoney(project.goalAmount)} · {pct}%
+                  </Text>
+                </Surface>
+              );
+            })}
           </View>
         )}
 
-        <Text style={[styles.label, { color: palette.textMuted, marginTop: 10 }]}>Provider</Text>
-        <View style={styles.providerRow}>
-          {PROVIDERS.map((p) => {
-            const active = provider === p;
-            return (
-              <Pressable
-                key={p}
-                onPress={() => setProvider(p)}
-                style={({ pressed }) => [
-                  styles.providerBtn,
-                  {
-                    borderColor: active ? Brand.gold : palette.border,
-                    backgroundColor: active ? Brand.cream : palette.background,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-              >
-                <Text style={[styles.providerText, { color: Brand.navy, fontWeight: active ? '800' : '600' }]}>
-                  {p}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <SectionTitle palette={palette} title="Make a donation" />
+        <Surface palette={palette} style={{ padding: 16, gap: 2 }}>
+          <Field palette={palette} label="Full name" value={name} onChangeText={setName} icon="person-outline" />
+          <Field palette={palette} label="Email" value={email} onChangeText={setEmail} icon="mail-outline" keyboardType="email-address" />
+          <Field palette={palette} label="Amount" value={amount} onChangeText={setAmount} icon="cash-outline" keyboardType="numeric" placeholder="100" />
 
-        <Pressable
-          onPress={onDonate}
-          disabled={submitting}
-          style={({ pressed }) => [
-            styles.btn,
-            { backgroundColor: Brand.navy, opacity: pressed || submitting ? 0.85 : 1 },
-          ]}
-        >
-          {submitting ? (
-            <ActivityIndicator color={Brand.cream} />
+          <Text style={{ color: palette.text, fontSize: 12, fontWeight: '900', marginBottom: 8 }}>Provider</Text>
+          {paymentMethods.length === 0 ? (
+            <EmptyState
+              palette={palette}
+              icon="card-outline"
+              title="Online payment is unavailable"
+              description="Ask the association desk to enable a payment provider."
+            />
           ) : (
-            <Text style={styles.btnText}>Continue to payment</Text>
+            <View style={{ gap: 10, marginBottom: 12 }}>
+              {paymentMethods.map((item) => {
+                const active = provider === item.provider;
+                return (
+                  <Pressable key={item.id} onPress={() => setProvider(item.provider)}>
+                    <Surface palette={palette} tone={active ? 'gold' : 'default'} style={{ padding: 12, gap: 4 }}>
+                      <Text style={{ color: active ? Brand.navy : palette.text, fontSize: 13, fontWeight: '900' }}>{item.displayName}</Text>
+                      <Text style={{ color: active ? Brand.navy : palette.textMuted, fontSize: 11, fontWeight: '700' }}>
+                        {item.supportedCurrencies.join(', ') || item.provider}
+                      </Text>
+                    </Surface>
+                  </Pressable>
+                );
+              })}
+            </View>
           )}
-        </Pressable>
-      </View>
-    </ScrollView>
+
+          {feeLoading ? (
+            <Surface palette={palette} tone="muted" style={{ padding: 12, gap: 8, marginBottom: 12 }}>
+              <SkeletonBar palette={palette} width="60%" />
+              <SkeletonBar palette={palette} width="82%" />
+            </Surface>
+          ) : null}
+
+          {feePreview && feePreview.enabled && feePreview.platformFee > 0 ? (
+            <Surface palette={palette} tone="muted" style={{ padding: 12, gap: 8, marginBottom: 12 }}>
+              <FeeLine palette={palette} label="Donation" value={formatMoney(feePreview.amount, selectedCurrency)} />
+              <FeeLine palette={palette} label={`Platform fee (${feePreview.percent}%)`} value={formatMoney(feePreview.platformFee, selectedCurrency)} />
+              <FeeLine palette={palette} label="Total to pay" value={formatMoney(feePreview.totalAmount, selectedCurrency)} strong />
+            </Surface>
+          ) : null}
+
+          <PrimaryButton
+            label="Continue to payment"
+            palette={palette}
+            onPress={onDonate}
+            loading={submitting}
+            disabled={paymentMethods.length === 0}
+            icon="arrow-forward"
+          />
+        </Surface>
+      </ScreenScroll>
+    </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  scroll: { padding: 16, paddingBottom: 40 },
-  heroCard: {
-    borderRadius: 18,
-    padding: 18,
-    gap: 6,
-    marginBottom: 18,
-  },
-  heroTitle: { color: Brand.cream, fontSize: 20, fontWeight: '800' },
-  heroBody: { color: Brand.cream, opacity: 0.85, fontSize: 13, lineHeight: 19 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 10 },
-  empty: { padding: 18, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
-  projectCard: {
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 10,
-    gap: 6,
-  },
-  projectTitle: { fontSize: 15, fontWeight: '700' },
-  projectDesc: { fontSize: 12, lineHeight: 17 },
-  progressTrack: { height: 8, borderRadius: 4, overflow: 'hidden', marginTop: 6 },
-  progressFill: { height: '100%', backgroundColor: Brand.gold },
-  progressLabel: { fontSize: 11, marginTop: 2 },
-  formCard: {
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  label: { fontSize: 12, fontWeight: '600', marginBottom: 6 },
-  input: {
-    height: 44,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    fontSize: 14,
-  },
-  providerRow: { flexDirection: 'row', gap: 8 },
-  providerBtn: {
-    flex: 1,
-    height: 44,
-    borderWidth: 1.5,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  providerText: { fontSize: 13 },
-  btn: {
-    marginTop: 18,
-    height: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnText: { color: Brand.cream, fontWeight: '700', fontSize: 15 },
-  feeCard: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    gap: 4,
-  },
-  feeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-});
+function FeeLine({ palette, label, value, strong }: { palette: typeof Colors.light; label: string; value: string; strong?: boolean }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+      <Text style={{ color: strong ? palette.text : palette.textMuted, fontSize: 13, fontWeight: strong ? '900' : '700' }}>{label}</Text>
+      <Text style={{ color: strong ? Brand.gold : palette.text, fontSize: 13, fontWeight: '900' }}>{value}</Text>
+    </View>
+  );
+}

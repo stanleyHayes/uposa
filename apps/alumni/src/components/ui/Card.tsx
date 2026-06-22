@@ -14,16 +14,6 @@ import { type ReactNode } from 'react'
 type AccentColor = 'primary' | 'secondary' | 'accent'
 type CardShape = 'default' | 'notch' | 'slant' | 'ticket' | 'wave' | 'ribbon'
 
-/* ─── Clip-path presets ─────────────────────────────────────── */
-
-const clipPaths: Record<Exclude<CardShape, 'default'>, string> = {
-  notch: 'polygon(0 0, calc(100% - 36px) 0, 100% 36px, 100% 100%, 0 100%)',
-  slant: 'polygon(0 0, 100% 0, 100% calc(100% - 32px), 0 100%)',
-  ticket: 'polygon(0 0, 100% 0, 100% calc(50% - 20px), calc(100% - 10px) calc(50% - 10px), calc(100% - 12px) 50%, calc(100% - 10px) calc(50% + 10px), 100% calc(50% + 20px), 100% 100%, 0 100%, 0 calc(50% + 20px), 10px calc(50% + 10px), 12px 50%, 10px calc(50% - 10px), 0 calc(50% - 20px))',
-  wave: 'polygon(0 0, 100% 0, 100% calc(100% - 12px), 90% calc(100% - 6px), 80% calc(100% - 2px), 70% calc(100% - 4px), 60% calc(100% - 10px), 50% calc(100% - 18px), 40% calc(100% - 22px), 30% calc(100% - 20px), 20% calc(100% - 14px), 10% calc(100% - 8px), 0 calc(100% - 10px))',
-  ribbon: 'polygon(0 0, 100% 0, 100% calc(100% - 24px), 50% 100%, 0 calc(100% - 24px))',
-}
-
 /* ─── Base Card ─────────────────────────────────────────────── */
 
 interface CardProps {
@@ -34,47 +24,23 @@ interface CardProps {
   as?: 'div' | 'article'
 }
 
-export function Card({ children, className = '', hover = true, shape = 'default', as: Tag = 'div' }: CardProps) {
-  const hasShape = shape !== 'default'
-
-  const inner = (
+export function Card({ children, className = '', hover = true, as: Tag = 'div' }: CardProps) {
+  return (
     <Tag
       className={[
-        'card relative bg-base-100 overflow-hidden rounded-[20px_4px_20px_4px]',
-        hover && !hasShape && 'hover:-translate-y-0.5',
+        'card relative bg-base-100 overflow-hidden',
+        hover && 'hover:-translate-y-0.5',
         'transition-all duration-300 ease-out',
-        !hasShape && 'group/card',
-        !hasShape && className,
+        'group/card',
+        className,
       ]
         .flat()
         .filter(Boolean)
         .join(' ')}
-      style={hasShape ? { clipPath: clipPaths[shape] } : undefined}
     >
       {children}
     </Tag>
   )
-
-  if (hasShape) {
-    return (
-      <div
-        className={[
-          'group/card',
-          'drop-shadow-[0_2px_6px_rgba(0,27,80,0.08)]',
-          hover && 'hover:drop-shadow-[0_12px_30px_rgba(0,27,80,0.12)] hover:-translate-y-0.5',
-          'transition-all duration-300 ease-out',
-          className,
-        ]
-          .flat()
-          .filter(Boolean)
-          .join(' ')}
-      >
-        {inner}
-      </div>
-    )
-  }
-
-  return inner
 }
 
 /* ─── Accent Strip ──────────────────────────────────────────── */

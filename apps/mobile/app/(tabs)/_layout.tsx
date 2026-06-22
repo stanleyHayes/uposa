@@ -1,7 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-import { HapticTab } from '@/components/haptic-tab';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -15,13 +14,18 @@ export default function TabLayout() {
         tabBarActiveTintColor: palette.tabIconSelected,
         tabBarInactiveTintColor: palette.tabIconDefault,
         tabBarStyle: {
-          backgroundColor: palette.surface,
+          backgroundColor: palette.background,
           borderTopColor: palette.border,
+          borderTopWidth: 1,
+          height: 74,
+          paddingTop: 8,
+          paddingBottom: 10,
         },
-        headerStyle: { backgroundColor: palette.surface },
-        headerTitleStyle: { color: palette.text, fontWeight: '700' },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '800' },
+        headerStyle: { backgroundColor: palette.background },
+        headerTitleStyle: { color: palette.text, fontWeight: '900' },
         headerTintColor: palette.text,
-        tabBarButton: HapticTab,
+        headerShadowVisible: false,
       }}
     >
       <Tabs.Screen
@@ -64,6 +68,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
+          href: null,
           tabBarIcon: ({ color, size }) => <Ionicons name="person-circle" size={size} color={color} />,
         }}
       />

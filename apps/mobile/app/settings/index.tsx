@@ -1,31 +1,30 @@
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Brand, Colors } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
+import { useThemePreference, type ThemePreference } from '@/lib/theme-context';
+import { Field, HeroPanel, PrimaryButton, ScreenHeader, ScreenScroll, Surface } from '@/components/mobile-ui';
 
 export default function SettingsScreen() {
   const scheme = useColorScheme() ?? 'light';
   const palette = Colors[scheme];
   const logout = useAuthStore((s) => s.logout);
+  const { preference, setPreference } = useThemePreference();
+
+  const themeOptions: { value: ThemePreference; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { value: 'light', label: 'Light', icon: 'sunny-outline' },
+    { value: 'dark', label: 'Dark', icon: 'moon-outline' },
+    { value: 'system', label: 'System', icon: 'phone-portrait-outline' },
+  ];
 
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
+  const [visible, setVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const onChangePassword = async () => {
@@ -38,7 +37,7 @@ export default function SettingsScreen() {
       return;
     }
     if (newPw !== confirmPw) {
-      Alert.alert('Passwords don’t match', 'Re-enter your new password to confirm.');
+      Alert.alert('Passwords do not match', 'Re-enter your new password to confirm.');
       return;
     }
     setSubmitting(true);
@@ -57,129 +56,87 @@ export default function SettingsScreen() {
   };
 
   const onLogout = () => {
-    Alert.alert('Sign out?', 'You’ll need to sign in again to access your account.', [
+    Alert.alert('Sign out?', 'You will need to sign in again to access your account.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign out', style: 'destructive', onPress: () => logout() },
     ]);
   };
 
+  const visibilityToggle = (
+    <Pressable onPress={() => setVisible((value) => !value)} hitSlop={10}>
+      <Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={18} color={palette.textMuted} />
+    </Pressable>
+  );
+
   return (
     <KeyboardAvoidingView
-      style={[styles.flex, { backgroundColor: palette.background }]}
+      style={{ flex: 1, backgroundColor: palette.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-          <Text style={[styles.cardTitle, { color: palette.text }]}>Change password</Text>
+      <ScreenScroll palette={palette} keyboardShouldPersistTaps="handled">
+        <ScreenHeader
+          palette={palette}
+          eyebrow="Account"
+          title="Settings"
+          description="Update password and control access to this mobile alumni desk."
+          icon="settings-outline"
+        />
+        <HeroPanel
+          palette={palette}
+          eyebrow="Security"
+          title="Keep your alumni account protected."
+          body="Use a strong password and sign out on shared devices."
+          icon="lock-closed-outline"
+        />
 
-          <PwField label="Current password" value={currentPw} onChangeText={setCurrentPw} palette={palette} />
-          <PwField label="New password" value={newPw} onChangeText={setNewPw} palette={palette} />
-          <PwField label="Confirm new password" value={confirmPw} onChangeText={setConfirmPw} palette={palette} />
+        <Surface palette={palette} style={{ padding: 16, gap: 2 }}>
+          <Text style={{ color: palette.text, fontSize: 18, fontWeight: '900', marginBottom: 8 }}>Change password</Text>
+          <Field palette={palette} label="Current password" value={currentPw} onChangeText={setCurrentPw} icon="lock-closed-outline" secureTextEntry={!visible} right={visibilityToggle} />
+          <Field palette={palette} label="New password" value={newPw} onChangeText={setNewPw} icon="key-outline" secureTextEntry={!visible} />
+          <Field palette={palette} label="Confirm new password" value={confirmPw} onChangeText={setConfirmPw} icon="checkmark-done-outline" secureTextEntry={!visible} />
+          <PrimaryButton label="Update password" palette={palette} onPress={onChangePassword} loading={submitting} icon="shield-checkmark-outline" />
+        </Surface>
 
-          <Pressable
-            onPress={onChangePassword}
-            disabled={submitting}
-            style={({ pressed }) => [
-              styles.btnPrimary,
-              { backgroundColor: Brand.navy, opacity: pressed || submitting ? 0.85 : 1 },
-            ]}
-          >
-            {submitting ? (
-              <ActivityIndicator color={Brand.cream} />
-            ) : (
-              <Text style={styles.btnPrimaryText}>Update password</Text>
-            )}
-          </Pressable>
-        </View>
+        <Surface palette={palette} style={{ padding: 16, marginTop: 18 }}>
+          <Text style={{ color: palette.text, fontSize: 16, fontWeight: '900', marginBottom: 4 }}>Appearance</Text>
+          <Text style={{ color: palette.textMuted, fontSize: 13, lineHeight: 19, marginBottom: 14 }}>
+            Switch the theme. &quot;System&quot; follows your device settings.
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {themeOptions.map((opt) => {
+              const active = preference === opt.value;
+              return (
+                <Pressable
+                  key={opt.value}
+                  onPress={() => setPreference(opt.value)}
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingVertical: 12,
+                    borderWidth: 1,
+                    borderColor: active ? palette.tint : palette.border,
+                    backgroundColor: active ? palette.tint : 'transparent',
+                  }}
+                >
+                  <Ionicons name={opt.icon} size={18} color={active ? palette.background : palette.textMuted} />
+                  <Text style={{ color: active ? palette.background : palette.text, fontWeight: '800', fontSize: 13 }}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Surface>
 
-        <Pressable
-          onPress={onLogout}
-          style={({ pressed }) => [
-            styles.logoutBtn,
-            { backgroundColor: palette.surface, borderColor: palette.border, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <Ionicons name="log-out-outline" size={18} color={palette.danger} />
-          <Text style={[styles.logoutText, { color: palette.danger }]}>Sign out</Text>
-        </Pressable>
-      </ScrollView>
+        <Surface palette={palette} style={{ padding: 16, marginTop: 18 }}>
+          <Text style={{ color: palette.text, fontSize: 16, fontWeight: '900', marginBottom: 4 }}>Session</Text>
+          <Text style={{ color: palette.textMuted, fontSize: 13, lineHeight: 19, marginBottom: 14 }}>
+            Sign out when you are done using the app on a shared phone.
+          </Text>
+          <PrimaryButton label="Sign out" palette={palette} onPress={onLogout} icon="log-out-outline" tone="danger" />
+        </Surface>
+      </ScreenScroll>
     </KeyboardAvoidingView>
   );
 }
-
-function PwField({
-  label,
-  value,
-  onChangeText,
-  palette,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (s: string) => void;
-  palette: typeof Colors.light;
-}) {
-  const [visible, setVisible] = useState(false);
-  return (
-    <View style={styles.field}>
-      <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
-      <View style={[styles.inputWrap, { borderColor: palette.border, backgroundColor: palette.background }]}>
-        <Ionicons name="lock-closed-outline" size={18} color={palette.textMuted} />
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          secureTextEntry={!visible}
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={[styles.input, { color: palette.text }]}
-          placeholderTextColor={palette.textMuted}
-        />
-        <Pressable onPress={() => setVisible((v) => !v)} hitSlop={10}>
-          <Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={18} color={palette.textMuted} />
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  scroll: { flexGrow: 1, padding: 16 },
-  card: {
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 20,
-    gap: 4,
-  },
-  cardTitle: { fontSize: 17, fontWeight: '700', marginBottom: 12 },
-  field: { marginBottom: 12 },
-  label: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 46,
-  },
-  input: { flex: 1, fontSize: 15 },
-  btnPrimary: {
-    marginTop: 12,
-    height: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnPrimaryText: { color: Brand.cream, fontSize: 16, fontWeight: '700' },
-  logoutBtn: {
-    marginTop: 24,
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  logoutText: { fontSize: 15, fontWeight: '700' },
-});

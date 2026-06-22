@@ -27,7 +27,8 @@ const executiveSchema = z.object({
   order: z.coerce.number().int().min(0, 'Order must be at least 0'),
 })
 
-type ExecutiveForm = z.infer<typeof executiveSchema>
+type ExecutiveFormInput = z.input<typeof executiveSchema>
+type ExecutiveForm = z.output<typeof executiveSchema>
 
 const termOptions = [
   { value: 'true', label: 'Active' },
@@ -55,7 +56,7 @@ export default function ExecutiveFormPage() {
     reset,
     control,
     formState: { errors, isSubmitting },
-  } = useForm<ExecutiveForm>({
+  } = useForm<ExecutiveFormInput, unknown, ExecutiveForm>({
     resolver: zodResolver(executiveSchema),
     defaultValues: { name: '', position: '', classOf: '', email: '', phone: '', bio: '', isActive: 'true', order: 0 },
   })
@@ -172,7 +173,7 @@ export default function ExecutiveFormPage() {
         />
       </div>
 
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+      <div className="admin-card-surface p-6">
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           {/* Photo upload */}
           <div>

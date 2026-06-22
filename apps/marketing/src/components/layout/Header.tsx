@@ -17,10 +17,12 @@ import {
     Megaphone,
     Menu,
     MessageSquare,
+    Moon,
     Newspaper,
     PanelTop,
     School,
     Search,
+    Sun,
     UserPlus,
     Users,
     X,
@@ -29,6 +31,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { useSiteData } from "../../context/SiteDataContext.tsx";
+import { useTheme } from "../../hooks/useTheme.ts";
 
 interface NavChild {
     label: string;
@@ -97,12 +100,15 @@ export const Header = () => {
     const dropdownRef = useRef<HTMLDivElement>(null);
     const notifRef = useRef<HTMLDivElement>(null);
     const { data } = useSiteData();
+    const { theme, toggle } = useTheme();
+    const themeLabel = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+    const ThemeIcon = theme === "dark" ? Sun : Moon;
 
     const notifications = [
         ...(data?.upcomingEvents?.slice(0, 2).map((event) => ({
             icon: Calendar,
-            iconBg: "bg-primary/5",
-            iconColor: "text-primary",
+            iconBg: "bg-base-200",
+            iconColor: "text-base-content/70",
             label: "Event",
             title: event.title,
             subtitle: new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -119,8 +125,8 @@ export const Header = () => {
         })) || []),
         ...(data?.latestNews?.filter((article) => article.category !== "ANNOUNCEMENT").slice(0, 1).map((article) => ({
             icon: Newspaper,
-            iconBg: "bg-primary/5",
-            iconColor: "text-primary",
+            iconBg: "bg-base-200",
+            iconColor: "text-base-content/70",
             label: "News",
             title: article.title,
             subtitle: article.publishedAt ? new Date(article.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Recent",
@@ -181,7 +187,7 @@ export const Header = () => {
             <div
                 className="pointer-events-none absolute inset-0 opacity-[0.06]"
                 style={{
-                    backgroundImage: "linear-gradient(90deg, #FFF8DC 1px, transparent 1px), linear-gradient(#FFF8DC 1px, transparent 1px)",
+                    backgroundImage: "linear-gradient(90deg, var(--uposa-nav-grid) 1px, transparent 1px), linear-gradient(var(--uposa-nav-grid) 1px, transparent 1px)",
                     backgroundSize: "40px 40px",
                 }}
             />
@@ -255,11 +261,11 @@ export const Header = () => {
                                                                             active ? "bg-secondary/10" : "hover:bg-base-200"
                                                                         }`}
                                                                     >
-                                                                        <span className={`grid h-11 w-11 place-items-center ${active ? "bg-secondary text-secondary-content" : "bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-content"}`}>
+                                                                        <span className={`grid h-11 w-11 place-items-center ${active ? "bg-secondary text-secondary-content" : "bg-base-200 text-base-content/70 group-hover:bg-primary group-hover:text-primary-content"}`}>
                                                                             <Icon size={17} />
                                                                         </span>
                                                                         <span className="min-w-0">
-                                                                            <span className={`block text-sm font-bold ${active ? "text-secondary" : "text-primary"}`}>{child.label}</span>
+                                                                            <span className={`block text-sm font-bold ${active ? "text-secondary" : "text-base-content"}`}>{child.label}</span>
                                                                             <span className="mt-0.5 block text-xs leading-relaxed text-base-content/50">{child.description}</span>
                                                                         </span>
                                                                         <ChevronRight size={15} className="text-base-content/25 transition group-hover:translate-x-1 group-hover:text-secondary" />
@@ -287,6 +293,16 @@ export const Header = () => {
                     </nav>
 
                     <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            className="grid h-10 w-10 place-items-center border border-primary-content/10 bg-primary-content/10 transition hover:bg-primary-content/15"
+                            onClick={toggle}
+                            aria-label={themeLabel}
+                            title={themeLabel}
+                        >
+                            <ThemeIcon size={17} />
+                        </button>
+
                         <div className="relative" ref={notifRef}>
                             <button
                                 type="button"
@@ -307,7 +323,7 @@ export const Header = () => {
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 10 }}
                                         transition={{ duration: 0.16 }}
-                                        className="absolute right-0 top-full z-50 mt-3 w-[min(88vw,360px)] border border-base-300 bg-base-100 text-base-content shadow-2xl"
+                                        className="absolute right-0 top-full z-50 mt-3 w-[min(88vw,360px)] max-w-[calc(100vw-2rem)] border border-base-300 bg-base-100 text-base-content shadow-2xl"
                                     >
                                         <div className="border-b border-base-300 bg-primary p-4 text-primary-content">
                                             <p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">Latest desk</p>
@@ -334,7 +350,7 @@ export const Header = () => {
                                                             </span>
                                                             <span className="min-w-0">
                                                                 <span className="flex items-center gap-2">
-                                                                    <span className="truncate text-sm font-bold text-primary">{notification.title}</span>
+                                                                    <span className="truncate text-sm font-bold text-base-content">{notification.title}</span>
                                                                     <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-base-content/30">{notification.label}</span>
                                                                 </span>
                                                                 <span className="mt-1 block text-xs text-base-content/45">{notification.subtitle}</span>
@@ -345,7 +361,7 @@ export const Header = () => {
                                             )}
                                         </div>
                                         <div className="border-t border-base-300 bg-base-200 px-4 py-3">
-                                            <Link to="/news" onClick={() => setNotifOpen(false)} className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-secondary">
+                                            <Link to="/news" onClick={() => setNotifOpen(false)} className="inline-flex items-center gap-1.5 text-xs font-bold text-base-content hover:text-secondary">
                                                 View all updates <ChevronRight size={13} />
                                             </Link>
                                         </div>
@@ -357,7 +373,7 @@ export const Header = () => {
                         <Link to="/donate" className="btn btn-secondary btn-sm hidden min-h-10 border-0 px-4 sm:inline-flex">
                             Donate
                         </Link>
-                        <Link to="/membership" className="btn btn-sm hidden min-h-10 border-primary-content/20 bg-primary-content text-primary hover:bg-white sm:inline-flex">
+                        <Link to="/membership" className="btn btn-sm hidden min-h-10 border-primary-content/20 bg-primary-content text-primary hover:bg-primary-content/90 sm:inline-flex">
                             Register
                         </Link>
                         <button
@@ -455,7 +471,7 @@ export const Header = () => {
                                 </motion.div>
                             ))}
                             <motion.div
-                                className="grid grid-cols-2 gap-2 border-t border-primary-content/10 pt-4"
+                                className="grid gap-2 border-t border-primary-content/10 pt-4 sm:grid-cols-2"
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.3 }}

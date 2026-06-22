@@ -17,6 +17,7 @@ import {
 import { authMiddleware } from '../../middleware/auth.middleware';
 import { adminMiddleware } from '../../middleware/admin.middleware';
 import { uploadSingle } from '../../middleware/upload.middleware';
+import { uploadLimiter } from '../../middleware/ratelimit.middleware';
 
 const router = Router();
 
@@ -28,7 +29,7 @@ router.get('/', authMiddleware, listMembersHandler);
 router.get('/my/dues', authMiddleware, getMyDuesHandler);
 router.get('/my/donations', authMiddleware, getMyDonationsHandler);
 router.put('/profile', authMiddleware, updateProfileHandler);
-router.post('/profile/photo', authMiddleware, uploadSingle('photo'), uploadProfilePhotoHandler);
+router.post('/profile/photo', authMiddleware, uploadLimiter, uploadSingle('photo'), uploadProfilePhotoHandler);
 router.get('/:id', authMiddleware, getMemberByIdHandler);
 
 export default router;

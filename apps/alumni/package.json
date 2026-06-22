@@ -2,7 +2,7 @@
   "name": "@uposa/alumni",
   "private": true,
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "version": "0.0.0",
   "type": "module",
@@ -13,41 +13,45 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.2.2",
-    "axios": "^1.13.6",
+    "@fontsource/fraunces": "^5.2.9",
+    "@fontsource/outfit": "^5.2.8",
+    "@hookform/resolvers": "^5.4.0",
+    "axios": "^1.18.0",
     "clsx": "^2.1.1",
-    "date-fns": "^4.1.0",
-    "framer-motion": "^12.36.0",
-    "lucide-react": "^0.577.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
+    "date-fns": "^4.4.0",
+    "framer-motion": "^12.40.0",
+    "lucide-react": "^1.21.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "react-helmet-async": "^3.0.0",
-    "react-hook-form": "^7.71.2",
+    "react-hook-form": "^7.80.0",
     "react-markdown": "^10.1.0",
-    "react-router": "^7.13.1",
+    "react-router": "^8.0.1",
     "socket.io-client": "^4.8.3",
-    "tailwind-merge": "^3.5.0",
-    "zod": "^4.3.6",
-    "zustand": "^5.0.11"
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
-    "@tailwindcss/vite": "^4.2.1",
-    "@types/node": "^24.12.0",
-    "@types/react": "^19.2.14",
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/postcss": "^4.3.1",
+    "@types/node": "^26.0.0",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^4.3.4",
-    "daisyui": "^5.5.19",
-    "eslint": "^9.39.4",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.4.0",
-    "tailwindcss": "^4.2.1",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.56.1",
-    "vite": "^7.1.5"
+    "@vitejs/plugin-react": "^6.0.2",
+    "autoprefixer": "^10.5.0",
+    "daisyui": "^5.5.23",
+    "eslint": "^10.5.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.6.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.3.1",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.61.1",
+    "vite": "^8.0.16"
   },
   "optionalDependencies": {
-    "@tailwindcss/oxide-linux-x64-gnu": "^4.2.2"
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.3.1"
   }
 }

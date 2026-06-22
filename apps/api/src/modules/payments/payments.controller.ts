@@ -12,6 +12,19 @@ import {
 import { getPaymentProvider } from '../../providers/payment.registry';
 import { successResponse, errorResponse } from '../../utils/response.utils';
 
+/**
+ * The /status/:reference and /verify/:reference endpoints are unauthenticated
+ * (a guest paying a donation has no token and looks up by reference). Strip the
+ * raw provider payload and the payer's email so a reference cannot be used to
+ * harvest PII / provider metadata. Receipt-essential fields (status, amount,
+ * currency, purpose, payerName, paidAt) are retained.
+ */
+function toPublicPaymentView<T>(payment: T): T {
+  if (!payment || typeof payment !== 'object') return payment;
+  const { providerData: _pd, payerEmail: _pe, ...safe } = payment as Record<string, unknown>;
+  return safe as T;
+}
+
 export async function initializePaymentHandler(req: RouteRequest, res: Response): Promise<void> {
   const parsed = initializePaymentSchema.parse({ body: req.body });
   const memberId = req.user?.id;
@@ -22,13 +35,13 @@ export async function initializePaymentHandler(req: RouteRequest, res: Response)
 export async function verifyPaymentHandler(req: RouteRequest, res: Response): Promise<void> {
   const { reference } = req.params;
   const payment = await verifyPayment(reference);
-  successResponse(res, 'Payment verified', payment);
+  successResponse(res, 'Payment verified', toPublicPaymentView(payment));
 }
 
 export async function getPaymentStatusHandler(req: RouteRequest, res: Response): Promise<void> {
   const { reference } = req.params;
   const payment = await getPaymentByReference(reference);
-  successResponse(res, 'Payment status retrieved', payment);
+  successResponse(res, 'Payment status retrieved', toPublicPaymentView(payment));
 }
 
 // Paystack webhook

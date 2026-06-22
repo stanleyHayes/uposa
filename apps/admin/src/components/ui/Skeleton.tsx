@@ -11,10 +11,10 @@ export function Skeleton({ className, variant = 'text', width, height }: Skeleto
   return (
     <div
       className={cn(
-        'animate-pulse bg-gray-200/70 dark:bg-dark-hover',
-        variant === 'text' && 'rounded-md h-4',
-        variant === 'circular' && 'rounded-full',
-        variant === 'rectangular' && 'rounded-xl',
+        'animate-pulse bg-brand-950/10 dark:bg-dark-hover',
+        variant === 'text' && 'h-4',
+        variant === 'circular' && '',
+        variant === 'rectangular' && '',
         className
       )}
       style={{ width, height }}
@@ -25,7 +25,7 @@ export function Skeleton({ className, variant = 'text', width, height }: Skeleto
 /** Skeleton row for data tables — mimics a typical table row with cells */
 function SkeletonRow({ cols }: { cols: number }) {
   return (
-    <tr className="border-b border-gray-50 dark:border-dark-border">
+    <tr className="border-b border-brand-950/10 dark:border-dark-border">
       {Array.from({ length: cols }).map((_, i) => (
         <td key={i} className="px-5 py-4">
           <Skeleton className={i === 0 ? 'w-40 h-4 mb-1.5' : 'w-24 h-4'} />
@@ -45,14 +45,12 @@ interface TableSkeletonProps {
 /** Full table skeleton with header + rows */
 export function TableSkeleton({ cols = 5, rows = 6, className }: TableSkeletonProps) {
   return (
-    <div className={cn('bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden', className)}>
-      {/* Header */}
-      <div className="bg-gradient-to-r from-gray-50 to-gray-50/50 dark:from-dark-hover dark:to-dark-hover/50 border-b-2 border-gray-100 dark:border-dark-border px-5 py-3.5 flex gap-8">
+    <div className={cn('admin-card-surface overflow-hidden', className)}>
+      <div className="flex gap-8 border-b-2 border-brand-950/10 bg-gradient-to-r from-cream-100/80 to-cream-50/70 px-5 py-3.5 dark:border-dark-border dark:from-dark-hover dark:to-dark-hover/50">
         {Array.from({ length: cols }).map((_, i) => (
           <Skeleton key={i} className="h-3 w-20" />
         ))}
       </div>
-      {/* Rows */}
       <table className="w-full">
         <tbody>
           {Array.from({ length: rows }).map((_, i) => (
@@ -67,13 +65,13 @@ export function TableSkeleton({ cols = 5, rows = 6, className }: TableSkeletonPr
 /** Stat cards skeleton — mimics PageStats */
 export function StatsSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+    <div className="mb-7 grid grid-cols-2 gap-4 sm:grid-cols-4">
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="bg-white dark:bg-dark-card rounded-2xl border border-gray-200/80 dark:border-dark-border shadow-[0_1px_4px_rgba(0,27,80,0.05)] p-4 flex items-start gap-3"
+          className="admin-card-surface flex items-start gap-3 p-4"
         >
-          <Skeleton variant="rectangular" className="w-10 h-10 rounded-lg shrink-0" />
+          <Skeleton variant="rectangular" className="w-10 h-10 shrink-0" />
           <div className="flex-1">
             <Skeleton className="w-12 h-6 mb-1.5" />
             <Skeleton className="w-20 h-3" />
@@ -96,10 +94,10 @@ export function CardGridSkeleton({ count = 6, cols = 3 }: { count?: number; cols
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-5"
+          className="admin-card-surface p-5"
         >
           <div className="flex items-center gap-3 mb-4">
-            <Skeleton variant="circular" className="w-12 h-12 shrink-0" />
+            <Skeleton variant="rectangular" className="w-12 h-12 shrink-0" />
             <div className="flex-1">
               <Skeleton className="w-28 h-4 mb-1.5" />
               <Skeleton className="w-20 h-3" />
@@ -123,7 +121,7 @@ export function PageSkeleton({ cols = 5, rows = 6 }: { cols?: number; rows?: num
           <Skeleton className="w-48 h-7 mb-2" />
           <Skeleton className="w-32 h-4" />
         </div>
-        <Skeleton variant="rectangular" className="w-32 h-9 rounded-lg" />
+        <Skeleton variant="rectangular" className="w-32 h-9" />
       </div>
       <StatsSkeleton />
       <TableSkeleton cols={cols} rows={rows} />

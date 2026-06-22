@@ -6,11 +6,12 @@ import {
   adminDeleteSubscriberHandler,
 } from './newsletter.controller';
 import { adminMiddleware } from '../../middleware/admin.middleware';
+import { publicWriteLimiter } from '../../middleware/ratelimit.middleware';
 
 const router = Router();
 
 // Public
-router.post('/', subscribeHandler);
+router.post('/', publicWriteLimiter, subscribeHandler);
 
 export default router;
 

@@ -174,7 +174,7 @@ export default function ElectionDetailPage() {
       </div>
 
       {election.candidates.length === 0 ? (
-        <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+        <div className="admin-card-surface overflow-hidden">
           <EmptyState
             icon={<Users size={32} />}
             title="No candidates yet"
@@ -186,7 +186,7 @@ export default function ElectionDetailPage() {
           {election.candidates.map((candidate) => (
             <div
               key={candidate.id}
-              className="card-enter card-lift bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-5 cursor-pointer"
+              className="card-enter card-lift admin-card-surface p-5 cursor-pointer"
               onClick={() => setViewingCandidate(candidate)}
             >
               <div className="flex items-start gap-3 mb-3">

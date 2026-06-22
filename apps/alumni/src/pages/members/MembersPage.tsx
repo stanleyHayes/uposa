@@ -1,178 +1,362 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { Users, Search, MapPin, GraduationCap, Briefcase, ArrowRight } from 'lucide-react'
-import { motion } from 'framer-motion'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Briefcase,
+  Building2,
+  Filter,
+  GraduationCap,
+  Handshake,
+  MapPin,
+  Search,
+  Sparkles,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 import PageTransition from '../../components/common/PageTransition'
-import PageHeader from '../../components/ui/PageHeader'
-import ScrollReveal from '../../components/common/ScrollReveal'
 import Avatar from '../../components/ui/Avatar'
-import EmptyState from '../../components/ui/EmptyState'
-import LoadingSpinner from '../../components/ui/LoadingSpinner'
+import StatusBadge from '../../components/ui/StatusBadge'
 import { membersApi } from '../../api/services'
 import { formatEnum } from '../../utils/formatters'
-import CustomSelect from '../../components/ui/CustomSelect'
-import type { Member } from '../../types'
+import type { House, Member } from '../../types'
 
-/* ─── Member Card ──────────────────────────────────────────── */
+type HouseFilter = 'ALL' | House
 
-const cardAccents = [
-  'from-primary/6 to-transparent',
-  'from-secondary/6 to-transparent',
-  'from-accent/6 to-transparent',
-  'from-primary/4 to-transparent',
+const houseOptions: Array<{ value: House; label: string }> = [
+  { value: 'ACKAH', label: 'Ackah' },
+  { value: 'DENSU', label: 'Densu' },
+  { value: 'TANO', label: 'Tano' },
+  { value: 'NKRUMAH', label: 'Nkrumah' },
+  { value: 'PRA', label: 'Pra' },
+  { value: 'VOLTA', label: 'Volta' },
 ]
 
-function MemberCard({ member, index }: { member: Member; index: number }) {
-  const accent = cardAccents[index % cardAccents.length]
-
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone = 'bg-primary-content/[0.06] text-secondary',
+}: {
+  icon: LucideIcon
+  label: string
+  value: ReactNode
+  detail: string
+  tone?: string
+}) {
   return (
-    <ScrollReveal delay={index * 0.03}>
-      <Link to={`/members/${member.id}`} className="block h-full">
-        <motion.div
-          whileHover={{ y: -3, transition: { duration: 0.2 } }}
-          className="card relative overflow-hidden bg-base-100 border border-base-300/60 shadow-[0_1px_4px_rgba(0,27,80,0.05)] hover:shadow-[0_12px_42px_rgba(0,27,80,0.08)] hover:border-primary/15 transition-all duration-300 h-full group"
-        >
-          {/* Top gradient accent */}
-          <div className="h-1 bg-gradient-to-r from-primary via-accent/80 to-primary/50" />
-
-          {/* Decorative corner blob */}
-          <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl ${accent} rounded-bl-[40px] pointer-events-none`} />
-
-          <div className="p-5 flex flex-col items-center text-center relative flex-1">
-            {/* Avatar with ring */}
-            <div className="relative mb-3">
-              <div className="ring-2 ring-primary/10 ring-offset-2 ring-offset-base-100 rounded-full">
-                <Avatar src={member.photoUrl} name={member.fullName} size="lg" />
-              </div>
-            </div>
-
-            {/* Name */}
-            <h3 className="font-bold text-base leading-tight">{member.fullName}</h3>
-
-            {/* Occupation */}
-            {member.occupation && (
-              <p className="text-sm text-base-content/55 flex items-center gap-1.5 mt-1">
-                <Briefcase size={12} className="shrink-0 text-primary/35" />
-                <span className="truncate max-w-[200px]">{member.occupation}</span>
-              </p>
-            )}
-
-            {/* Badges */}
-            <div className="flex flex-wrap justify-center gap-1.5 mt-3">
-              {member.yearGroup && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-medium bg-gradient-to-r from-primary/8 to-accent/5 text-primary/80 border border-primary/10">
-                  <GraduationCap className="w-3 h-3" />
-                  {member.yearGroup}
-                </span>
-              )}
-              {member.house && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-medium bg-secondary/8 text-secondary border border-secondary/10">
-                  {formatEnum(member.house)}
-                </span>
-              )}
-            </div>
-
-            {/* Location */}
-            {member.city && (
-              <p className="text-xs text-base-content/45 flex items-center gap-1 mt-2.5">
-                <MapPin className="w-3 h-3 shrink-0" />
-                {member.city}{member.country ? `, ${member.country}` : ''}
-              </p>
-            )}
-
-            {/* View profile link */}
-            <div className="mt-auto pt-3 border-t border-base-300/40 w-full">
-              <span className="text-xs font-medium text-primary/60 group-hover:text-primary flex items-center justify-center gap-1 transition-colors">
-                View Profile <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
-              </span>
-            </div>
-          </div>
-
-          {/* Bottom accent line */}
-          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary/12 to-transparent" />
-        </motion.div>
-      </Link>
-    </ScrollReveal>
+    <div className="flex h-full flex-col border border-primary-content/10 bg-primary-content/[0.055] p-4 rounded-[18px_4px_18px_4px]">
+      <span className={`grid h-10 w-10 place-items-center rounded-[14px_3px_14px_3px] ${tone}`}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-primary-content/42">{label}</p>
+      <p className="mt-2 truncate text-2xl font-bold text-secondary">{value}</p>
+      <p className="mt-auto pt-2 text-xs font-semibold text-primary-content/45">{detail}</p>
+    </div>
   )
 }
 
-/* ─── Main Page ────────────────────────────────────────────── */
+function MetaItem({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5 text-xs font-semibold text-base-content/48">
+      <Icon className="h-3.5 w-3.5 shrink-0" />
+      <span className="truncate">{children}</span>
+    </span>
+  )
+}
+
+function MemberCard({ member }: { member: Member }) {
+  return (
+    <Link
+      to={`/members/${member.id}`}
+      className="group flex h-full flex-col overflow-hidden border border-primary/10 bg-base-100/90 shadow-[0_14px_38px_rgba(0,27,80,0.06)] transition-all hover:-translate-y-0.5 hover:border-primary/18 hover:shadow-[0_22px_55px_rgba(0,27,80,0.11)] rounded-[24px_4px_24px_4px]"
+    >
+      <div className="h-1 bg-gradient-to-r from-secondary via-primary to-secondary" />
+      <div className="flex flex-1 flex-col p-5">
+        <div className="flex items-start gap-4">
+          <div className="relative shrink-0">
+            <Avatar src={member.photoUrl} name={member.fullName} size="lg" />
+            {member.isAvailableAsMentor && (
+              <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center border-2 border-base-100 bg-secondary text-primary rounded-[8px_2px_8px_2px]">
+                <Handshake className="h-2.5 w-2.5" />
+              </span>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="line-clamp-2 text-lg font-bold leading-tight text-base-content">{member.fullName}</h2>
+            {member.occupation && (
+              <p className="mt-2 flex min-w-0 items-center gap-1.5 text-sm font-semibold text-base-content/55">
+                <Briefcase className="h-3.5 w-3.5 shrink-0 text-primary/45" />
+                <span className="truncate">{member.occupation}</span>
+              </p>
+            )}
+            {member.organization && (
+              <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs font-semibold text-base-content/38">
+                <Building2 className="h-3.5 w-3.5 shrink-0 text-primary/35" />
+                <span className="truncate">{member.organization}</span>
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-1.5">
+          <StatusBadge status={member.membershipStatus} />
+          {member.isAvailableAsMentor && <span className="badge badge-sm border-secondary/20 bg-secondary/15 text-primary">Mentor</span>}
+          {member.house && <span className="badge badge-sm border-primary/10 bg-primary/7 text-primary">{formatEnum(member.house)}</span>}
+        </div>
+
+        <div className="mt-5 grid gap-2 border-y border-primary/8 py-4">
+          {member.yearGroup && <MetaItem icon={GraduationCap}>Year group {member.yearGroup}</MetaItem>}
+          {member.programme && <MetaItem icon={Users}>{formatEnum(member.programme)}</MetaItem>}
+          {(member.city || member.country) && (
+            <MetaItem icon={MapPin}>
+              {[member.city, member.country].filter(Boolean).join(', ')}
+            </MetaItem>
+          )}
+        </div>
+
+        <div className="mt-auto flex items-center justify-between gap-4 pt-5">
+          <span className="text-sm font-bold text-base-content/42">
+            {member.areaOfExpertise?.length ? `${member.areaOfExpertise.length} expertise area${member.areaOfExpertise.length === 1 ? '' : 's'}` : 'View profile'}
+          </span>
+          <span className="grid h-10 w-10 shrink-0 place-items-center bg-primary/8 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-content rounded-[14px_3px_14px_3px]">
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+function DirectorySkeleton() {
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[0, 1, 2, 3].map((item) => (
+          <div key={item} className="h-32 animate-pulse bg-base-300/40 rounded-[18px_4px_18px_4px]" />
+        ))}
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {[0, 1, 2, 3, 4, 5, 6, 7].map((item) => (
+          <div key={item} className="border border-primary/8 bg-base-100/84 p-5 rounded-[24px_4px_24px_4px]">
+            <div className="flex gap-4">
+              <div className="h-14 w-14 animate-pulse bg-base-300/45 rounded-[18px_4px_18px_4px]" />
+              <div className="flex-1 space-y-2">
+                <div className="h-5 w-4/5 animate-pulse bg-base-300/55" />
+                <div className="h-3 w-3/5 animate-pulse bg-base-300/35" />
+              </div>
+            </div>
+            <div className="mt-5 h-8 animate-pulse bg-base-300/30" />
+            <div className="mt-4 h-20 animate-pulse bg-base-300/25" />
+            <div className="mt-5 h-10 animate-pulse bg-base-300/40" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function EmptyDirectory({ hasFilters, onClear }: { hasFilters: boolean; onClear: () => void }) {
+  return (
+    <div className="flex min-h-72 flex-col items-center justify-center border border-primary/10 bg-base-100/86 px-6 py-12 text-center shadow-[0_12px_34px_rgba(0,27,80,0.06)] rounded-[24px_4px_24px_4px]">
+      <span className="grid h-16 w-16 place-items-center bg-primary/8 text-primary rounded-[18px_4px_18px_4px]">
+        <Users className="h-7 w-7" />
+      </span>
+      <h2 className="mt-5 text-xl font-bold">No members found</h2>
+      <p className="mt-2 max-w-md text-sm leading-relaxed text-base-content/55">
+        {hasFilters ? 'Try clearing the search and filters.' : 'Approved alumni profiles will appear here.'}
+      </p>
+      {hasFilters && (
+        <button type="button" className="btn btn-primary mt-6 min-h-11" onClick={onClear}>
+          Clear filters
+        </button>
+      )}
+    </div>
+  )
+}
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [yearFilter, setYearFilter] = useState('')
-  const [houseFilter, setHouseFilter] = useState('')
+  const [houseFilter, setHouseFilter] = useState<HouseFilter>('ALL')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [totalMembers, setTotalMembers] = useState(0)
 
   useEffect(() => {
     setLoading(true)
     const params: Record<string, string | number> = { page, limit: 20 }
-    if (search) params.search = search
+    if (search.trim()) params.search = search.trim()
     if (yearFilter) params.yearGroup = yearFilter
-    if (houseFilter) params.house = houseFilter
+    if (houseFilter !== 'ALL') params.house = houseFilter
 
     membersApi.directory(params)
       .then((res) => {
-        const data = res.data.data
-        setMembers(data || [])
+        setMembers(res.data.data || [])
         setTotalPages(res.data.pagination?.totalPages || 1)
+        setTotalMembers(res.data.pagination?.total || 0)
       })
-      .catch(() => setMembers([]))
+      .catch(() => {
+        setMembers([])
+        setTotalPages(1)
+        setTotalMembers(0)
+      })
       .finally(() => setLoading(false))
   }, [page, search, yearFilter, houseFilter])
 
+  const hasFilters = Boolean(search.trim() || yearFilter || houseFilter !== 'ALL')
+  const mentorsOnPage = members.filter((member) => member.isAvailableAsMentor).length
+  const yearGroupsOnPage = useMemo(() => new Set(members.map((member) => member.yearGroup).filter(Boolean)).size, [members])
+  const countriesOnPage = useMemo(() => new Set(members.map((member) => member.country).filter(Boolean)).size, [members])
+
+  const clearFilters = () => {
+    setSearch('')
+    setYearFilter('')
+    setHouseFilter('ALL')
+    setPage(1)
+  }
+
   return (
     <PageTransition>
-      <PageHeader title="Alumni Directory" description="Connect with fellow UPOSA alumni" />
-
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/50" />
-          <input type="text" className="input input-sm input-bordered w-full pl-9" placeholder="Search by name..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} />
-        </div>
-        <input type="number" className="input input-sm input-bordered w-32" placeholder="Year group" value={yearFilter} onChange={(e) => { setYearFilter(e.target.value); setPage(1) }} />
-        <CustomSelect
-          value={houseFilter}
-          onChange={(v) => { setHouseFilter(v); setPage(1) }}
-          placeholder="All Houses"
-          className="w-40"
-          options={[
-            { value: 'ACKAH', label: 'Ackah' },
-            { value: 'DENSU', label: 'Densu' },
-            { value: 'TANO', label: 'Tano' },
-            { value: 'NKRUMAH', label: 'Nkrumah' },
-            { value: 'PRA', label: 'Pra' },
-            { value: 'VOLTA', label: 'Volta' },
-          ]}
+      <div className="relative space-y-6">
+        <img
+          src="/logo.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none fixed right-[-8rem] top-24 z-0 hidden h-[26rem] w-[26rem] object-contain opacity-[0.025] xl:block"
         />
-      </div>
 
-      {loading ? (
-        <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
-      ) : members.length === 0 ? (
-        <EmptyState icon={Users} title="No members found" description="Try adjusting your search filters" />
-      ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {members.map((member, i) => (
-              <MemberCard key={member.id} member={member} index={i} />
-            ))}
+        <section className="relative z-10 overflow-hidden bg-primary text-primary-content shadow-[0_24px_80px_rgba(0,27,80,0.18)] rounded-[28px_6px_28px_6px]">
+          <img src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 object-contain opacity-[0.055]" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-secondary/80 to-transparent" />
+          <div className="relative grid gap-8 p-5 sm:p-7 lg:grid-cols-[minmax(0,1.08fr)_minmax(340px,0.92fr)] lg:p-8">
+            <div className="min-w-0">
+              <div className="mb-4 inline-flex items-center gap-2 border border-primary-content/15 bg-primary-content/10 px-3 py-2 text-xs font-semibold text-primary-content/70 rounded-[14px_3px_14px_3px]">
+                <Sparkles className="h-4 w-4 text-secondary" />
+                Alumni directory
+              </div>
+              <h1 className="max-w-3xl text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
+                Find old students by year, house, work, and location.
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-primary-content/62 sm:text-base">
+                Search approved alumni profiles, discover mentors, and open member records without losing the rhythm of the directory.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <StatTile icon={Users} label="Directory" value={totalMembers || members.length} detail="Approved profiles" />
+              <StatTile icon={Handshake} label="Mentors" value={mentorsOnPage} detail="Visible on this page" tone="bg-secondary/18 text-primary" />
+              <StatTile icon={GraduationCap} label="Year groups" value={yearGroupsOnPage} detail="In current view" />
+              <StatTile icon={MapPin} label="Countries" value={countriesOnPage} detail="In current view" />
+            </div>
+          </div>
+        </section>
+
+        <section className="relative z-10 border border-primary/10 bg-base-100/88 p-4 shadow-[0_12px_34px_rgba(0,27,80,0.05)] rounded-[24px_4px_24px_4px]">
+          <div className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_160px_minmax(0,1.15fr)_auto] lg:items-center">
+            <label className="relative block">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/38" />
+              <input
+                type="text"
+                className="input input-bordered h-12 w-full border-primary/10 bg-base-100 pl-11 text-sm focus:border-primary"
+                placeholder="Search by name..."
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value)
+                  setPage(1)
+                }}
+              />
+            </label>
+
+            <input
+              type="number"
+              className="input input-bordered h-12 w-full border-primary/10 bg-base-100 text-sm focus:border-primary"
+              placeholder="Year group"
+              value={yearFilter}
+              onChange={(event) => {
+                setYearFilter(event.target.value)
+                setPage(1)
+              }}
+            />
+
+            <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
+              <button
+                type="button"
+                className={`btn btn-sm min-h-10 shrink-0 gap-2 ${houseFilter === 'ALL' ? 'btn-primary' : 'border-primary/10 bg-base-200 text-primary hover:bg-base-300'}`}
+                onClick={() => {
+                  setHouseFilter('ALL')
+                  setPage(1)
+                }}
+              >
+                <Filter className="h-4 w-4" />
+                All houses
+              </button>
+              {houseOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`btn btn-sm min-h-10 shrink-0 ${houseFilter === option.value ? 'btn-primary' : 'border-primary/10 bg-base-200 text-primary hover:bg-base-300'}`}
+                  onClick={() => {
+                    setHouseFilter(option.value)
+                    setPage(1)
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            <button type="button" className="btn min-h-12 border-primary/10 bg-base-200 text-primary hover:bg-base-300" onClick={clearFilters} disabled={!hasFilters}>
+              Clear
+            </button>
+          </div>
+        </section>
+
+        <section className="relative z-10 space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-secondary">Member records</p>
+              <h2 className="mt-1 text-2xl font-bold">Alumni profiles</h2>
+            </div>
+            <p className="max-w-xl text-sm leading-relaxed text-base-content/52">
+              Showing page {page} of {totalPages}. Use filters to narrow the network quickly.
+            </p>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-8">
-              <div className="join">
-                <button className="join-item btn btn-sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Previous</button>
-                <button className="join-item btn btn-sm">Page {page} of {totalPages}</button>
-                <button className="join-item btn btn-sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</button>
+          {loading ? (
+            <DirectorySkeleton />
+          ) : members.length === 0 ? (
+            <EmptyDirectory hasFilters={hasFilters} onClear={clearFilters} />
+          ) : (
+            <>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {members.map((member) => (
+                  <MemberCard key={member.id} member={member} />
+                ))}
               </div>
-            </div>
+
+              {totalPages > 1 && (
+                <div className="flex flex-col gap-3 border border-primary/10 bg-base-100/88 p-3 shadow-[0_10px_28px_rgba(0,27,80,0.04)] sm:flex-row sm:items-center sm:justify-between rounded-[20px_4px_20px_4px]">
+                  <p className="text-sm font-semibold text-base-content/52">Page {page} of {totalPages}</p>
+                  <div className="flex gap-2">
+                    <button className="btn min-h-11 border-primary/10 bg-base-200 text-primary hover:bg-base-300" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}>
+                      <ArrowLeft className="h-4 w-4" />
+                      Previous
+                    </button>
+                    <button className="btn btn-primary min-h-11" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page === totalPages}>
+                      Next
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
-        </>
-      )}
+        </section>
+      </div>
     </PageTransition>
   )
 }

@@ -1,14 +1,29 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
-  Lock, Eye, EyeOff, Bell, Palette, Shield, Save, CheckCircle,
-  Sun, Moon,
+  AlertTriangle,
+  ArrowRight,
+  Bell,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Globe2,
+  KeyRound,
+  Languages,
+  Lock,
+  Moon,
+  Palette,
+  Save,
+  Shield,
+  Sparkles,
+  Sun,
+  UserCircle,
+  type LucideIcon,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import PageTransition from '../../components/common/PageTransition'
-import PageHeader from '../../components/ui/PageHeader'
 import ScrollReveal from '../../components/common/ScrollReveal'
 import { useAuthStore } from '../../stores/auth.store'
 import { useTheme } from '../../hooks/useTheme'
@@ -25,17 +40,195 @@ const passwordSchema = z.object({
 })
 
 type PasswordForm = z.infer<typeof passwordSchema>
+type TabKey = 'preferences' | 'password' | 'notifications' | 'privacy'
+
+const tabs: Array<{ key: TabKey; label: string; helper: string; icon: LucideIcon }> = [
+  { key: 'preferences', label: 'Preferences', helper: 'Theme and region', icon: Palette },
+  { key: 'password', label: 'Password', helper: 'Account security', icon: KeyRound },
+  { key: 'notifications', label: 'Notifications', helper: 'Email routing', icon: Bell },
+  { key: 'privacy', label: 'Privacy', helper: 'Directory visibility', icon: Shield },
+]
+
+const inputCls = 'input input-bordered min-h-12 w-full border-primary/10 bg-base-200/45 pl-10 pr-10 focus:border-primary focus:bg-base-100'
+const selectCls = 'select select-bordered min-h-12 w-full border-primary/10 bg-base-200/45 focus:border-primary focus:bg-base-100'
+const labelCls = 'text-xs font-bold uppercase tracking-[0.14em] text-base-content/44'
+
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone = 'bg-primary-content/[0.06] text-secondary',
+}: {
+  icon: LucideIcon
+  label: string
+  value: ReactNode
+  detail: string
+  tone?: string
+}) {
+  return (
+    <div className="flex h-full flex-col border border-primary-content/10 bg-primary-content/[0.055] p-4 rounded-[18px_4px_18px_4px]">
+      <span className={`grid h-10 w-10 place-items-center rounded-[14px_3px_14px_3px] ${tone}`}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-primary-content/42">{label}</p>
+      <p className="mt-2 truncate text-2xl font-bold text-secondary">{value}</p>
+      <p className="mt-auto pt-2 text-xs font-semibold text-primary-content/45">{detail}</p>
+    </div>
+  )
+}
+
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string
+  error?: string
+  children: ReactNode
+}) {
+  return (
+    <label className="form-control">
+      <span className="mb-2">
+        <span className={labelCls}>{label}</span>
+      </span>
+      {children}
+      {error && <span className="mt-2 text-xs font-bold text-error">{error}</span>}
+    </label>
+  )
+}
+
+function TabButton({
+  active,
+  icon: Icon,
+  label,
+  helper,
+  onClick,
+}: {
+  active: boolean
+  icon: LucideIcon
+  label: string
+  helper: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className={`flex min-h-20 items-center gap-3 border p-3 text-left transition-all rounded-[20px_4px_20px_4px] ${
+        active ? 'border-primary bg-primary/7 shadow-[0_10px_24px_rgba(0,27,80,0.08)]' : 'border-primary/10 bg-base-100 hover:border-primary/20'
+      }`}
+      onClick={onClick}
+    >
+      <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-[15px_3px_15px_3px] ${active ? 'bg-primary text-primary-content' : 'bg-primary/8 text-primary'}`}>
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-bold">{label}</span>
+        <span className="mt-1 block text-xs leading-relaxed text-base-content/50">{helper}</span>
+      </span>
+    </button>
+  )
+}
+
+function PanelHeader({
+  icon: Icon,
+  eyebrow,
+  title,
+  description,
+}: {
+  icon: LucideIcon
+  eyebrow: string
+  title: string
+  description: string
+}) {
+  return (
+    <div className="flex items-start gap-4">
+      <span className="grid h-12 w-12 shrink-0 place-items-center bg-primary/8 text-primary rounded-[16px_3px_16px_3px]">
+        <Icon className="h-5 w-5" />
+      </span>
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-secondary">{eyebrow}</p>
+        <h2 className="mt-1 text-2xl font-bold leading-tight">{title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-base-content/56">{description}</p>
+      </div>
+    </div>
+  )
+}
+
+function ToggleRow({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string
+  description: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <label className="flex min-h-20 cursor-pointer items-center justify-between gap-4 border border-primary/10 bg-base-100/86 p-4 transition-all hover:border-primary/18 hover:bg-base-100 rounded-[18px_4px_18px_4px]">
+      <span className="min-w-0">
+        <span className="block text-sm font-bold text-base-content">{label}</span>
+        <span className="mt-1 block text-xs leading-relaxed text-base-content/50">{description}</span>
+      </span>
+      <input
+        type="checkbox"
+        className="toggle toggle-primary toggle-sm shrink-0"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+    </label>
+  )
+}
+
+function PasswordInput({
+  label,
+  icon: Icon,
+  visible,
+  onToggle,
+  error,
+  ...props
+}: {
+  label: string
+  icon: LucideIcon
+  visible?: boolean
+  onToggle?: () => void
+  error?: string
+} & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <Field label={label} error={error}>
+      <div className="relative">
+        <Icon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/38" />
+        <input
+          {...props}
+          type={visible ? 'text' : 'password'}
+          className={`${inputCls} ${error ? 'input-error' : ''}`}
+        />
+        {onToggle && (
+          <button
+            type="button"
+            aria-label={visible ? 'Hide password' : 'Show password'}
+            className="absolute right-3 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center text-base-content/40 transition-colors hover:text-primary"
+            onClick={onToggle}
+          >
+            {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        )}
+      </div>
+    </Field>
+  )
+}
 
 export default function SettingsPage() {
-  useAuthStore((s) => s.user)
+  const user = useAuthStore((s) => s.user)
   const { theme, setTheme } = useTheme()
   const toast = useToast()
-  const [tab, setTab] = useState<'preferences' | 'password' | 'notifications' | 'privacy'>('preferences')
-  const [showPasswords, setShowPasswords] = useState({ current: false, new: false })
-  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [tab, setTab] = useState<TabKey>('preferences')
+  const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false })
+  const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
 
-  // Notification preferences (local state for demo)
   const [notifications, setNotifications] = useState({
     emailEvents: true,
     emailNews: true,
@@ -45,7 +238,6 @@ export default function SettingsPage() {
     emailMentorship: true,
   })
 
-  // Privacy preferences
   const [privacy, setPrivacy] = useState({
     showEmail: false,
     showPhone: false,
@@ -57,8 +249,11 @@ export default function SettingsPage() {
     resolver: zodResolver(passwordSchema),
   })
 
+  const enabledNotifications = Object.values(notifications).filter(Boolean).length
+  const visiblePrivacyItems = Object.values(privacy).filter(Boolean).length
+
   const onPasswordSubmit = async (data: PasswordForm) => {
-    setPasswordLoading(true)
+    setPasswordSaving(true)
     try {
       await authApi.changePassword({
         currentPassword: data.currentPassword,
@@ -68,11 +263,13 @@ export default function SettingsPage() {
       reset()
       toast.success('Password updated successfully!')
       setTimeout(() => setPasswordSuccess(false), 3000)
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to update password.'
-      toast.error(msg)
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined
+      toast.error(msg || 'Failed to update password.')
     } finally {
-      setPasswordLoading(false)
+      setPasswordSaving(false)
     }
   }
 
@@ -84,91 +281,131 @@ export default function SettingsPage() {
     toast.success('Privacy settings saved!')
   }
 
-  const tabs = [
-    { key: 'preferences' as const, label: 'Preferences', icon: Palette },
-    { key: 'password' as const, label: 'Password', icon: Lock },
-    { key: 'notifications' as const, label: 'Notifications', icon: Bell },
-    { key: 'privacy' as const, label: 'Privacy', icon: Shield },
-  ]
-
   return (
     <PageTransition>
-      <PageHeader title="Settings" description="Manage your account preferences and security" />
+      <div className="relative space-y-6">
+        <img
+          src="/logo.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none fixed right-[-8rem] top-24 z-0 hidden h-[26rem] w-[26rem] object-contain opacity-[0.025] xl:block"
+        />
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Sidebar tabs */}
-        <div className="lg:w-56 shrink-0">
-          <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
-            {tabs.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
-                  tab === t.key
-                    ? 'bg-primary text-primary-content'
-                    : 'text-base-content/60 hover:bg-base-200'
-                }`}
-              >
-                <t.icon className="w-4 h-4" />
-                {t.label}
-              </button>
-            ))}
+        <section className="relative z-10 overflow-hidden bg-primary text-primary-content shadow-[0_24px_80px_rgba(0,27,80,0.18)] rounded-[28px_6px_28px_6px]">
+          <img src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 object-contain opacity-[0.055]" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-secondary/80 to-transparent" />
+          <div className="relative grid gap-8 p-5 sm:p-7 lg:grid-cols-[minmax(0,1.08fr)_minmax(340px,0.92fr)] lg:p-8">
+            <div className="min-w-0">
+              <div className="mb-4 inline-flex items-center gap-2 border border-primary-content/15 bg-primary-content/10 px-3 py-2 text-xs font-semibold text-primary-content/70 rounded-[14px_3px_14px_3px]">
+                <Sparkles className="h-4 w-4 text-secondary" />
+                Settings desk
+              </div>
+              <h1 className="max-w-3xl text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
+                Tune your account without digging through menus.
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-primary-content/62 sm:text-base">
+                Manage theme, security, notification routing, and what other alumni can see in the directory.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <StatTile icon={UserCircle} label="Account" value={user?.membershipStatus || 'Member'} detail={user?.email || 'Signed in'} />
+              <StatTile icon={Palette} label="Theme" value={theme === 'dark' ? 'Dark' : 'Light'} detail="Local preference" />
+              <StatTile icon={Bell} label="Alerts" value={`${enabledNotifications}/6`} detail="Email channels on" tone="bg-secondary/18 text-primary" />
+              <StatTile icon={Shield} label="Privacy" value={`${visiblePrivacyItems}/4`} detail="Visible profile fields" tone="bg-success/12 text-success" />
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* Content */}
-        <div className="flex-1 max-w-2xl">
+        <section className="relative z-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {tabs.map((item) => (
+            <TabButton
+              key={item.key}
+              active={tab === item.key}
+              icon={item.icon}
+              label={item.label}
+              helper={item.helper}
+              onClick={() => setTab(item.key)}
+            />
+          ))}
+        </section>
+
+        <section className="relative z-10">
           {tab === 'preferences' && (
             <ScrollReveal>
-              <div className="card bg-base-100 shadow-[0_2px_8px_rgba(0,27,80,0.06)]">
-                <div className="card-body">
-                  <h3 className="font-bold text-lg mb-4">Appearance</h3>
+              <div className="overflow-hidden border border-primary/10 bg-base-100/92 shadow-[0_18px_50px_rgba(0,27,80,0.08)] rounded-[28px_6px_28px_6px]">
+                <div className="h-1 bg-secondary" />
+                <div className="p-5 sm:p-6">
+                  <PanelHeader
+                    icon={Palette}
+                    eyebrow="Preferences"
+                    title="Appearance and locale"
+                    description="Choose the visual mode and default regional hints for your alumni workspace."
+                  />
 
-                  <div className="space-y-6">
-                    <div className="form-control">
-                      <label className="label"><span className="label-text font-medium">Theme</span></label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {[
-                          { value: 'light', label: 'Light', icon: Sun },
-                          { value: 'dark', label: 'Dark', icon: Moon },
-                        ].map((t) => (
+                  <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {[
+                        { value: 'light' as const, label: 'Light', icon: Sun, description: 'Bright interface for daytime work.' },
+                        { value: 'dark' as const, label: 'Dark', icon: Moon, description: 'Dimmer interface for low-light use.' },
+                      ].map((option) => {
+                        const Icon = option.icon
+                        const active = theme === option.value
+                        return (
                           <button
-                            key={t.value}
-                            onClick={() => setTheme(t.value as 'light' | 'dark')}
-                            className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                              theme === t.value
-                                ? 'border-primary bg-primary/5'
-                                : 'border-base-300 hover:border-base-content/20'
+                            key={option.value}
+                            type="button"
+                            className={`flex min-h-44 flex-col items-start border p-5 text-left transition-all rounded-[24px_4px_24px_4px] ${
+                              active ? 'border-primary bg-primary/7 shadow-[0_12px_28px_rgba(0,27,80,0.08)]' : 'border-primary/10 bg-base-100 hover:border-primary/20'
                             }`}
+                            onClick={() => setTheme(option.value)}
                           >
-                            <t.icon className={`w-6 h-6 ${theme === t.value ? 'text-primary' : 'text-base-content/40'}`} />
-                            <span className="text-sm font-medium">{t.label}</span>
-                            {theme === t.value && <CheckCircle className="w-4 h-4 text-primary" />}
+                            <span className={`grid h-12 w-12 place-items-center rounded-[16px_3px_16px_3px] ${active ? 'bg-primary text-primary-content' : 'bg-primary/8 text-primary'}`}>
+                              <Icon className="h-5 w-5" />
+                            </span>
+                            <span className="mt-5 text-lg font-bold">{option.label}</span>
+                            <span className="mt-2 text-sm leading-relaxed text-base-content/54">{option.description}</span>
+                            <span className="mt-auto pt-5 text-xs font-bold text-primary">{active ? 'Current theme' : 'Set theme'}</span>
                           </button>
-                        ))}
+                        )
+                      })}
+                    </div>
+
+                    <div className="grid gap-4">
+                      <div className="border border-primary/10 bg-base-100/88 p-4 rounded-[22px_4px_22px_4px]">
+                        <div className="mb-4 flex items-center gap-3">
+                          <span className="grid h-10 w-10 place-items-center bg-primary/8 text-primary rounded-[14px_3px_14px_3px]">
+                            <Languages className="h-4 w-4" />
+                          </span>
+                          <div>
+                            <p className="text-sm font-bold">Language</p>
+                            <p className="text-xs text-base-content/45">More languages coming soon</p>
+                          </div>
+                        </div>
+                        <select className={selectCls} defaultValue="en">
+                          <option value="en">English</option>
+                          <option value="tw">Twi</option>
+                          <option value="dag">Dagaare</option>
+                        </select>
                       </div>
-                    </div>
 
-                    <div className="divider" />
-
-                    <div className="form-control w-full max-w-xs">
-                      <label className="label"><span className="label-text font-medium">Language</span></label>
-                      <select className="select select-bordered w-full">
-                        <option value="en">English</option>
-                        <option value="tw">Twi</option>
-                        <option value="dag">Dagaare</option>
-                      </select>
-                      <label className="label"><span className="label-text-alt text-base-content/50">More languages coming soon</span></label>
-                    </div>
-
-                    <div className="form-control w-full max-w-xs">
-                      <label className="label"><span className="label-text font-medium">Time Zone</span></label>
-                      <select className="select select-bordered w-full">
-                        <option value="GMT">GMT (Ghana)</option>
-                        <option value="GMT+1">GMT+1 (West Africa)</option>
-                        <option value="GMT-5">GMT-5 (US Eastern)</option>
-                        <option value="GMT+1:CET">CET (Central Europe)</option>
-                      </select>
+                      <div className="border border-primary/10 bg-base-100/88 p-4 rounded-[22px_4px_22px_4px]">
+                        <div className="mb-4 flex items-center gap-3">
+                          <span className="grid h-10 w-10 place-items-center bg-primary/8 text-primary rounded-[14px_3px_14px_3px]">
+                            <Globe2 className="h-4 w-4" />
+                          </span>
+                          <div>
+                            <p className="text-sm font-bold">Time zone</p>
+                            <p className="text-xs text-base-content/45">Used for date and event context</p>
+                          </div>
+                        </div>
+                        <select className={selectCls} defaultValue="GMT">
+                          <option value="GMT">GMT (Ghana)</option>
+                          <option value="GMT+1">GMT+1 (West Africa)</option>
+                          <option value="GMT-5">GMT-5 (US Eastern)</option>
+                          <option value="GMT+1:CET">CET (Central Europe)</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -178,73 +415,77 @@ export default function SettingsPage() {
 
           {tab === 'password' && (
             <ScrollReveal>
-              <div className="card bg-base-100 shadow-[0_2px_8px_rgba(0,27,80,0.06)]">
-                <div className="card-body">
-                  <h3 className="font-bold text-lg mb-1">Change Password</h3>
-                  <p className="text-sm text-base-content/60 mb-6">Update your password to keep your account secure</p>
+              <div className="overflow-hidden border border-primary/10 bg-base-100/92 shadow-[0_18px_50px_rgba(0,27,80,0.08)] rounded-[28px_6px_28px_6px]">
+                <div className="h-1 bg-secondary" />
+                <div className="p-5 sm:p-6">
+                  <PanelHeader
+                    icon={KeyRound}
+                    eyebrow="Security"
+                    title="Change password"
+                    description="Update your password with your current credential. Keep it unique to this account."
+                  />
 
                   {passwordSuccess && (
                     <motion.div
-                      initial={{ opacity: 0, y: -10 }}
+                      initial={{ opacity: 0, y: -8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="alert alert-success mb-4"
+                      className="mt-6 flex min-h-12 items-center gap-3 border border-success/15 bg-success/10 px-4 py-3 text-sm font-bold text-success rounded-[18px_4px_18px_4px]"
                     >
-                      <CheckCircle className="w-5 h-5" />
-                      <span>Password updated successfully!</span>
+                      <CheckCircle2 className="h-5 w-5" />
+                      Password updated successfully.
                     </motion.div>
                   )}
 
-                  <form onSubmit={handleSubmit(onPasswordSubmit)} className="space-y-4">
-                    <div className="form-control">
-                      <label className="label"><span className="label-text font-medium">Current Password</span></label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
-                        <input
-                          type={showPasswords.current ? 'text' : 'password'}
-                          className={`input input-bordered w-full pl-10 pr-10 ${errors.currentPassword ? 'input-error' : ''}`}
-                          {...register('currentPassword')}
-                        />
-                        <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content" onClick={() => setShowPasswords((p) => ({ ...p, current: !p.current }))}>
-                          {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      {errors.currentPassword && <p className="text-error text-xs mt-1">{errors.currentPassword.message}</p>}
+                  <form onSubmit={handleSubmit(onPasswordSubmit)} className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+                    <div className="grid gap-4">
+                      <PasswordInput
+                        label="Current password"
+                        icon={Lock}
+                        visible={showPasswords.current}
+                        onToggle={() => setShowPasswords((prev) => ({ ...prev, current: !prev.current }))}
+                        error={errors.currentPassword?.message}
+                        {...register('currentPassword')}
+                      />
+                      <PasswordInput
+                        label="New password"
+                        icon={KeyRound}
+                        placeholder="At least 6 characters"
+                        visible={showPasswords.new}
+                        onToggle={() => setShowPasswords((prev) => ({ ...prev, new: !prev.new }))}
+                        error={errors.newPassword?.message}
+                        {...register('newPassword')}
+                      />
+                      <PasswordInput
+                        label="Confirm new password"
+                        icon={KeyRound}
+                        visible={showPasswords.confirm}
+                        onToggle={() => setShowPasswords((prev) => ({ ...prev, confirm: !prev.confirm }))}
+                        error={errors.confirmPassword?.message}
+                        {...register('confirmPassword')}
+                      />
                     </div>
 
-                    <div className="form-control">
-                      <label className="label"><span className="label-text font-medium">New Password</span></label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
-                        <input
-                          type={showPasswords.new ? 'text' : 'password'}
-                          className={`input input-bordered w-full pl-10 pr-10 ${errors.newPassword ? 'input-error' : ''}`}
-                          placeholder="At least 6 characters"
-                          {...register('newPassword')}
-                        />
-                        <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content" onClick={() => setShowPasswords((p) => ({ ...p, new: !p.new }))}>
-                          {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
+                    <div className="flex flex-col justify-between gap-5 border border-primary/10 bg-base-200/45 p-5 rounded-[22px_4px_22px_4px]">
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-secondary">Password guide</p>
+                        <ul className="mt-4 space-y-3 text-sm font-semibold leading-relaxed text-base-content/58">
+                          <li>Use at least 6 characters.</li>
+                          <li>Avoid reusing old passwords.</li>
+                          <li>Keep the new password private.</li>
+                        </ul>
                       </div>
-                      {errors.newPassword && <p className="text-error text-xs mt-1">{errors.newPassword.message}</p>}
-                    </div>
 
-                    <div className="form-control">
-                      <label className="label"><span className="label-text font-medium">Confirm New Password</span></label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
-                        <input
-                          type="password"
-                          className={`input input-bordered w-full pl-10 ${errors.confirmPassword ? 'input-error' : ''}`}
-                          {...register('confirmPassword')}
-                        />
-                      </div>
-                      {errors.confirmPassword && <p className="text-error text-xs mt-1">{errors.confirmPassword.message}</p>}
+                      <button type="submit" className="btn btn-primary min-h-11 w-full gap-2" disabled={passwordSaving}>
+                        {passwordSaving ? (
+                          <span className="h-4 w-28 animate-pulse bg-primary-content/35" />
+                        ) : (
+                          <>
+                            Update password
+                            <Save className="h-4 w-4" />
+                          </>
+                        )}
+                      </button>
                     </div>
-
-                    <button type="submit" className={`btn btn-primary ${passwordLoading ? 'loading' : ''}`} disabled={passwordLoading}>
-                      {!passwordLoading && <Save className="w-4 h-4" />}
-                      {passwordLoading ? 'Updating...' : 'Update Password'}
-                    </button>
                   </form>
                 </div>
               </div>
@@ -253,38 +494,42 @@ export default function SettingsPage() {
 
           {tab === 'notifications' && (
             <ScrollReveal>
-              <div className="card bg-base-100 shadow-[0_2px_8px_rgba(0,27,80,0.06)]">
-                <div className="card-body">
-                  <h3 className="font-bold text-lg mb-1">Email Notifications</h3>
-                  <p className="text-sm text-base-content/60 mb-6">Choose what you want to be notified about</p>
+              <div className="overflow-hidden border border-primary/10 bg-base-100/92 shadow-[0_18px_50px_rgba(0,27,80,0.08)] rounded-[28px_6px_28px_6px]">
+                <div className="h-1 bg-secondary" />
+                <div className="flex min-h-[34rem] flex-col p-5 sm:p-6">
+                  <PanelHeader
+                    icon={Bell}
+                    eyebrow="Notifications"
+                    title="Email notification routing"
+                    description="Choose which association updates should reach your inbox."
+                  />
 
-                  <div className="space-y-4">
+                  <div className="mt-6 grid gap-3 md:grid-cols-2">
                     {[
-                      { key: 'emailEvents', label: 'Events & Gatherings', desc: 'Get notified about upcoming events and RSVPs' },
-                      { key: 'emailNews', label: 'News & Announcements', desc: 'Stay updated with the latest UPOSA news' },
-                      { key: 'emailForum', label: 'Forum Replies', desc: 'Get notified when someone replies to your posts' },
-                      { key: 'emailPolls', label: 'Polls & Elections', desc: 'Be alerted when new polls or elections open' },
-                      { key: 'emailDues', label: 'Dues Reminders', desc: 'Receive reminders about outstanding dues' },
-                      { key: 'emailMentorship', label: 'Mentorship Requests', desc: 'Get notified about mentorship activity' },
+                      { key: 'emailEvents', label: 'Events & gatherings', desc: 'Upcoming events and RSVP updates' },
+                      { key: 'emailNews', label: 'News & announcements', desc: 'Latest UPOSA news and notices' },
+                      { key: 'emailForum', label: 'Forum replies', desc: 'Replies to your forum posts' },
+                      { key: 'emailPolls', label: 'Polls & elections', desc: 'New votes and ballot windows' },
+                      { key: 'emailDues', label: 'Dues reminders', desc: 'Outstanding dues and payment prompts' },
+                      { key: 'emailMentorship', label: 'Mentorship requests', desc: 'Mentorship activity and responses' },
                     ].map((item) => (
-                      <div key={item.key} className="flex items-center justify-between p-4 rounded-xl border border-base-300 hover:bg-base-200/30 transition-colors">
-                        <div>
-                          <p className="font-medium text-sm">{item.label}</p>
-                          <p className="text-xs text-base-content/50">{item.desc}</p>
-                        </div>
-                        <input
-                          type="checkbox"
-                          className="toggle toggle-primary toggle-sm"
-                          checked={notifications[item.key as keyof typeof notifications]}
-                          onChange={(e) => setNotifications((n) => ({ ...n, [item.key]: e.target.checked }))}
-                        />
-                      </div>
+                      <ToggleRow
+                        key={item.key}
+                        label={item.label}
+                        description={item.desc}
+                        checked={notifications[item.key as keyof typeof notifications]}
+                        onChange={(checked) => setNotifications((prev) => ({ ...prev, [item.key]: checked }))}
+                      />
                     ))}
                   </div>
 
-                  <div className="mt-6">
-                    <button className="btn btn-primary btn-sm" onClick={handleSaveNotifications}>
-                      <Save className="w-4 h-4" /> Save Preferences
+                  <div className="mt-auto flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs font-semibold leading-relaxed text-base-content/42">
+                      {enabledNotifications} of 6 email channels are currently enabled.
+                    </p>
+                    <button type="button" className="btn btn-primary min-h-11 gap-2 sm:min-w-48" onClick={handleSaveNotifications}>
+                      Save preferences
+                      <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -294,54 +539,62 @@ export default function SettingsPage() {
 
           {tab === 'privacy' && (
             <ScrollReveal>
-              <div className="card bg-base-100 shadow-[0_2px_8px_rgba(0,27,80,0.06)]">
-                <div className="card-body">
-                  <h3 className="font-bold text-lg mb-1">Privacy Settings</h3>
-                  <p className="text-sm text-base-content/60 mb-6">Control what other alumni can see about you</p>
+              <div className="overflow-hidden border border-primary/10 bg-base-100/92 shadow-[0_18px_50px_rgba(0,27,80,0.08)] rounded-[28px_6px_28px_6px]">
+                <div className="h-1 bg-secondary" />
+                <div className="flex min-h-[34rem] flex-col p-5 sm:p-6">
+                  <PanelHeader
+                    icon={Shield}
+                    eyebrow="Privacy"
+                    title="Directory visibility"
+                    description="Control what other alumni can see when they view your member profile."
+                  />
 
-                  <div className="space-y-4">
+                  <div className="mt-6 grid gap-3 md:grid-cols-2">
                     {[
-                      { key: 'showInDirectory', label: 'Show in Alumni Directory', desc: 'Allow other members to find you in the directory' },
-                      { key: 'showEmail', label: 'Show Email Address', desc: 'Display your email on your public profile' },
-                      { key: 'showPhone', label: 'Show Phone Number', desc: 'Display your phone number on your public profile' },
-                      { key: 'showYearGroup', label: 'Show Year Group', desc: 'Display your year group on your profile' },
+                      { key: 'showInDirectory', label: 'Show in alumni directory', desc: 'Allow members to find you in directory search' },
+                      { key: 'showEmail', label: 'Show email address', desc: 'Display your email on your public profile' },
+                      { key: 'showPhone', label: 'Show phone number', desc: 'Display your phone number on your public profile' },
+                      { key: 'showYearGroup', label: 'Show year group', desc: 'Display your year group on your profile' },
                     ].map((item) => (
-                      <div key={item.key} className="flex items-center justify-between p-4 rounded-xl border border-base-300 hover:bg-base-200/30 transition-colors">
-                        <div>
-                          <p className="font-medium text-sm">{item.label}</p>
-                          <p className="text-xs text-base-content/50">{item.desc}</p>
-                        </div>
-                        <input
-                          type="checkbox"
-                          className="toggle toggle-primary toggle-sm"
-                          checked={privacy[item.key as keyof typeof privacy]}
-                          onChange={(e) => setPrivacy((p) => ({ ...p, [item.key]: e.target.checked }))}
-                        />
-                      </div>
+                      <ToggleRow
+                        key={item.key}
+                        label={item.label}
+                        description={item.desc}
+                        checked={privacy[item.key as keyof typeof privacy]}
+                        onChange={(checked) => setPrivacy((prev) => ({ ...prev, [item.key]: checked }))}
+                      />
                     ))}
                   </div>
 
-                  <div className="divider" />
-
-                  <div>
-                    <h4 className="font-semibold text-sm text-error mb-2">Danger Zone</h4>
-                    <div className="p-4 rounded-xl border border-error/30 bg-error/5">
-                      <p className="text-sm font-medium">Deactivate Account</p>
-                      <p className="text-xs text-base-content/60 mb-3">This will hide your profile and disable your account. You can reactivate by contacting an admin.</p>
-                      <button className="btn btn-error btn-outline btn-sm">Deactivate Account</button>
+                  <div className="mt-5 border border-error/20 bg-error/8 p-4 rounded-[22px_4px_22px_4px]">
+                    <div className="flex items-start gap-3">
+                      <span className="grid h-11 w-11 shrink-0 place-items-center bg-error/12 text-error rounded-[15px_3px_15px_3px]">
+                        <AlertTriangle className="h-5 w-5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-error">Deactivate account</p>
+                        <p className="mt-1 text-xs leading-relaxed text-base-content/58">
+                          This hides your profile and disables your account. Reactivation requires admin support.
+                        </p>
+                      </div>
+                      <button type="button" className="btn btn-outline btn-error btn-sm min-h-10 shrink-0">Deactivate</button>
                     </div>
                   </div>
 
-                  <div className="mt-4">
-                    <button className="btn btn-primary btn-sm" onClick={handleSavePrivacy}>
-                      <Save className="w-4 h-4" /> Save Privacy Settings
+                  <div className="mt-auto flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs font-semibold leading-relaxed text-base-content/42">
+                      {visiblePrivacyItems} of 4 profile visibility options are enabled.
+                    </p>
+                    <button type="button" className="btn btn-primary min-h-11 gap-2 sm:min-w-48" onClick={handleSavePrivacy}>
+                      Save privacy
+                      <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
               </div>
             </ScrollReveal>
           )}
-        </div>
+        </section>
       </div>
     </PageTransition>
   )

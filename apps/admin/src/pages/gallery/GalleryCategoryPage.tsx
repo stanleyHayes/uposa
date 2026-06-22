@@ -162,8 +162,13 @@ export default function GalleryCategoryPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-600 border-t-transparent" />
+      <div className="page-enter space-y-4">
+        <div className="h-5 w-36 animate-pulse bg-brand-950/10 dark:bg-dark-hover" />
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="admin-card-surface aspect-square animate-pulse" />
+          ))}
+        </div>
       </div>
     )
   }
@@ -194,7 +199,7 @@ export default function GalleryCategoryPage() {
 
       {/* Upload Panel */}
       {showUpload && (
-        <div className="mb-6 bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+        <div className="mb-6 admin-card-surface p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-900 dark:text-gray-100">Upload Images</h3>
             <button onClick={() => { setShowUpload(false); setUploadFiles([]); uploadPreviews.forEach(url => URL.revokeObjectURL(url)); setUploadPreviews([]) }} className="text-gray-400 hover:text-gray-600 transition-colors">
@@ -252,7 +257,7 @@ export default function GalleryCategoryPage() {
       )}
 
       {/* Image Grid */}
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+      <div className="admin-card-surface overflow-hidden">
         {items.length === 0 ? (
           <EmptyState
             icon={<Images size={40} />}

@@ -8,6 +8,8 @@ dist/
 .env
 .env.local
 .env.production
+.env.bak*
+.env.*.bak
 
 # Uploads
 uploads/

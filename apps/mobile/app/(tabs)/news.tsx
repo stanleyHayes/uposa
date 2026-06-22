@@ -1,21 +1,12 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { FlatList, Image, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
-import { Brand, Colors } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { newsApi } from '@/lib/api';
 import type { News } from '@/lib/types';
+import { EmptyState, LoadingState, Pill, ScreenHeader, Surface, formatShortDate } from '@/components/mobile-ui';
 
 const CATEGORY_LABEL: Record<News['category'], string> = {
   ANNOUNCEMENT: 'Announcement',
@@ -54,96 +45,51 @@ export default function NewsScreen() {
     setRefreshing(false);
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <ActivityIndicator color={palette.tint} />
-      </View>
-    );
-  }
+  if (loading) return <LoadingState palette={palette} title="News" />;
 
   return (
     <FlatList
       style={{ backgroundColor: palette.background }}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
       data={items}
       keyExtractor={(item) => item.id}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.tint} />}
-      ListEmptyComponent={
-        <View style={[styles.empty, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-          <Ionicons name="newspaper-outline" size={36} color={palette.textMuted} />
-          <Text style={{ color: palette.textMuted }}>No news yet.</Text>
-        </View>
+      ListHeaderComponent={
+        <ScreenHeader
+          palette={palette}
+          eyebrow="Dispatches"
+          title="News"
+          description="Announcements, reports, stories, and meeting summaries from the association."
+          icon="newspaper-outline"
+        />
       }
+      ListEmptyComponent={
+        <EmptyState palette={palette} icon="newspaper-outline" title="No news yet" description="Published dispatches will appear here." />
+      }
+      ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
       renderItem={({ item }) => (
-        <Pressable
-          onPress={() => router.push(`/news/${item.slug}`)}
-          style={({ pressed }) => [
-            styles.card,
-            { backgroundColor: palette.surface, borderColor: palette.border, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          {item.imageUrl ? (
-            <Image source={{ uri: item.imageUrl }} style={styles.cover} resizeMode="cover" />
-          ) : null}
-          <View style={styles.cardBody}>
-            <View style={[styles.chip, { backgroundColor: Brand.cream, borderColor: palette.border }]}>
-              <Text style={[styles.chipText, { color: Brand.navy }]}>
-                {CATEGORY_LABEL[item.category]}
+        <Pressable onPress={() => router.push(`/news/${item.slug}`)} style={({ pressed }) => ({ opacity: pressed ? 0.78 : 1 })}>
+          <Surface palette={palette} style={{ overflow: 'hidden' }}>
+            {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={{ width: '100%', height: 162 }} resizeMode="cover" /> : null}
+            <View style={{ padding: 14, gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <Pill palette={palette} tone="gold">{CATEGORY_LABEL[item.category]}</Pill>
+                <Text style={{ color: palette.textMuted, fontSize: 11, fontWeight: '700' }}>
+                  {formatShortDate(item.publishedAt ?? item.createdAt)}
+                </Text>
+              </View>
+              <Text style={{ color: palette.text, fontSize: 18, fontWeight: '900', lineHeight: 23 }} numberOfLines={2}>
+                {item.title}
               </Text>
+              {item.excerpt ? (
+                <Text style={{ color: palette.textMuted, fontSize: 13, lineHeight: 19 }} numberOfLines={3}>
+                  {item.excerpt}
+                </Text>
+              ) : null}
             </View>
-            <Text style={[styles.title, { color: palette.text }]} numberOfLines={2}>
-              {item.title}
-            </Text>
-            {item.excerpt ? (
-              <Text style={[styles.excerpt, { color: palette.textMuted }]} numberOfLines={3}>
-                {item.excerpt}
-              </Text>
-            ) : null}
-            <Text style={[styles.meta, { color: palette.textMuted }]}>
-              {item.authorName ? `${item.authorName} · ` : ''}
-              {new Date(item.publishedAt ?? item.createdAt).toLocaleDateString('en', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </Text>
-          </View>
+          </Surface>
         </Pressable>
       )}
     />
   );
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  list: { padding: 16, paddingBottom: 40 },
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 14,
-    overflow: 'hidden',
-  },
-  cover: { width: '100%', height: 160 },
-  cardBody: { padding: 14, gap: 8 },
-  chip: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.4 },
-  title: { fontSize: 16, fontWeight: '700' },
-  excerpt: { fontSize: 13, lineHeight: 18 },
-  meta: { fontSize: 11, marginTop: 4 },
-  empty: {
-    padding: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    gap: 10,
-  },
-});

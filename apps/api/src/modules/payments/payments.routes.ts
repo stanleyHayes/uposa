@@ -9,14 +9,14 @@ import {
   cryptoWebhookHandler,
   adminListPaymentsHandler,
 } from './payments.controller';
-import { authMiddleware } from '../../middleware/auth.middleware';
+import { optionalAuthMiddleware } from '../../middleware/auth.middleware';
 import { adminMiddleware } from '../../middleware/admin.middleware';
 import { paymentLimiter, webhookLimiter } from '../../middleware/ratelimit.middleware';
 
 const router = Router();
 
 // Initialize a payment (optional auth — guests can pay for donations)
-router.post('/initialize', paymentLimiter, initializePaymentHandler);
+router.post('/initialize', paymentLimiter, optionalAuthMiddleware, initializePaymentHandler);
 
 // Verify payment after callback
 router.get('/verify/:reference', paymentLimiter, verifyPaymentHandler);

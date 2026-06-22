@@ -25,32 +25,54 @@
     "lint:api": "npm run lint -w apps/api",
     "lint:mobile": "npm run lint -w apps/mobile",
     "lint": "npm run lint:api && npm run lint:admin && npm run lint:alumni && npm run lint:marketing && npm run lint:mobile",
-    "test": "echo 'No tests configured yet. Add tests to each app workspace.' && exit 0",
+    "test": "npm run test -w apps/api",
+    "test:integration": "npm run test:integration -w apps/api",
+    "test:e2e": "playwright test",
     "dev": "concurrently \"npm run dev:marketing\" \"npm run dev:admin\" \"npm run dev:alumni\" \"npm run dev:api\"",
     "seed": "npm run seed -w apps/api"
   },
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "@playwright/test": "^1.61.0",
+    "concurrently": "^10.0.3"
   },
   "overrides": {
     "react-native": {
-      "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "react": "19.2.7",
+      "react-dom": "19.2.7"
     },
     "expo-router": {
-      "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "react": "19.2.7",
+      "react-dom": "19.2.7"
     },
     "expo": {
-      "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "react": "19.2.7",
+      "react-dom": "19.2.7"
     },
     "react-native-web": {
-      "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "react": "19.2.7",
+      "react-dom": "19.2.7"
+    },
+    "@babel/core": "7.29.7",
+    "express": "5.2.1",
+    "form-data": "4.0.6",
+    "qs": "6.15.2",
+    "engine.io": {
+      ".": "6.6.9",
+      "ws": "8.21.0"
+    },
+    "engine.io-client": {
+      ".": "6.6.6",
+      "ws": "8.21.0"
+    },
+    "socket.io-adapter": {
+      ".": "2.5.8",
+      "ws": "8.21.0"
+    },
+    "react-devtools-core": {
+      "ws": "7.5.11"
     }
   }
 }

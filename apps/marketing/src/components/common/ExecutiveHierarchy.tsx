@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Crown, Shield, Star } from 'lucide-react';
-import { Card, CardAccent } from '../ui/Card.tsx';
+import LeadershipProfileCard from './LeadershipProfileCard.tsx';
 
 interface Executive {
   id: string;
@@ -62,64 +62,23 @@ function buildPyramidRows(executives: Executive[]): { row: Executive[]; rowIndex
 
 function ExecCard({ exec, rowIndex }: { exec: Executive; rowIndex: number }) {
   const initials = exec.name.split(' ').map((n) => n[0]).join('').slice(0, 2);
-  const isTop = rowIndex === 0;
-  const isUpper = rowIndex <= 1;
+  const meta = ROW_META[Math.min(rowIndex, ROW_META.length - 1)];
+  const classLabel = exec.classOf
+    ? exec.classOf.toLowerCase().startsWith('class')
+      ? exec.classOf
+      : `Class of ${exec.classOf}`
+    : undefined;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
-    >
-      <Card>
-        <CardAccent color={isTop ? 'secondary' : isUpper ? 'primary' : 'accent'} />
-        {/* Photo */}
-        <div
-          className={`relative bg-gradient-to-br from-primary/10 to-secondary/5 flex items-center justify-center overflow-hidden ${
-            isTop ? 'aspect-[3/4]' : isUpper ? 'aspect-[3/4]' : 'aspect-[4/5]'
-          }`}
-        >
-          {exec.photoUrl ? (
-            <img
-              src={exec.photoUrl}
-              alt={exec.name}
-              className="w-full h-full object-cover object-top group-hover/card:scale-105 transition-transform duration-500"
-            />
-          ) : (
-            <span className={`font-bold text-primary/25 ${isTop ? 'text-6xl' : isUpper ? 'text-4xl' : 'text-3xl'}`}>
-              {initials}
-            </span>
-          )}
-          {isTop && (
-            <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center shadow-lg shadow-secondary/30">
-              <Crown size={14} className="text-secondary-content" />
-            </div>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="border-t border-base-300/40" />
-        <div className={`text-center ${isTop ? 'p-6' : 'p-4'}`}>
-          <h3 className={`font-bold ${isTop ? 'text-lg' : 'text-base'}`}>{exec.name}</h3>
-          <div
-            className={`inline-block rounded-lg px-3 py-1 text-sm font-medium mt-2 ${
-              isTop
-                ? 'bg-gradient-to-r from-secondary to-secondary/80 text-secondary-content shadow-sm'
-                : isUpper
-                ? 'bg-primary/10 text-primary'
-                : 'bg-base-200 text-base-content/70'
-            }`}
-          >
-            {exec.position}
-          </div>
-          {exec.classOf && (
-            <p className="text-xs text-base-content/50 mt-2">{exec.classOf.toLowerCase().startsWith('class') ? exec.classOf : `Class of ${exec.classOf}`}</p>
-          )}
-        </div>
-      </Card>
-    </motion.div>
+    <LeadershipProfileCard
+      name={exec.name}
+      position={exec.position}
+      photoUrl={exec.photoUrl}
+      initials={initials}
+      tier={Math.min(rowIndex, 3)}
+      label={meta.label}
+      subtitle={classLabel}
+    />
   );
 }
 
@@ -192,10 +151,10 @@ export default function ExecutiveHierarchy({ executives }: Props) {
           row.length === 1
             ? 'flex justify-center'
             : row.length === 2
-            ? 'grid grid-cols-2 max-w-2xl mx-auto gap-5'
+            ? 'grid grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto gap-5'
             : row.length === 3
-            ? 'grid grid-cols-2 lg:grid-cols-3 max-w-4xl mx-auto gap-5'
-            : 'grid grid-cols-2 lg:grid-cols-4 gap-4';
+            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-4xl mx-auto gap-5'
+            : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4';
 
         const cardWidth =
           row.length === 1

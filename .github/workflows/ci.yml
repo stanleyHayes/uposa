@@ -26,7 +26,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
 
       - name: Install dependencies
@@ -38,6 +38,93 @@ jobs:
       - name: Build ${{ matrix.app }}
         if: matrix.app != 'mobile'
         run: npm run build -w apps/${{ matrix.app }}
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint-and-build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: API unit tests
+        run: npm run test -w apps/api
+
+      - name: API integration tests (Testcontainers + MongoDB)
+        run: npm run test:integration -w apps/api
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: lint-and-build
+
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+
+    env:
+      NODE_ENV: development
+      PORT: '5001'
+      DATABASE_URL: mongodb://127.0.0.1:27017/uposa_e2e
+      JWT_SECRET: ci-jwt-secret-value
+      JWT_ADMIN_SECRET: ci-admin-secret-value
+      CREDENTIALS_ENCRYPTION_KEY: ci-credentials-encryption-key-32
+      VITE_API_URL: http://localhost:5001/api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Seed database
+        run: npm run seed -w apps/api
+
+      - name: Start API
+        run: npm run dev -w apps/api &
+
+      - name: Wait for API health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:5001/health > /dev/null; then
+              echo "API is up"; exit 0
+            fi
+            sleep 2
+          done
+          echo "API did not become healthy in time"; exit 1
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run e2e (marketing, alumni, admin)
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
 
   docker-build:
     runs-on: ubuntu-latest

@@ -1,3 +1,5 @@
+import { escapeRegex } from '../../utils/search.utils';
+import mongoose from 'mongoose';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { CreateDueInput, MarkPaidInput, BulkCreateDuesInput, MemberPayDueInput } from './dues.validation';
@@ -14,8 +16,8 @@ async function attachMemberMany(docs: Record<string, any>[]) {
   if (mIds.length === 0) return docs.map(d => ({ ...d, member: null }));
   const repos = getRepos();
   const mDocs = await repos.members.findMany({ _id: { $in: mIds } }, { projection: 'fullName email' });
-  const mMap = new Map(mDocs.map((m: any) => [m.id, { id: m.id, fullName: m.fullName, email: m.email }]));
-  return docs.map(d => ({ ...d, member: d.memberId ? mMap.get(d.memberId) || null : null }));
+  const mMap = new Map(mDocs.map((m: any) => [String(m.id), { id: m.id, fullName: m.fullName, email: m.email }]));
+  return docs.map(d => ({ ...d, member: d.memberId ? mMap.get(String(d.memberId)) || null : null }));
 }
 
 export async function getMyDues(memberId: string, query: Record<string, string | undefined>) {
@@ -44,8 +46,8 @@ export async function adminListDues(query: Record<string, string | undefined>) {
   if (search) {
     const matchingMembers = await repos.members.findMany(
       { $or: [
-        { fullName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
+        { fullName: { $regex: escapeRegex(search), $options: 'i' } },
+        { email: { $regex: escapeRegex(search), $options: 'i' } },
       ]},
       { projection: 'id' },
     );
@@ -121,12 +123,13 @@ export async function memberPayDue(dueId: string, memberId: string, data: Member
 
 export async function getMemberDueSummary(memberId: string) {
   const repos = getRepos();
+  const memberObjectId = new mongoose.Types.ObjectId(memberId);
 
   const [totalDues, paidAgg, pendingAgg, overdueAgg] = await Promise.all([
     repos.dues.count({ memberId }),
-    repos.dues.aggregate([{ $match: { memberId, status: 'PAID' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
-    repos.dues.aggregate([{ $match: { memberId, status: 'PENDING' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
-    repos.dues.aggregate([{ $match: { memberId, status: 'OVERDUE' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+    repos.dues.aggregate([{ $match: { memberId: memberObjectId, status: 'PAID' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+    repos.dues.aggregate([{ $match: { memberId: memberObjectId, status: 'PENDING' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+    repos.dues.aggregate([{ $match: { memberId: memberObjectId, status: 'OVERDUE' } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
   ]);
 
   return {

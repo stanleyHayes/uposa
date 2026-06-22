@@ -1,21 +1,12 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { FlatList, Image, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
-import { Brand, Colors } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { projectsApi } from '@/lib/api';
 import type { Project } from '@/lib/types';
+import { EmptyState, LoadingState, Pill, ProgressBar, ScreenHeader, Surface, formatMoney } from '@/components/mobile-ui';
 
 export default function ProjectsScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -47,97 +38,53 @@ export default function ProjectsScreen() {
     setRefreshing(false);
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <ActivityIndicator color={palette.tint} />
-      </View>
-    );
-  }
+  if (loading) return <LoadingState palette={palette} title="Projects" />;
 
   return (
     <FlatList
       style={{ backgroundColor: palette.background }}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
       data={projects}
       keyExtractor={(item) => item.id}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.tint} />}
-      ListEmptyComponent={
-        <View style={[styles.empty, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-          <Ionicons name="construct-outline" size={36} color={palette.textMuted} />
-          <Text style={{ color: palette.textMuted }}>No projects yet.</Text>
-        </View>
+      ListHeaderComponent={
+        <ScreenHeader
+          palette={palette}
+          eyebrow="School support"
+          title="Projects"
+          description="Infrastructure, welfare, learning resources, and school-facing initiatives."
+          icon="construct-outline"
+        />
       }
+      ListEmptyComponent={
+        <EmptyState palette={palette} icon="construct-outline" title="No projects yet" description="Approved initiatives will appear here once published." />
+      }
+      ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
       renderItem={({ item }) => {
         const pct = item.goalAmount > 0 ? Math.min(100, Math.round((item.raisedAmount / item.goalAmount) * 100)) : 0;
         return (
-          <Pressable
-            onPress={() => router.push(`/projects/${item.slug}`)}
-            style={({ pressed }) => [
-              styles.card,
-              { backgroundColor: palette.surface, borderColor: palette.border, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            {item.imageUrl ? (
-              <Image source={{ uri: item.imageUrl }} style={styles.cover} resizeMode="cover" />
-            ) : null}
-            <View style={styles.body}>
-              <View style={styles.headerRow}>
-                <Text style={[styles.title, { color: palette.text }]} numberOfLines={2}>
-                  {item.title}
-                </Text>
-                <View
-                  style={[
-                    styles.statusChip,
-                    {
-                      backgroundColor: item.status === 'ONGOING' ? Brand.gold : palette.surfaceMuted,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.statusText, { color: Brand.navy }]}>{item.status}</Text>
+          <Pressable onPress={() => router.push(`/projects/${item.slug}`)} style={({ pressed }) => ({ opacity: pressed ? 0.78 : 1 })}>
+            <Surface palette={palette} style={{ overflow: 'hidden' }}>
+              {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={{ width: '100%', height: 154 }} resizeMode="cover" /> : null}
+              <View style={{ padding: 14, gap: 9 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                  <Text style={{ flex: 1, color: palette.text, fontSize: 17, fontWeight: '900', lineHeight: 23 }} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                  <Pill palette={palette} tone={item.status === 'ONGOING' ? 'gold' : 'muted'}>{item.status}</Pill>
                 </View>
+                <Text style={{ color: palette.textMuted, fontSize: 13, lineHeight: 19 }} numberOfLines={2}>
+                  {item.description}
+                </Text>
+                <ProgressBar palette={palette} percent={pct} />
+                <Text style={{ color: palette.textMuted, fontSize: 12, fontWeight: '700' }}>
+                  {formatMoney(item.raisedAmount)} of {formatMoney(item.goalAmount)} · {pct}%
+                </Text>
               </View>
-              <Text style={[styles.desc, { color: palette.textMuted }]} numberOfLines={2}>
-                {item.description}
-              </Text>
-              <View style={[styles.progressTrack, { backgroundColor: palette.surfaceMuted }]}>
-                <View style={[styles.progressFill, { width: `${pct}%` }]} />
-              </View>
-              <Text style={[styles.progressLabel, { color: palette.textMuted }]}>
-                GHS {item.raisedAmount.toLocaleString()} of GHS {item.goalAmount.toLocaleString()} ({pct}%)
-              </Text>
-            </View>
+            </Surface>
           </Pressable>
         );
       }}
     />
   );
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  list: { padding: 16, paddingBottom: 40 },
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-    marginBottom: 14,
-  },
-  cover: { width: '100%', height: 150 },
-  body: { padding: 14, gap: 6 },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  title: { flex: 1, fontSize: 16, fontWeight: '700' },
-  statusChip: { paddingHorizontal: 8, height: 20, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
-  statusText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
-  desc: { fontSize: 13, lineHeight: 18 },
-  progressTrack: { height: 8, borderRadius: 4, overflow: 'hidden', marginTop: 8 },
-  progressFill: { height: '100%', backgroundColor: Brand.gold },
-  progressLabel: { fontSize: 11, marginTop: 4 },
-  empty: {
-    padding: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    gap: 10,
-  },
-});

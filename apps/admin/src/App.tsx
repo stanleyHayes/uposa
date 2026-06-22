@@ -53,11 +53,12 @@ import GalleryCategoryPage from './pages/gallery/GalleryCategoryPage'
 import SchoolLeadersPage from './pages/school-leaders/SchoolLeadersPage'
 import SchoolLeaderFormPage from './pages/school-leaders/SchoolLeaderFormPage'
 import NewsletterPage from './pages/newsletter/NewsletterPage'
+import HelpPage from './pages/help/HelpPage'
 
 export default function App() {
   return (
     <ErrorBoundary>
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter>
       <ToastContainer />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -67,6 +68,7 @@ export default function App() {
           <Route element={<DashboardLayout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/help" element={<HelpPage />} />
             <Route
               path="/alumni-registrations"
               element={

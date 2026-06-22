@@ -7,6 +7,8 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Euclid Circular A', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Fraunces', 'Euclid Circular A', 'ui-serif', 'Georgia', 'serif'],
+        status: ['Outfit', 'Euclid Circular A', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
         brand: {

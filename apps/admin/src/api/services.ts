@@ -15,6 +15,39 @@ interface PaginatedResponse<T = unknown> {
 
 type Params = Record<string, string | number | boolean | undefined>
 
+export type AIWritingAction =
+  | 'formalize'
+  | 'summarize'
+  | 'make_casual'
+  | 'expand'
+  | 'fix_grammar'
+  | 'create_from_prompt'
+  | 'improve_clarity'
+  | 'generate_title'
+  | 'generate_message'
+  | 'translate'
+
+export interface AIWritingRequest {
+  action: AIWritingAction
+  text?: string
+  fullText?: string
+  prompt?: string
+  language?: string
+  fieldContext?: string
+  contentType?: 'plain' | 'markdown'
+}
+
+export interface AIWritingResult {
+  output: string
+  action: AIWritingAction
+  model: string
+  usage: {
+    limit: number
+    remaining: number
+    resetAt: string
+  }
+}
+
 // Auth
 export const adminAuthApi = {
   login: (data: { email: string; password: string }) =>
@@ -43,6 +76,12 @@ export const adminExecutivesApi = {
 export const adminDashboardApi = {
   stats: () =>
     client.get<ApiResponse>('/admin/dashboard/stats'),
+}
+
+// AI Writing Assistant
+export const adminAiApi = {
+  write: (data: AIWritingRequest) =>
+    client.post<ApiResponse<AIWritingResult>>('/admin/ai/writing', data),
 }
 
 // Admin Management

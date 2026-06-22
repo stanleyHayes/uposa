@@ -42,10 +42,10 @@ export default function Modal({ open, onClose, title, children, footer, size = '
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
     >
-      <div className="modal-backdrop-enter fixed inset-0 bg-black/40 backdrop-blur-sm" aria-hidden="true" />
+      <div className="modal-backdrop-enter fixed inset-0 bg-brand-950/55 backdrop-blur-sm" aria-hidden="true" />
       <div
         className={cn(
-          'card-enter relative w-full bg-white dark:bg-dark-card rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] flex flex-col max-h-[90vh]',
+          'card-enter admin-card-surface relative flex max-h-[90vh] w-full flex-col shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)]',
           sizeClasses[size]
         )}
         role="dialog"
@@ -53,13 +53,13 @@ export default function Modal({ open, onClose, title, children, footer, size = '
         aria-labelledby={title ? 'modal-title' : undefined}
       >
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-dark-border shrink-0 bg-gradient-to-r from-gray-50/80 to-white dark:from-dark-hover/80 dark:to-dark-card rounded-t-2xl">
-            <h2 id="modal-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <div className="flex shrink-0 items-center justify-between border-b border-brand-950/10 bg-gradient-to-r from-cream-100/80 to-cream-50 px-6 py-4 dark:border-dark-border dark:from-dark-hover/80 dark:to-dark-card">
+            <h2 id="modal-title" className="text-lg font-black text-brand-950 dark:text-gray-100">
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-dark-hover transition-colors"
+              className="p-1.5 text-brand-950/35 transition-colors hover:bg-cream-100 hover:text-brand-950 dark:text-gray-400 dark:hover:bg-dark-hover dark:hover:text-gray-200"
               aria-label="Close modal"
             >
               <X size={18} />
@@ -68,7 +68,7 @@ export default function Modal({ open, onClose, title, children, footer, size = '
         )}
         <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
         {footer && (
-          <div className="px-6 py-4 border-t border-gray-100 dark:border-dark-border shrink-0 flex items-center justify-end gap-3">
+          <div className="flex shrink-0 items-center justify-end gap-3 border-t border-brand-950/10 px-6 py-4 dark:border-dark-border">
             {footer}
           </div>
         )}

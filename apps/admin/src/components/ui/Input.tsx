@@ -13,7 +13,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="flex flex-col gap-1">
         {label && (
-          <label htmlFor={inputId} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor={inputId} className="text-sm font-bold text-brand-950/75 dark:text-gray-300">
             {label}
           </label>
         )}
@@ -21,12 +21,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           id={inputId}
           className={cn(
-            'block w-full rounded-lg border px-3 py-2 text-sm text-gray-900 dark:text-gray-100 dark:bg-dark-hover shadow-sm placeholder:text-gray-400 dark:placeholder:text-gray-500',
-            'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent',
-            'disabled:bg-gray-50 dark:disabled:bg-dark-card disabled:text-gray-500 disabled:cursor-not-allowed',
+            'block w-full border bg-cream-50/80 px-3 py-2.5 text-sm font-semibold text-brand-950 shadow-sm placeholder:text-brand-950/35 dark:bg-dark-hover dark:text-gray-100 dark:placeholder:text-gray-500',
+            'focus:border-brand-700 focus:bg-cream-50 focus:outline-none focus:ring-2 focus:ring-brand-500/15 dark:focus:bg-dark-surface',
+            'disabled:bg-cream-100/70 disabled:text-brand-950/35 disabled:cursor-not-allowed dark:disabled:bg-dark-card',
             error
-              ? 'border-red-400 focus:ring-red-400'
-              : 'border-gray-300 dark:border-gray-600',
+              ? 'border-red-400 focus:border-red-500 focus:ring-red-500/15'
+              : 'border-brand-950/15 dark:border-gray-600',
             className
           )}
           {...props}

@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { getRepos } from '../../repositories';
+import { getRepos, type IRepository } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 
 interface CreateAdminInput {
@@ -16,24 +16,105 @@ interface UpdateAdminInput {
   isActive?: boolean;
 }
 
+interface MonthlyAggregateRow {
+  _id: { year: number; month: number };
+  count?: number;
+  total?: number;
+}
+
+interface TotalsAggregateRow {
+  _id: string | null;
+  total?: number;
+  count?: number;
+}
+
+interface ProjectFundingAggregateRow {
+  _id: string | null;
+  goal?: number;
+  raised?: number;
+}
+
+function monthKey(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+function buildMonthSlots(now: Date, length = 6) {
+  return Array.from({ length }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - (length - 1 - index), 1);
+    return {
+      key: monthKey(date.getFullYear(), date.getMonth() + 1),
+      label: date.toLocaleString('en-US', { month: 'short' }),
+    };
+  });
+}
+
+function mapMonthlyRows(rows: MonthlyAggregateRow[], valueField: 'count' | 'total' = 'count') {
+  return new Map(
+    rows.map((row) => [
+      monthKey(row._id.year, row._id.month),
+      Number(row[valueField] || 0),
+    ]),
+  );
+}
+
 export async function getDashboardStats() {
   const {
     members, donations, events, projects, contactMessages,
     forumPosts, jobs, jobApplications, polls, elections, mentorshipRequests,
-    newsletterSubscriptions,
+    newsletterSubscriptions, dues, news, eventRsvps, forumComments, pollVotes,
+    electionVotes, galleryItems, schoolLeaders, executives, paymentMethods,
+    transcriptRequests, admins,
   } = getRepos();
 
   const now = new Date();
+  const monthSlots = buildMonthSlots(now);
+  const timelineStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+  async function monthlyCount<T>(
+    repo: IRepository<T>,
+    match: Record<string, unknown> = {},
+    dateField = 'createdAt',
+  ) {
+    return mapMonthlyRows(await repo.aggregate<MonthlyAggregateRow>([
+      { $match: { ...match, [dateField]: { $gte: timelineStart } } },
+      {
+        $group: {
+          _id: { year: { $year: `$${dateField}` }, month: { $month: `$${dateField}` } },
+          count: { $sum: 1 },
+        },
+      },
+    ]));
+  }
+
+  async function monthlySum<T>(
+    repo: IRepository<T>,
+    sumField: string,
+    match: Record<string, unknown> = {},
+    dateField = 'createdAt',
+  ) {
+    return mapMonthlyRows(await repo.aggregate<MonthlyAggregateRow>([
+      { $match: { ...match, [dateField]: { $gte: timelineStart } } },
+      {
+        $group: {
+          _id: { year: { $year: `$${dateField}` }, month: { $month: `$${dateField}` } },
+          total: { $sum: `$${sumField}` },
+        },
+      },
+    ]), 'total');
+  }
 
   const [
     totalMembers,
     pendingApprovals,
     activeMembers,
     donationsAgg,
+    confirmedDonationsCount,
+    pendingDonationsCount,
     upcomingEventsCount,
     activeProjectsCount,
     unreadMessagesCount,
     totalForumPosts,
+    totalForumComments,
     totalJobs,
     pendingJobs,
     activePolls,
@@ -42,8 +123,34 @@ export async function getDashboardStats() {
     totalMentors,
     totalJobApplications,
     newsletterSubscribers,
+    publishedNewsCount,
+    draftNewsCount,
+    eventRsvpCount,
+    pollVoteCount,
+    electionVoteCount,
+    paidDuesAgg,
+    pendingDuesAgg,
+    overdueDuesCount,
+    galleryItemCount,
+    activeSchoolLeadersCount,
+    activeExecutivesCount,
+    enabledPaymentMethodsCount,
+    pendingTranscriptRequestsCount,
+    totalAdmins,
+    activeAdmins,
+    projectFundingAgg,
+    donationsByChannelAgg,
+    duesByStatusAgg,
+    membersByMonth,
+    donationsByMonth,
+    newsByMonth,
+    eventsByMonth,
+    forumByMonth,
+    rsvpsByMonth,
     recentMembers,
     recentDonations,
+    recentMessages,
+    recentJobs,
   ] = await Promise.all([
     members.count(),
     members.count({ membershipStatus: 'PENDING', isApproved: false }),
@@ -52,10 +159,13 @@ export async function getDashboardStats() {
       { $match: { status: 'CONFIRMED' } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]),
+    donations.count({ status: 'CONFIRMED' }),
+    donations.count({ status: 'PENDING' }),
     events.count({ status: 'UPCOMING', date: { $gte: now } }),
     projects.count({ status: 'ONGOING' }),
     contactMessages.count({ isRead: false }),
     forumPosts.count(),
+    forumComments.count(),
     jobs.count(),
     jobs.count({ isApproved: false }),
     polls.count({ status: 'ACTIVE' }),
@@ -64,6 +174,44 @@ export async function getDashboardStats() {
     members.count({ isAvailableAsMentor: true, membershipStatus: 'ACTIVE' }),
     jobApplications.count(),
     newsletterSubscriptions.count({ isActive: true }),
+    news.count({ isPublished: true }),
+    news.count({ isPublished: false }),
+    eventRsvps.count(),
+    pollVotes.count(),
+    electionVotes.count(),
+    dues.aggregate([
+      { $match: { status: 'PAID' } },
+      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
+    ]),
+    dues.aggregate([
+      { $match: { status: 'PENDING' } },
+      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
+    ]),
+    dues.count({ status: 'OVERDUE' }),
+    galleryItems.count(),
+    schoolLeaders.count({ isActive: true }),
+    executives.count({ isActive: true }),
+    paymentMethods.count({ isEnabled: true }),
+    transcriptRequests.count({ status: 'PENDING' }),
+    admins.count(),
+    admins.count({ isActive: true }),
+    projects.aggregate<ProjectFundingAggregateRow>([
+      { $group: { _id: null, goal: { $sum: '$goalAmount' }, raised: { $sum: '$raisedAmount' } } },
+    ]),
+    donations.aggregate<TotalsAggregateRow>([
+      { $match: { status: 'CONFIRMED' } },
+      { $group: { _id: '$channel', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+      { $sort: { total: -1 } },
+    ]),
+    dues.aggregate<TotalsAggregateRow>([
+      { $group: { _id: '$status', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+    ]),
+    monthlyCount(members),
+    monthlySum(donations, 'amount', { status: 'CONFIRMED' }),
+    monthlyCount(news, { isPublished: true }, 'publishedAt'),
+    monthlyCount(events),
+    monthlyCount(forumPosts),
+    monthlyCount(eventRsvps),
     members.findMany({}, {
       projection: 'fullName email membershipStatus createdAt',
       sort: { createdAt: -1 },
@@ -74,7 +222,26 @@ export async function getDashboardStats() {
       sort: { createdAt: -1 },
       limit: 5,
     }),
+    contactMessages.findMany({}, {
+      projection: 'name subject isRead createdAt',
+      sort: { createdAt: -1 },
+      limit: 5,
+    }),
+    jobs.findMany({ isApproved: false }, {
+      projection: 'title company createdAt',
+      sort: { createdAt: -1 },
+      limit: 5,
+    }),
   ]);
+
+  const activityTrend = monthSlots.map((slot) => ({
+    ...slot,
+    members: membersByMonth.get(slot.key) || 0,
+    donations: donationsByMonth.get(slot.key) || 0,
+    content: (newsByMonth.get(slot.key) || 0) + (forumByMonth.get(slot.key) || 0),
+    engagement: rsvpsByMonth.get(slot.key) || 0,
+    events: eventsByMonth.get(slot.key) || 0,
+  }));
 
   return {
     overview: {
@@ -82,10 +249,13 @@ export async function getDashboardStats() {
       pendingApprovals,
       activeMembers,
       donationsTotal: donationsAgg[0]?.total || 0,
+      confirmedDonationsCount,
+      pendingDonationsCount,
       upcomingEventsCount,
       activeProjectsCount,
       unreadMessagesCount,
       totalForumPosts,
+      totalForumComments,
       totalJobs,
       pendingJobs,
       activePolls,
@@ -94,9 +264,43 @@ export async function getDashboardStats() {
       totalMentors,
       totalJobApplications,
       newsletterSubscribers,
+      publishedNewsCount,
+      draftNewsCount,
+      eventRsvpCount,
+      pollVoteCount,
+      electionVoteCount,
+      paidDuesTotal: paidDuesAgg[0]?.total || 0,
+      paidDuesCount: paidDuesAgg[0]?.count || 0,
+      pendingDuesTotal: pendingDuesAgg[0]?.total || 0,
+      pendingDuesCount: pendingDuesAgg[0]?.count || 0,
+      overdueDuesCount,
+      galleryItemCount,
+      activeSchoolLeadersCount,
+      activeExecutivesCount,
+      enabledPaymentMethodsCount,
+      pendingTranscriptRequestsCount,
+      totalAdmins,
+      activeAdmins,
+      projectFundingGoal: projectFundingAgg[0]?.goal || 0,
+      projectFundingRaised: projectFundingAgg[0]?.raised || 0,
+    },
+    activityTrend,
+    financials: {
+      donationsByChannel: donationsByChannelAgg.map((channel) => ({
+        channel: channel._id || 'OTHER',
+        total: channel.total || 0,
+        count: channel.count || 0,
+      })),
+      duesByStatus: duesByStatusAgg.map((status) => ({
+        status: status._id || 'UNKNOWN',
+        total: status.total || 0,
+        count: status.count || 0,
+      })),
     },
     recentMembers,
     recentDonations,
+    recentMessages,
+    recentJobs,
   };
 }
 

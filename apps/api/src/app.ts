@@ -4,12 +4,15 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import morgan from 'morgan';
+import pinoHttp from 'pino-http';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 
 import { env } from './config/env';
+import { logger } from './config/logger';
+import { corsAllowedOriginPatterns, corsAllowedOrigins, isCorsOriginAllowed } from './config/cors';
 import { errorMiddleware, notFoundMiddleware } from './middleware/error.middleware';
+import { adminLimiter } from './middleware/ratelimit.middleware';
 
 // Route imports
 import authRoutes from './modules/auth/auth.routes';
@@ -37,6 +40,7 @@ import newsletterRoutes, { adminNewsletterRouter } from './modules/newsletter/ne
 import notificationsRoutes from './modules/notifications/notifications.routes';
 import galleryRoutes, { adminGalleryRouter } from './modules/gallery/gallery.routes';
 import schoolLeadersRoutes, { adminSchoolLeadersRouter } from './modules/school-leaders/school-leaders.routes';
+import aiRoutes from './modules/ai/ai.routes';
 
 const app = express();
 
@@ -51,17 +55,12 @@ app.use(helmet({
 }));
 
 // CORS
-const corsAllowList = [env.CLIENT_URL, env.ADMIN_URL, ...env.ALLOWED_ORIGINS];
-const corsPatterns = env.ALLOWED_ORIGIN_PATTERNS.map((p: string) => new RegExp(p));
-console.log('[CORS] allowList=', corsAllowList, 'patterns=', env.ALLOWED_ORIGIN_PATTERNS);
+if (env.NODE_ENV !== 'production') {
+  console.log('[CORS] allowList=', corsAllowedOrigins, 'patterns=', corsAllowedOriginPatterns.map((pattern) => pattern.source));
+}
 app.use(cors({
   origin: (origin, callback) => {
-    if (
-      !origin ||
-      corsAllowList.includes(origin) ||
-      corsPatterns.some((re: RegExp) => re.test(origin)) ||
-      (env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origin))
-    ) {
+    if (isCorsOriginAllowed(origin)) {
       callback(null, true);
     } else {
       console.warn('[CORS] rejected origin:', origin);
@@ -83,9 +82,9 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Logging
+// Structured request logging (skips the health probe to cut noise).
 if (env.NODE_ENV !== 'test') {
-  app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+  app.use(pinoHttp({ logger, autoLogging: { ignore: (req) => req.url === '/health' } }));
 }
 
 // Serve uploaded files
@@ -100,6 +99,9 @@ app.get('/health', (_req, res) => {
     environment: env.NODE_ENV,
   });
 });
+
+// Defense-in-depth rate limit across the entire admin surface (all /api/admin/*).
+app.use('/api/admin', adminLimiter);
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -127,6 +129,7 @@ app.use('/api/transcripts', transcriptsRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/admin/notifications', notificationsRoutes);
 app.use('/api/admin/newsletter', adminNewsletterRouter);
+app.use('/api/admin/ai', aiRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/admin/gallery', adminGalleryRouter);
 app.use('/api/school-leaders', schoolLeadersRoutes);

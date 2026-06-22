@@ -180,6 +180,7 @@ export default function ResetPasswordPage() {
 
         <Button
           type="submit"
+          variant="accent"
           className="w-full"
           size="lg"
           loading={isSubmitting}

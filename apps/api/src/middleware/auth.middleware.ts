@@ -33,3 +33,24 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     errorResponse(res, 'Invalid or expired token', 401);
   }
 }
+
+export function optionalAuthMiddleware(req: Request, _res: Response, next: NextFunction): void {
+  try {
+    const authHeader = req.headers.authorization;
+    let token: string | undefined;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else if (req.cookies?.accessToken) {
+      token = req.cookies.accessToken;
+    }
+
+    if (token) {
+      req.user = verifyMemberToken(token);
+    }
+  } catch {
+    req.user = undefined;
+  }
+
+  next();
+}

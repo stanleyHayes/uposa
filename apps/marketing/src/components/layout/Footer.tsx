@@ -131,7 +131,7 @@ export const Footer = () => {
             <div
                 className="pointer-events-none absolute inset-0 opacity-[0.06]"
                 style={{
-                    backgroundImage: "linear-gradient(90deg, #FFF8DC 1px, transparent 1px), linear-gradient(#FFF8DC 1px, transparent 1px)",
+                    backgroundImage: "linear-gradient(90deg, var(--uposa-nav-grid) 1px, transparent 1px), linear-gradient(var(--uposa-nav-grid) 1px, transparent 1px)",
                     backgroundSize: "42px 42px",
                 }}
             />

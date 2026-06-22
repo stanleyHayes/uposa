@@ -15,6 +15,7 @@ import {
 } from './gallery.controller';
 import { adminMiddleware } from '../../middleware/admin.middleware';
 import { uploadMultiple, uploadSingle } from '../../middleware/upload.middleware';
+import { uploadLimiter } from '../../middleware/ratelimit.middleware';
 
 const router = Router();
 
@@ -29,7 +30,7 @@ export const adminGalleryRouter = Router();
 
 adminGalleryRouter.use(adminMiddleware);
 adminGalleryRouter.get('/', adminListGalleryHandler);
-adminGalleryRouter.post('/upload', uploadMultiple('images', 20), adminBulkUploadHandler);
+adminGalleryRouter.post('/upload', uploadLimiter, uploadMultiple('images', 20), adminBulkUploadHandler);
 adminGalleryRouter.put('/items/:id', adminUpdateItemHandler);
 adminGalleryRouter.delete('/:id', adminDeleteGalleryHandler);
 adminGalleryRouter.post('/bulk-delete', adminBulkDeleteHandler);
@@ -37,6 +38,6 @@ adminGalleryRouter.post('/bulk-delete', adminBulkDeleteHandler);
 // Category CRUD
 adminGalleryRouter.get('/categories', adminListCategoriesHandler);
 adminGalleryRouter.get('/categories/:id', adminGetCategoryHandler);
-adminGalleryRouter.post('/categories', uploadSingle('coverImage'), adminCreateCategoryHandler);
-adminGalleryRouter.put('/categories/:id', uploadSingle('coverImage'), adminUpdateCategoryHandler);
+adminGalleryRouter.post('/categories', uploadLimiter, uploadSingle('coverImage'), adminCreateCategoryHandler);
+adminGalleryRouter.put('/categories/:id', uploadLimiter, uploadSingle('coverImage'), adminUpdateCategoryHandler);
 adminGalleryRouter.delete('/categories/:id', adminDeleteCategoryHandler);

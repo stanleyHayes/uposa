@@ -90,7 +90,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className={cn('flex flex-col gap-1 relative', className)} ref={containerRef}>
         {label && (
-          <label htmlFor={selectId} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label htmlFor={selectId} className="text-sm font-bold text-brand-950/75 dark:text-gray-300">
             {label}
           </label>
         )}
@@ -122,20 +122,20 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           onClick={() => !disabled && setOpen(!open)}
           onKeyDown={handleKeyDown}
           className={cn(
-            'flex items-center justify-between w-full rounded-lg border px-3 py-2 text-sm text-left',
-            'bg-white dark:bg-dark-hover shadow-sm transition-all duration-150',
-            'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent',
-            'disabled:bg-gray-50 dark:disabled:bg-dark-card disabled:text-gray-500 disabled:cursor-not-allowed',
+            'flex w-full items-center justify-between border px-3 py-2.5 text-left text-sm font-semibold',
+            'bg-cream-50/80 text-brand-950 shadow-sm transition-all duration-150 dark:bg-dark-hover',
+            'focus:border-brand-700 focus:bg-cream-50 focus:outline-none focus:ring-2 focus:ring-brand-500/15 dark:focus:bg-dark-surface',
+            'disabled:bg-cream-100/70 disabled:text-brand-950/35 disabled:cursor-not-allowed dark:disabled:bg-dark-card',
             error
-              ? 'border-red-400 focus:ring-red-400'
+              ? 'border-red-400 focus:border-red-500 focus:ring-red-500/15'
               : open
-                ? 'border-brand-500 ring-2 ring-brand-500/20'
-                : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500',
+                ? 'border-brand-700 ring-2 ring-brand-500/15'
+                : 'border-brand-950/15 hover:border-brand-950/30 dark:border-gray-600 dark:hover:border-gray-500',
           )}
         >
           <span className={cn(
             'truncate',
-            !selectedOption || selectedOption.value === '' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'
+            !selectedOption || selectedOption.value === '' ? 'text-brand-950/35 dark:text-gray-500' : 'text-brand-950 dark:text-gray-100'
           )}>
             {displayLabel}
           </span>
@@ -155,9 +155,9 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             role="listbox"
             className={cn(
               'absolute z-50 top-full left-0 right-0 mt-1',
-              'bg-white dark:bg-dark-card',
-              'border border-gray-200 dark:border-dark-border',
-              'rounded-xl shadow-lg shadow-black/10 dark:shadow-black/30',
+              'bg-cream-50 dark:bg-dark-card',
+              'border border-brand-950/10 dark:border-dark-border',
+              'shadow-lg shadow-brand-950/10 dark:shadow-black/30',
               'py-1 max-h-60 overflow-y-auto',
               'select-dropdown-enter',
             )}
@@ -176,10 +176,10 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
                   onMouseEnter={() => setHighlightedIndex(i)}
                   className={cn(
                     'flex items-center justify-between w-full px-3 py-2.5 text-sm transition-colors',
-                    isHighlighted && 'bg-brand-50 dark:bg-brand-900/20',
-                    isSelected && !isHighlighted && 'bg-gray-50 dark:bg-dark-hover',
-                    !isHighlighted && !isSelected && 'hover:bg-gray-50 dark:hover:bg-dark-hover',
-                    isSelected ? 'text-brand-600 dark:text-brand-400 font-medium' : 'text-gray-700 dark:text-gray-300',
+                    isHighlighted && 'bg-cream-100 dark:bg-brand-900/20',
+                    isSelected && !isHighlighted && 'bg-cream-100/70 dark:bg-dark-hover',
+                    !isHighlighted && !isSelected && 'hover:bg-cream-100 dark:hover:bg-dark-hover',
+                    isSelected ? 'text-brand-950 dark:text-brand-300 font-bold' : 'text-brand-950/70 dark:text-gray-300',
                   )}
                 >
                   <span className="truncate">{opt.label}</span>

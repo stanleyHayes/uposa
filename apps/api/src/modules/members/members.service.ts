@@ -1,3 +1,5 @@
+import { escapeRegex } from '../../utils/search.utils';
+import mongoose from 'mongoose';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { sendApprovalEmail } from '../../utils/email.utils';
@@ -14,12 +16,12 @@ function buildMemberFilter(query: Record<string, string | undefined>, base: Reco
   if (yearGroup) where.yearGroup = parseInt(yearGroup, 10);
   if (house) where.house = house;
   if (programme) where.programme = programme;
-  if (country) where.country = { $regex: country, $options: 'i' };
+  if (country) where.country = { $regex: escapeRegex(country), $options: 'i' };
   if (search) {
     where.$or = [
-      { fullName: { $regex: search, $options: 'i' } },
-      { occupation: { $regex: search, $options: 'i' } },
-      { organization: { $regex: search, $options: 'i' } },
+      { fullName: { $regex: escapeRegex(search), $options: 'i' } },
+      { occupation: { $regex: escapeRegex(search), $options: 'i' } },
+      { organization: { $regex: escapeRegex(search), $options: 'i' } },
     ];
   }
   return where;
@@ -31,7 +33,7 @@ export async function listMembers(query: Record<string, string | undefined>) {
   const where = buildMemberFilter(query, { membershipStatus: 'ACTIVE', isApproved: true });
 
   const [data, total] = await Promise.all([
-    members.findMany(where, { projection: SAFE_MEMBER_PROJECTION, sort: { fullName: 1 }, skip, limit }),
+    members.findMany(where, { projection: DIRECTORY_PROJECTION, sort: { fullName: 1 }, skip, limit }),
     members.count(where),
   ]);
 
@@ -48,11 +50,11 @@ export async function getMemberDirectory(query: Record<string, string | undefine
   if (yearGroup) where.yearGroup = parseInt(yearGroup, 10);
   if (house) where.house = house;
   if (programme) where.programme = programme;
-  if (country) where.country = { $regex: country, $options: 'i' };
+  if (country) where.country = { $regex: escapeRegex(country), $options: 'i' };
   if (search) {
     where.$or = [
-      { fullName: { $regex: search, $options: 'i' } },
-      { occupation: { $regex: search, $options: 'i' } },
+      { fullName: { $regex: escapeRegex(search), $options: 'i' } },
+      { occupation: { $regex: escapeRegex(search), $options: 'i' } },
     ];
   }
 
@@ -64,9 +66,22 @@ export async function getMemberDirectory(query: Record<string, string | undefine
   return { data, meta: buildPaginationMeta(page, limit, total) };
 }
 
-export async function getMemberById(id: string) {
+export async function getMemberById(id: string, requesterId?: string) {
   const { members } = getRepos();
-  const member = await members.findById(id, { projection: SAFE_MEMBER_PROJECTION });
+
+  // A member may read their OWN full record. Any other member is limited to
+  // directory-safe fields, and only for active, approved members — this prevents
+  // IDOR PII harvesting (addresses, phone numbers, DOB, next-of-kin) across accounts.
+  if (requesterId && id === requesterId) {
+    const self = await members.findById(id, { projection: SAFE_MEMBER_PROJECTION });
+    if (!self) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
+    return self;
+  }
+
+  const member = await members.findOne(
+    { _id: id, membershipStatus: 'ACTIVE', isApproved: true },
+    { projection: DIRECTORY_PROJECTION },
+  );
   if (!member) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
   return member;
 }
@@ -109,7 +124,7 @@ export async function getMyDonations(memberId: string, query: Record<string, str
   const { page, limit, skip } = getPaginationParams(query);
 
   const pipeline = [
-    { $match: { memberId } },
+    { $match: { memberId: new mongoose.Types.ObjectId(memberId) } },
     { $sort: { createdAt: -1 as const } },
     { $skip: skip },
     { $limit: limit },
@@ -118,7 +133,7 @@ export async function getMyDonations(memberId: string, query: Record<string, str
         from: 'projects',
         let: { pid: '$projectId' },
         pipeline: [
-          { $match: { $expr: { $eq: [{ $toString: '$_id' }, '$$pid'] } } },
+          { $match: { $expr: { $eq: [{ $toString: '$_id' }, { $toString: '$$pid' }] } } },
           { $project: { _id: 0, id: { $toString: '$_id' }, title: 1 } },
         ],
         as: '_project',
@@ -155,8 +170,8 @@ export async function adminListMembers(query: Record<string, string | undefined>
   if (programme) where.programme = programme;
   if (search) {
     where.$or = [
-      { fullName: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
+      { fullName: { $regex: escapeRegex(search), $options: 'i' } },
+      { email: { $regex: escapeRegex(search), $options: 'i' } },
     ];
   }
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getRepos, withTransaction } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { CreatePollInput, CastVoteInput } from './polls.validation';
@@ -10,20 +9,20 @@ interface PollOption {
   votes: number;
 }
 
-async function attachCreatedBy(doc: Record<string, any>) {
+async function attachCreatedBy(doc: Record<string, any>): Promise<Record<string, any>> {
   if (!doc.createdById) return { ...doc, createdBy: null };
   const { admins } = getRepos();
-  const a = await admins.findById(doc.createdById, { projection: 'fullName' });
+  const a = await admins.findById(String(doc.createdById), { projection: 'fullName' });
   return { ...doc, createdBy: a ? { id: a.id, fullName: (a as any).fullName } : null };
 }
 
-async function attachCreatedByMany(docs: Record<string, any>[]) {
+async function attachCreatedByMany(docs: Record<string, any>[]): Promise<Record<string, any>[]> {
   const ids = [...new Set(docs.map(d => d.createdById).filter(Boolean))];
   if (ids.length === 0) return docs.map(d => ({ ...d, createdBy: null }));
   const { admins } = getRepos();
   const aDocs = await admins.findMany({ _id: { $in: ids } }, { projection: 'fullName' });
-  const aMap = new Map(aDocs.map((a: any) => [a.id, { id: a.id, fullName: a.fullName }]));
-  return docs.map(d => ({ ...d, createdBy: d.createdById ? aMap.get(d.createdById) || null : null }));
+  const aMap = new Map(aDocs.map((a: any) => [String(a.id), { id: a.id, fullName: a.fullName }]));
+  return docs.map(d => ({ ...d, createdBy: d.createdById ? aMap.get(String(d.createdById)) || null : null }));
 }
 
 export async function listPolls(query: Record<string, string | undefined>) {
@@ -56,7 +55,7 @@ export async function listPolls(query: Record<string, string | undefined>) {
 
   const result = withAdmins.map(d => ({
     ...d,
-    _count: { votes: countMap.get(d.id) || 0 },
+    _count: { votes: countMap.get(String(d.id)) || 0 },
   }));
 
   return { data: result, meta: buildPaginationMeta(page, limit, total) };
@@ -152,6 +151,7 @@ export async function closePoll(id: string) {
   if (!poll) throw Object.assign(new Error('Poll not found'), { statusCode: 404 });
 
   const result = await polls.updateById(id, { status: 'CLOSED' });
+  if (!result) throw Object.assign(new Error('Poll not found'), { statusCode: 404 });
   const withAdmin = await attachCreatedBy(result);
   return withAdmin;
 }
@@ -189,7 +189,7 @@ export async function adminListAllPolls(query: Record<string, string | undefined
 
   const result = withAdmins.map(d => ({
     ...d,
-    _count: { votes: countMap.get(d.id) || 0 },
+    _count: { votes: countMap.get(String(d.id)) || 0 },
   }));
 
   return { data: result, meta: buildPaginationMeta(page, limit, total) };
@@ -207,6 +207,7 @@ export async function adminUpdatePoll(id: string, data: { question?: string; des
   if (data.endsAt) updateData.endsAt = new Date(data.endsAt);
 
   const result = await polls.updateById(id, updateData);
+  if (!result) throw Object.assign(new Error('Poll not found'), { statusCode: 404 });
   const withAdmin = await attachCreatedBy(result);
   const voteCount = await pollVotes.count({ pollId: id });
   return { ...withAdmin, _count: { votes: voteCount } };
@@ -235,11 +236,11 @@ export async function adminGetPollResults(id: string) {
   const memberDocs = memberIds.length > 0
     ? await members.findMany({ _id: { $in: memberIds } }, { projection: 'fullName' })
     : [];
-  const memberMap = new Map(memberDocs.map((m: any) => [m.id, { id: m.id, fullName: m.fullName }]));
+  const memberMap = new Map(memberDocs.map((m: any) => [String(m.id), { id: m.id, fullName: m.fullName }]));
 
   const votesWithMembers = votes.map((v: any) => ({
     ...v,
-    member: memberMap.get(v.memberId) || null,
+    member: memberMap.get(String(v.memberId)) || null,
   }));
 
   return {

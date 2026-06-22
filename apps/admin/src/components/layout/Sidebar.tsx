@@ -1,33 +1,40 @@
-import { NavLink } from 'react-router-dom'
+import { useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard,
+  BarChart3,
+  BookOpen,
+  Briefcase,
   Calendar,
-  Newspaper,
+  ChevronDown,
+  ChevronsLeft,
+  ChevronsRight,
+  Crown,
   FolderKanban,
+  Globe,
+  GraduationCap,
   HandCoins,
-  Wallet,
-  UserCheck,
-  Users,
+  Images,
+  LayoutDashboard,
+  Mail,
+  Megaphone,
+  MessageSquare,
+  Newspaper,
+  Send,
+  Settings,
   ShieldCheck,
   ShieldHalf,
-  Settings,
-  X,
-  Megaphone,
-  Briefcase,
-  MessageSquare,
-  BarChart3,
+  Sparkles,
+  UserCheck,
+  Users,
   Vote,
-  Crown,
-  BookOpen,
-  Mail,
-  Globe,
-  Images,
-  GraduationCap,
-  Send,
+  Wallet,
+  X,
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '../../utils/cn'
 import { usePermission } from '../../hooks/usePermission'
 import { useNotificationStore } from '../../stores/notification.store'
+import { useUIStore } from '../../stores/ui.store'
 import type { Permission } from '../../types'
 
 interface NavItem {
@@ -35,7 +42,6 @@ interface NavItem {
   to: string
   icon: React.ElementType
   permission?: Permission
-  /** Notification types that count toward this nav item's badge */
   notifTypes?: string[]
 }
 
@@ -108,109 +114,195 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, onCloseMobile }: SidebarProps) {
   const { can } = usePermission()
   const notifications = useNotificationStore((s) => s.notifications)
+  const { setSidebarCollapsed } = useUIStore()
+  const location = useLocation()
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
 
-  /** Count unread notifications matching given types */
   const getBadgeCount = (types?: string[]): number => {
     if (!types || types.length === 0) return 0
     return notifications.filter((n) => !n.isRead && types.includes(n.type)).length
   }
 
+  const pathMatches = (to: string) => location.pathname === to || location.pathname.startsWith(`${to}/`)
+
+  const toggleSection = (title: string) => {
+    setExpandedSections((prev) => ({ ...prev, [title]: prev[title] === false }))
+  }
+
+  const baseNavClass = collapsed
+    ? 'mx-auto grid h-11 w-11 place-items-center'
+    : 'flex w-full items-center gap-3 px-3 py-2.5'
+
+  const navClass = (active: boolean, threaded = false) =>
+    cn(
+      'group relative text-sm font-semibold transition-all duration-200',
+      threaded ? 'overflow-visible' : 'overflow-hidden',
+      baseNavClass,
+      threaded
+        && !collapsed
+        && 'before:absolute before:-left-[13px] before:top-0 before:h-1/2 before:w-3 before:border-b before:border-l before:border-[#D4AF37]/30 before:content-[""]',
+      active
+        ? 'bg-[#FFF8DC] text-[#001B50] shadow-[0_14px_34px_rgba(0,0,0,0.18)]'
+        : 'text-[#FFF8DC]/62 hover:bg-white/[0.08] hover:text-[#FFF8DC]'
+    )
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className={cn(
-        'flex items-center border-b border-dark-border',
-        collapsed ? 'justify-center px-2 py-5' : 'justify-between px-4 py-5'
-      )}>
-        <div className={cn('flex items-center', collapsed ? 'gap-0' : 'gap-3')}>
-          <img src="/logo.png" alt="UPOSA" className="w-9 h-9 rounded-xl shrink-0" />
+    <div className="relative flex h-full flex-col overflow-hidden bg-[#001B50] text-[#FFF8DC] shadow-[24px_0_80px_rgba(0,27,80,0.18)]">
+      <img
+        src="/logo.png"
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-24 top-20 h-64 w-64 object-contain opacity-[0.04]"
+      />
+      <img
+        src="/logo.png"
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-28 right-[-7rem] h-80 w-80 object-contain opacity-[0.045]"
+      />
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent" />
+
+      <div className={cn('relative z-10 flex shrink-0 items-center border-b border-white/10', collapsed ? 'justify-center px-3 py-4' : 'justify-between p-4')}>
+        <NavLink to="/dashboard" className={cn('flex min-w-0 items-center gap-3', collapsed && 'justify-center')} onClick={onCloseMobile}>
+          <span className="grid h-12 w-12 shrink-0 place-items-center bg-[#FFF8DC] p-1.5 shadow-lg shadow-black/15">
+            <img src="/logo.png" alt="UPOSA" className="h-full w-full object-contain" />
+          </span>
           {!collapsed && (
-            <div>
-              <p className="text-white font-bold text-sm leading-tight">UPOSA</p>
-              <p className="text-gray-400 text-xs leading-tight">Admin Portal</p>
-            </div>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-bold leading-tight">UPOSA Admin</span>
+              <span className="mt-0.5 block text-xs text-[#FFF8DC]/50">Secretariat console</span>
+            </span>
           )}
-        </div>
+        </NavLink>
         {!collapsed && (
           <button
+            type="button"
+            className="p-1 text-[#FFF8DC]/65 transition-colors hover:bg-white/10 hover:text-[#FFF8DC] lg:hidden"
             onClick={onCloseMobile}
-            className="lg:hidden text-gray-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-dark-hover"
-            aria-label="Close sidebar"
+            aria-label="Close navigation"
           >
-            <X size={20} />
+            <X className="h-5 w-5" />
           </button>
         )}
       </div>
 
-      {/* Navigation */}
-      <nav className={cn(
-        'flex-1 overflow-y-auto py-4 space-y-6',
-        collapsed ? 'px-1.5' : 'px-3'
-      )}>
+      {!collapsed && (
+        <div className="relative z-10 mx-4 mt-4 border border-white/10 bg-white/[0.06] p-3">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center bg-[#D4AF37] text-[#001B50]">
+              <Sparkles className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold">Legit Elites desk</p>
+              <p className="mt-0.5 truncate text-xs text-[#FFF8DC]/45">Publishing, payments, and members</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <nav className={cn('relative z-10 flex-1 overflow-y-auto py-4', collapsed ? 'px-2' : 'px-3')}>
         {navSections.map((section) => {
-          const visibleItems = section.items.filter(
-            (item) => !item.permission || can(item.permission)
-          )
+          const visibleItems = section.items.filter((item) => !item.permission || can(item.permission))
           if (visibleItems.length === 0) return null
+
+          const activeSection = visibleItems.some((item) => pathMatches(item.to))
+          const sectionExpanded = collapsed || activeSection || expandedSections[section.title] !== false
+
           return (
-            <div key={section.title}>
-              {!collapsed && (
-                <p className="px-3 mb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  {section.title}
-                </p>
+            <div key={section.title} className={cn('mb-4', collapsed && 'mb-3')}>
+              {collapsed ? (
+                <div className="mx-auto mb-2 h-px w-9 bg-white/10" />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section.title)}
+                  className="mb-2 flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]/70 transition-colors hover:text-[#D4AF37]"
+                  aria-expanded={sectionExpanded}
+                >
+                  <span>{section.title}</span>
+                  <ChevronDown
+                    className={cn(
+                      'h-3.5 w-3.5 text-current/70 transition-transform duration-200',
+                      sectionExpanded && 'rotate-180'
+                    )}
+                  />
+                </button>
               )}
-              {collapsed && (
-                <div className="mb-1 border-b border-dark-border/50 mx-2" />
-              )}
-              <ul className={cn('space-y-0.5', !collapsed && 'stagger-fast')}>
-                {visibleItems.map((item) => {
-                  const badge = getBadgeCount(item.notifTypes)
-                  return (
-                    <li key={item.to} className={!collapsed ? 'nav-item-enter' : undefined}>
-                      <NavLink
-                        to={item.to}
-                        onClick={onCloseMobile}
-                        title={collapsed ? item.label : undefined}
-                        className={({ isActive }) =>
-                          cn(
-                            'flex items-center rounded-lg text-sm font-medium transition-all duration-150',
-                            collapsed
-                              ? 'justify-center px-2 py-2.5 relative'
-                              : 'gap-3 px-3 py-2',
-                            isActive
-                              ? 'bg-brand-600 text-cream-100 shadow-sm'
-                              : 'text-gray-400 hover:bg-dark-hover hover:text-white'
-                          )
-                        }
-                      >
-                        <item.icon size={18} className="shrink-0" />
-                        {!collapsed && <span className="flex-1">{item.label}</span>}
-                        {/* Badge */}
-                        {badge > 0 && (
-                          collapsed ? (
-                            <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500" />
-                          ) : (
-                            <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1.5">
-                              {badge > 99 ? '99+' : badge}
-                            </span>
-                          )
-                        )}
-                      </NavLink>
-                    </li>
-                  )
-                })}
-              </ul>
+
+              <AnimatePresence initial={false}>
+                {sectionExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className={cn('space-y-1', !collapsed && 'relative ml-3 border-l border-[#D4AF37]/18 pl-3')}>
+                      {visibleItems.map((item) => {
+                        const badge = getBadgeCount(item.notifTypes)
+                        return (
+                          <NavLink
+                            key={item.to}
+                            to={item.to}
+                            onClick={onCloseMobile}
+                            title={collapsed ? item.label : undefined}
+                            className={({ isActive }) => navClass(isActive || pathMatches(item.to), true)}
+                          >
+                            <item.icon className="h-[18px] w-[18px] shrink-0" />
+                            {!collapsed && <span className="min-w-0 flex-1 truncate">{item.label}</span>}
+                            {badge > 0 && (
+                              collapsed ? (
+                                <span className="absolute right-0.5 top-0.5 h-2 w-2 bg-red-500" />
+                              ) : (
+                                <span className="min-w-[20px] bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white">
+                                  {badge > 99 ? '99+' : badge}
+                                </span>
+                              )
+                            )}
+                          </NavLink>
+                        )
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )
         })}
       </nav>
 
-      {/* Footer */}
-      {!collapsed && (
-        <div className="px-4 py-3 border-t border-dark-border">
-          <p className="text-xs text-gray-600 text-center">UPOSA © {new Date().getFullYear()}</p>
-        </div>
-      )}
+      <div className={cn('relative z-10 shrink-0 border-t border-white/10', collapsed ? 'p-3' : 'p-4')}>
+        {!collapsed && (
+          <div className="mb-3 flex items-center gap-3 border border-white/10 bg-white/[0.05] p-3">
+            <span className="grid h-9 w-9 place-items-center bg-white/10 text-[#D4AF37]">
+              <ShieldCheck className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-bold uppercase tracking-[0.14em] text-[#FFF8DC]/45">Portal status</p>
+              <p className="truncate text-sm font-bold">Admin access active</p>
+            </div>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setSidebarCollapsed(!collapsed)}
+          className={cn(
+            'flex min-h-11 items-center border border-white/10 bg-white/[0.06] text-sm font-bold text-[#FFF8DC]/70 transition-colors hover:border-white/20 hover:bg-white/[0.1] hover:text-[#FFF8DC]',
+            collapsed ? 'mx-auto w-11 justify-center' : 'w-full justify-between px-4'
+          )}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? (
+            <ChevronsRight className="h-4 w-4" />
+          ) : (
+            <>
+              Collapse panel
+              <ChevronsLeft className="h-4 w-4" />
+            </>
+          )}
+        </button>
+      </div>
     </div>
   )
 }

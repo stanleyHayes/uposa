@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getRepos, withTransaction } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { CreateElectionInput, ChangeElectionStatusInput, CastElectionVoteInput } from './elections.validation';
@@ -13,20 +12,20 @@ interface ElectionCandidate {
   votes: number;
 }
 
-async function attachCreatedBy(doc: Record<string, any>) {
+async function attachCreatedBy(doc: Record<string, any>): Promise<Record<string, any>> {
   if (!doc.createdById) return { ...doc, createdBy: null };
   const { admins } = getRepos();
-  const a = await admins.findById(doc.createdById, { projection: { id: 1, fullName: 1 } });
+  const a = await admins.findById(String(doc.createdById), { projection: { id: 1, fullName: 1 } });
   return { ...doc, createdBy: a ? { id: a.id, fullName: a.fullName } : null };
 }
 
-async function attachCreatedByMany(docs: Record<string, any>[]) {
+async function attachCreatedByMany(docs: Record<string, any>[]): Promise<Record<string, any>[]> {
   const ids = [...new Set(docs.map(d => d.createdById).filter(Boolean))];
   if (ids.length === 0) return docs.map(d => ({ ...d, createdBy: null }));
   const { admins } = getRepos();
   const aDocs = await admins.findMany({ _id: { $in: ids } }, { projection: { id: 1, fullName: 1 } });
-  const aMap = new Map(aDocs.map(a => [a.id, { id: a.id, fullName: a.fullName }]));
-  return docs.map(d => ({ ...d, createdBy: d.createdById ? aMap.get(d.createdById) || null : null }));
+  const aMap = new Map(aDocs.map(a => [String(a.id), { id: a.id, fullName: a.fullName }]));
+  return docs.map(d => ({ ...d, createdBy: d.createdById ? aMap.get(String(d.createdById)) || null : null }));
 }
 
 export async function listElections(query: Record<string, string | undefined>) {
@@ -155,9 +154,9 @@ export async function getElectionResults(id: string) {
   const voterDocs = voterIds.length > 0
     ? await members.findMany({ _id: { $in: voterIds } }, { projection: { id: 1, fullName: 1 } })
     : [];
-  const voterMap = new Map(voterDocs.map(v => [v.id, { id: v.id, fullName: v.fullName }]));
+  const voterMap = new Map(voterDocs.map(v => [String(v.id), { id: v.id, fullName: v.fullName }]));
 
-  const votes = rawVotes.map(v => ({ ...v, voter: voterMap.get(v.voterId) || null }));
+  const votes = rawVotes.map(v => ({ ...v, voter: voterMap.get(String(v.voterId)) || null }));
   const withAdmin = await attachCreatedBy(election);
 
   const totalVotes = votes.length;
@@ -207,7 +206,7 @@ export async function adminListAllElections(query: Record<string, string | undef
 
   const data = withAdmins.map(d => ({
     ...d,
-    _count: { votes: countMap.get(d.id) || 0 },
+    _count: { votes: countMap.get(String(d.id)) || 0 },
   }));
 
   return { data, meta: buildPaginationMeta(page, limit, total) };

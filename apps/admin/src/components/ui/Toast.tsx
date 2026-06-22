@@ -15,10 +15,10 @@ const iconMap = {
 }
 
 const styleMap = {
-  success: 'bg-white dark:bg-dark-card border-green-400 text-green-700',
-  error: 'bg-white dark:bg-dark-card border-red-400 text-red-700',
-  warning: 'bg-white dark:bg-dark-card border-yellow-400 text-yellow-700',
-  info: 'bg-white dark:bg-dark-card border-blue-400 text-blue-700',
+  success: 'admin-card-surface border-green-400 text-green-700',
+  error: 'admin-card-surface border-red-400 text-red-700',
+  warning: 'admin-card-surface border-yellow-400 text-yellow-700',
+  info: 'admin-card-surface border-blue-400 text-blue-700',
 }
 
 const iconStyleMap = {
@@ -33,7 +33,7 @@ export default function Toast({ toast, onRemove }: ToastProps) {
   return (
     <div
       className={cn(
-        'flex items-start gap-3 w-full max-w-sm rounded-xl border-l-4 px-4 py-3 shadow-lg',
+        'flex w-full max-w-sm items-start gap-3 border-l-4 px-4 py-3 shadow-lg',
         styleMap[toast.type]
       )}
       role="alert"

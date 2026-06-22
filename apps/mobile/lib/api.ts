@@ -7,6 +7,7 @@ import type {
   Member, Event, EventRsvp, News, Due, Project, Donation,
   Job, JobApplication, MentorshipRequest,
   ForumPost, ForumComment, Poll, Election, ContactMessage,
+  PaymentMethod,
 } from './types';
 
 const TOKEN_KEY = 'uposa_alumni_token';
@@ -262,6 +263,12 @@ export const projectsApi = {
 export const contactApi = {
   send: (data: ContactMessage) =>
     client.post<ApiResponse>('/contact', data),
+};
+
+// -------- Payment Methods --------
+export const paymentMethodsApi = {
+  list: () =>
+    client.get<ApiResponse<PaymentMethod[]>>('/payment-methods'),
 };
 
 // -------- Payments --------

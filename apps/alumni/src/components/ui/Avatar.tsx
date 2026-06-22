@@ -19,8 +19,8 @@ export default function Avatar({ src, name, size = 'md', className }: Props) {
   if (src) {
     return (
       <div className={cn('avatar', className)}>
-        <div className={cn('rounded-full', sizes[size])}>
-          <img src={src} alt={name} />
+        <div className={cn('grid place-items-center overflow-hidden rounded-full', sizes[size])}>
+          <img src={src} alt={name} className="h-full w-full object-cover" />
         </div>
       </div>
     )
@@ -28,8 +28,8 @@ export default function Avatar({ src, name, size = 'md', className }: Props) {
 
   return (
     <div className={cn('avatar placeholder', className)}>
-      <div className={cn('bg-primary text-primary-content rounded-full', sizes[size])}>
-        <span>{getInitials(name)}</span>
+      <div className={cn('grid place-items-center overflow-hidden rounded-full bg-primary text-center text-primary-content', sizes[size])}>
+        <span className="block leading-none">{getInitials(name)}</span>
       </div>
     </div>
   )

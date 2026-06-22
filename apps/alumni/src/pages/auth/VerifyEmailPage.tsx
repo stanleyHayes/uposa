@@ -99,7 +99,7 @@ export default function VerifyEmailPage() {
                   Your email has been verified successfully. Your membership is now pending admin
                   approval. You'll receive an email once approved.
                 </p>
-                <Link to="/login" className="btn btn-primary w-full h-11">
+                <Link to="/login" className="btn btn-auth-cream w-full h-11">
                   Go to Login
                 </Link>
               </motion.div>

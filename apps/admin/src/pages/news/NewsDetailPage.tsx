@@ -54,8 +54,13 @@ export default function NewsDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-600 border-t-transparent" />
+      <div className="page-enter space-y-4">
+        <div className="h-5 w-36 animate-pulse bg-brand-950/10 dark:bg-dark-hover" />
+        <div className="admin-card-surface space-y-4 p-6">
+          <div className="h-8 w-2/3 animate-pulse bg-brand-950/10 dark:bg-dark-hover" />
+          <div className="h-4 w-48 animate-pulse bg-brand-950/10 dark:bg-dark-hover" />
+          <div className="h-32 w-full animate-pulse bg-brand-950/5 dark:bg-dark-hover" />
+        </div>
       </div>
     )
   }
@@ -79,7 +84,7 @@ export default function NewsDetailPage() {
           </div>
         )}
 
-        <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+        <div className="admin-card-surface p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-2 flex-wrap">

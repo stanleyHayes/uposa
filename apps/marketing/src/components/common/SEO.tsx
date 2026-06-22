@@ -10,9 +10,9 @@ interface SEOProps {
 }
 
 const SITE_NAME = 'UPOSA - University Practice Old Students\' Association';
-const BASE_URL = 'https://uposa.org';
+const BASE_URL = import.meta.env.VITE_SITE_URL || 'https://uposa.org';
 const DEFAULT_DESCRIPTION = 'UPOSA is the official alumni association of University Practice Senior High School (UPSHS), Cape Coast, Ghana. Join fellow alumni, support your alma mater, and stay connected.';
-const DEFAULT_IMAGE = `${BASE_URL}/logo.png`;
+const DEFAULT_IMAGE = `${BASE_URL}/og-image.png`;
 
 export default function SEO({
   title,

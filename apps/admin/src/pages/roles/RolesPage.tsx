@@ -15,7 +15,7 @@ import type { Permission, Role } from '../../types'
 const PERMISSION_GROUPS: { group: string; color: string; permissions: { key: Permission; label: string }[] }[] = [
   {
     group: 'Alumni',
-    color: 'bg-violet-500',
+    color: 'bg-[#D4AF37]',
     permissions: [
       { key: 'alumni:view', label: 'View registrations' },
       { key: 'alumni:approve', label: 'Approve registrations' },
@@ -163,7 +163,7 @@ export default function RolesPage() {
       {/* Role legend */}
       <div className="flex flex-wrap gap-3 mb-6">
         {ROLE_KEYS.map((role) => (
-          <div key={role} className="flex items-center gap-2 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg px-3 py-2 shadow-sm">
+          <div key={role} className="admin-card-surface flex items-center gap-2 px-3 py-2">
             <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{ROLES[role]}</span>
           </div>
         ))}
@@ -174,7 +174,7 @@ export default function RolesPage() {
       </div>
 
       {/* Permission matrix */}
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+      <div className="admin-card-surface overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

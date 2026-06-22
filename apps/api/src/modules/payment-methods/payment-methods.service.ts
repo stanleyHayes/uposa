@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getRepos } from '../../repositories';
 import { encryptCredentials, decryptCredentials } from '../../utils/crypto.utils';
 import { CreatePaymentMethodInput, UpdatePaymentMethodInput } from './payment-methods.validation';

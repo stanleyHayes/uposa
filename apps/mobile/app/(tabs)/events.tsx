@@ -1,20 +1,12 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { eventsApi } from '@/lib/api';
 import type { Event } from '@/lib/types';
+import { EmptyState, LoadingState, Pill, ScreenHeader, Surface, formatDateTime } from '@/components/mobile-ui';
 
 export default function EventsScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -46,118 +38,59 @@ export default function EventsScreen() {
     setRefreshing(false);
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <ActivityIndicator color={palette.tint} />
-      </View>
-    );
-  }
+  if (loading) return <LoadingState palette={palette} title="Events" />;
 
   return (
     <FlatList
       style={{ backgroundColor: palette.background }}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
       data={events}
       keyExtractor={(item) => item.id}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.tint} />}
-      ListEmptyComponent={
-        <View style={[styles.empty, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-          <Ionicons name="calendar-outline" size={36} color={palette.textMuted} />
-          <Text style={[styles.emptyText, { color: palette.textMuted }]}>No events to show.</Text>
-        </View>
+      ListHeaderComponent={
+        <ScreenHeader
+          palette={palette}
+          eyebrow="Calendar"
+          title="Events"
+          description="Gatherings, meetings, homecomings, and school-facing activities."
+          icon="calendar-outline"
+        />
       }
+      ListEmptyComponent={
+        <EmptyState palette={palette} icon="calendar-outline" title="No events yet" description="Published events and RSVP opportunities will appear here." />
+      }
+      ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
       renderItem={({ item }) => {
         const date = new Date(item.date);
         const isPast = item.status === 'PAST' || date < new Date();
         return (
-          <Pressable
-            onPress={() => router.push(`/events/${item.slug}`)}
-            style={({ pressed }) => [
-              styles.card,
-              { backgroundColor: palette.surface, borderColor: palette.border, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <View style={[styles.dateBadge, { backgroundColor: Brand.cream, borderColor: palette.border }]}>
-              <Text style={[styles.dateMonth, { color: Brand.navy }]}>
-                {date.toLocaleString('en', { month: 'short' }).toUpperCase()}
-              </Text>
-              <Text style={[styles.dateDay, { color: Brand.navy }]}>{date.getDate()}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={styles.titleRow}>
-                <Text style={[styles.title, { color: palette.text }]} numberOfLines={2}>
-                  {item.title}
+          <Pressable onPress={() => router.push(`/events/${item.slug}`)} style={({ pressed }) => ({ opacity: pressed ? 0.78 : 1 })}>
+            <Surface palette={palette} style={{ padding: 14, flexDirection: 'row', gap: 12 }}>
+              <View style={{ width: 58, minHeight: 68, backgroundColor: Brand.gold, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: Brand.navy, fontSize: 11, fontWeight: '900', letterSpacing: 0.8 }}>
+                  {date.toLocaleString('en', { month: 'short' }).toUpperCase()}
                 </Text>
-                {item.isFeatured ? (
-                  <View style={[styles.badge, { backgroundColor: Brand.gold }]}>
-                    <Text style={styles.badgeText}>FEATURED</Text>
-                  </View>
-                ) : null}
+                <Text style={{ color: Brand.navy, fontSize: 24, fontWeight: '900' }}>{date.getDate()}</Text>
               </View>
-              {item.location ? (
-                <View style={styles.metaRow}>
-                  <Ionicons name="location-outline" size={13} color={palette.textMuted} />
-                  <Text style={[styles.meta, { color: palette.textMuted }]} numberOfLines={1}>
-                    {item.location}
+              <View style={{ flex: 1, gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                  <Text style={{ flex: 1, color: palette.text, fontSize: 16, fontWeight: '900' }} numberOfLines={2}>
+                    {item.title}
                   </Text>
+                  {item.isFeatured ? <Pill palette={palette} tone="gold">Featured</Pill> : null}
                 </View>
-              ) : null}
-              <View style={styles.metaRow}>
-                <Ionicons name="time-outline" size={13} color={palette.textMuted} />
-                <Text style={[styles.meta, { color: palette.textMuted }]}>
-                  {date.toLocaleString('en', {
-                    weekday: 'short',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
+                <Text style={{ color: palette.textMuted, fontSize: 12, lineHeight: 17 }}>
+                  {formatDateTime(item.date)}
+                  {item.location ? ` · ${item.location}` : ''}
                 </Text>
+                <Pill palette={palette} active={!isPast} tone={isPast ? 'muted' : 'gold'}>
+                  {isPast ? 'Past' : item.status}
+                </Pill>
               </View>
-              {isPast ? (
-                <Text style={[styles.tag, { color: palette.textMuted }]}>Past event</Text>
-              ) : null}
-            </View>
+            </Surface>
           </Pressable>
         );
       }}
     />
   );
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  list: { padding: 16, paddingBottom: 40 },
-  card: {
-    flexDirection: 'row',
-    gap: 14,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  dateBadge: {
-    width: 56,
-    height: 60,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-  dateMonth: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
-  dateDay: { fontSize: 20, fontWeight: '800', marginTop: 2 },
-  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  title: { flex: 1, fontSize: 16, fontWeight: '700' },
-  badge: { paddingHorizontal: 8, height: 20, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: 10, fontWeight: '800', color: Brand.navy, letterSpacing: 0.5 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  meta: { fontSize: 12 },
-  tag: { fontSize: 11, marginTop: 6, fontStyle: 'italic' },
-  empty: {
-    padding: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    gap: 10,
-  },
-  emptyText: { fontSize: 14 },
-});

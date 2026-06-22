@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { escapeRegex } from '../../utils/search.utils';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { SendMentorshipRequestInput, RespondToRequestInput, ToggleMentorAvailabilityInput } from './mentorship.validation';
@@ -17,9 +17,9 @@ export async function listMentors(query: Record<string, string | undefined>) {
   if (areaOfExpertise) where.areaOfExpertise = areaOfExpertise;
   if (search) {
     where.$or = [
-      { fullName: { $regex: search, $options: 'i' } },
-      { occupation: { $regex: search, $options: 'i' } },
-      { organization: { $regex: search, $options: 'i' } },
+      { fullName: { $regex: escapeRegex(search), $options: 'i' } },
+      { occupation: { $regex: escapeRegex(search), $options: 'i' } },
+      { organization: { $regex: escapeRegex(search), $options: 'i' } },
     ];
   }
 
@@ -40,6 +40,7 @@ export async function toggleMentorAvailability(memberId: string, data: ToggleMen
     isAvailableAsMentor: data.isAvailableAsMentor,
     mentorBio: data.mentorBio,
   });
+  if (!result) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
   return { id: result.id, fullName: (result as any).fullName, isAvailableAsMentor: (result as any).isAvailableAsMentor, mentorBio: (result as any).mentorBio };
 }
 
@@ -51,11 +52,11 @@ export async function getMyMentorProfile(memberId: string) {
   return m || null;
 }
 
-async function attachMentorMentee(doc: Record<string, any>) {
+async function attachMentorMentee(doc: Record<string, any>): Promise<Record<string, any>> {
   const { members } = getRepos();
   const [mentor, mentee] = await Promise.all([
-    doc.mentorId ? members.findById(doc.mentorId, { projection: 'fullName photoUrl occupation' }) : null,
-    doc.menteeId ? members.findById(doc.menteeId, { projection: 'fullName photoUrl' }) : null,
+    doc.mentorId ? members.findById(String(doc.mentorId), { projection: 'fullName photoUrl occupation' }) : null,
+    doc.menteeId ? members.findById(String(doc.menteeId), { projection: 'fullName photoUrl' }) : null,
   ]);
   return {
     ...doc,
@@ -108,9 +109,9 @@ export async function getMyMenteeRequests(menteeId: string, query: Record<string
   const mentorDocs = mentorIds.length > 0
     ? await members.findMany({ _id: { $in: mentorIds } }, { projection: 'fullName photoUrl occupation' })
     : [];
-  const mentorMap = new Map(mentorDocs.map((m: any) => [m.id, { id: m.id, fullName: m.fullName, photoUrl: m.photoUrl, occupation: m.occupation }]));
+  const mentorMap = new Map(mentorDocs.map((m: any) => [String(m.id), { id: m.id, fullName: m.fullName, photoUrl: m.photoUrl, occupation: m.occupation }]));
 
-  const result = data.map((d: any) => ({ ...d, mentor: mentorMap.get(d.mentorId) || null }));
+  const result = data.map((d: any) => ({ ...d, mentor: mentorMap.get(String(d.mentorId)) || null }));
   return { data: result, meta: buildPaginationMeta(page, limit, total) };
 }
 
@@ -127,9 +128,9 @@ export async function getMyMentorRequests(mentorId: string, query: Record<string
   const menteeDocs = menteeIds.length > 0
     ? await members.findMany({ _id: { $in: menteeIds } }, { projection: 'fullName photoUrl' })
     : [];
-  const menteeMap = new Map(menteeDocs.map((m: any) => [m.id, { id: m.id, fullName: m.fullName, photoUrl: m.photoUrl }]));
+  const menteeMap = new Map(menteeDocs.map((m: any) => [String(m.id), { id: m.id, fullName: m.fullName, photoUrl: m.photoUrl }]));
 
-  const result = data.map((d: any) => ({ ...d, mentee: menteeMap.get(d.menteeId) || null }));
+  const result = data.map((d: any) => ({ ...d, mentee: menteeMap.get(String(d.menteeId)) || null }));
   return { data: result, meta: buildPaginationMeta(page, limit, total) };
 }
 
@@ -138,7 +139,7 @@ export async function respondToRequest(requestId: string, mentorId: string, data
 
   const request = await mentorshipRequests.findById(requestId);
   if (!request) throw Object.assign(new Error('Request not found'), { statusCode: 404 });
-  if ((request as any).mentorId !== mentorId) {
+  if (String((request as any).mentorId) !== mentorId) {
     throw Object.assign(new Error('Not authorized to respond to this request'), { statusCode: 403 });
   }
   if ((request as any).status !== 'PENDING') {
@@ -149,6 +150,7 @@ export async function respondToRequest(requestId: string, mentorId: string, data
     status: data.status,
     mentorResponse: data.mentorResponse,
   });
+  if (!result) throw Object.assign(new Error('Request not found'), { statusCode: 404 });
 
   const withRelations = await attachMentorMentee(result);
   return withRelations;
@@ -166,7 +168,7 @@ export async function adminListMentorshipRequests(query: Record<string, string |
   // For search on member names, find matching member IDs first
   if (search) {
     const matchingMembers = await members.findMany(
-      { fullName: { $regex: search, $options: 'i' } },
+      { fullName: { $regex: escapeRegex(search), $options: 'i' } },
       { projection: '_id' },
     );
     const memberIdStrings = matchingMembers.map((m: any) => m.id);
@@ -186,12 +188,12 @@ export async function adminListMentorshipRequests(query: Record<string, string |
   const memberDocs = allMemberIds.length > 0
     ? await members.findMany({ _id: { $in: allMemberIds } }, { projection: 'fullName email photoUrl occupation' })
     : [];
-  const memberMap = new Map(memberDocs.map((m: any) => [m.id, { id: m.id, fullName: m.fullName, email: m.email, photoUrl: m.photoUrl, occupation: m.occupation }]));
+  const memberMap = new Map(memberDocs.map((m: any) => [String(m.id), { id: m.id, fullName: m.fullName, email: m.email, photoUrl: m.photoUrl, occupation: m.occupation }]));
 
   const result = data.map((d: any) => ({
     ...d,
-    mentor: memberMap.get(d.mentorId) || null,
-    mentee: memberMap.get(d.menteeId) || null,
+    mentor: memberMap.get(String(d.mentorId)) || null,
+    mentee: memberMap.get(String(d.menteeId)) || null,
   }));
 
   return { data: result, meta: buildPaginationMeta(page, limit, total) };
@@ -217,11 +219,11 @@ export async function adminListMentors(query: Record<string, string | undefined>
     { $match: { mentorId: { $in: memberIds } } },
     { $group: { _id: '$mentorId', count: { $sum: 1 } } },
   ]);
-  const countMap = new Map(requestCounts.map(c => [c._id, c.count]));
+  const countMap = new Map(requestCounts.map(c => [String(c._id), c.count]));
 
   const result = data.map((d: any) => ({
     ...d,
-    _count: { mentorRequests: countMap.get(d.id) || 0 },
+    _count: { mentorRequests: countMap.get(String(d.id)) || 0 },
   }));
 
   return { data: result, meta: buildPaginationMeta(page, limit, total) };

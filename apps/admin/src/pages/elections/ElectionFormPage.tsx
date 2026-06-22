@@ -118,7 +118,7 @@ export default function ElectionFormPage() {
         Back to Elections
       </button>
 
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+      <div className="admin-card-surface p-6">
         <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">
           {isEditing ? 'Edit Election' : 'New Election'}
         </h1>

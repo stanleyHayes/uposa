@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Crown, Shield, Star } from 'lucide-react';
-import { Card, CardAccent, CardBody } from '../ui/Card.tsx';
+import LeadershipProfileCard from './LeadershipProfileCard.tsx';
 
 interface SchoolLeader {
   id?: string;
@@ -46,57 +46,18 @@ function getTierMeta(tier: number) {
 
 function LeaderCard({ leader, tier }: { leader: SchoolLeader; tier: number }) {
   const initials = leader.initials || leader.name.split(' ').map((n) => n[0]).join('').slice(0, 2);
-  const isTop = tier === 0;
-  const isUpper = tier <= 1;
+  const meta = getTierMeta(tier);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
-    >
-      <Card className="h-full">
-        <CardAccent color={isTop ? 'secondary' : isUpper ? 'primary' : 'accent'} />
-        <CardBody className={`items-center text-center flex flex-col ${isTop ? 'py-8' : 'py-5'}`}>
-          {/* Avatar */}
-          <div className={`relative mb-3 ${isTop ? 'ring-3 ring-secondary/20 ring-offset-2 ring-offset-base-100' : ''} rounded-full`}>
-            {leader.photoUrl ? (
-              <div className="avatar">
-                <div className={`${isTop ? 'w-24' : isUpper ? 'w-18' : 'w-16'} rounded-full overflow-hidden`}>
-                  <img src={leader.photoUrl} alt={leader.name} loading="lazy" className="w-full h-full object-cover" />
-                </div>
-              </div>
-            ) : (
-              <div className="avatar placeholder">
-                <div className={`bg-gradient-to-br ${isTop ? 'from-secondary to-secondary/80 text-secondary-content w-24' : isUpper ? 'from-primary to-accent text-primary-content w-18' : 'from-primary/80 to-primary text-primary-content w-16'} rounded-full`}>
-                  <span className={`${isTop ? 'text-2xl' : isUpper ? 'text-xl' : 'text-lg'} font-bold`}>{initials}</span>
-                </div>
-              </div>
-            )}
-            {isTop && (
-              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center shadow-md shadow-secondary/30 border-2 border-base-100">
-                <Crown size={12} className="text-secondary-content" />
-              </div>
-            )}
-          </div>
-
-          <h3 className={`font-bold ${isTop ? 'text-lg' : 'text-base'}`}>{leader.name}</h3>
-          <div
-            className={`inline-block rounded-lg px-3 py-1 text-sm font-medium mt-1.5 ${
-              isTop
-                ? 'bg-gradient-to-r from-secondary to-secondary/80 text-secondary-content shadow-sm'
-                : isUpper
-                ? 'bg-primary/10 text-primary'
-                : 'bg-base-200 text-base-content/70'
-            }`}
-          >
-            {leader.position}
-          </div>
-        </CardBody>
-      </Card>
-    </motion.div>
+    <LeadershipProfileCard
+      name={leader.name}
+      position={leader.position}
+      photoUrl={leader.photoUrl}
+      initials={initials}
+      tier={tier}
+      label={meta.label}
+      subtitle={tier === 0 ? 'Daily vision' : 'School leadership'}
+    />
   );
 }
 
@@ -157,10 +118,10 @@ export default function SchoolLeadershipHierarchy({ leaders }: Props) {
           row.length === 1
             ? 'flex justify-center'
             : row.length === 2
-            ? 'grid grid-cols-2 max-w-2xl mx-auto gap-5'
+            ? 'grid grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto gap-5'
             : row.length === 3
-            ? 'grid grid-cols-2 lg:grid-cols-3 max-w-4xl mx-auto gap-5'
-            : 'grid grid-cols-2 lg:grid-cols-4 gap-4';
+            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-4xl mx-auto gap-5'
+            : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4';
 
         const cardWidth = row.length === 1 ? 'w-full max-w-xs' : '';
 
