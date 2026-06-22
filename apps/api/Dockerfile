@@ -6,9 +6,12 @@
 FROM node:24-alpine AS deps
 WORKDIR /app
 
-# Install dependencies first for better layer caching
+# Install dependencies first for better layer caching.
+# This package is an npm-workspace member: the lockfile lives at the repo root,
+# not here, and the build context is apps/api — so there is no local lockfile for
+# `npm ci` to use. Use `npm install`, which resolves from package.json directly.
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # ── Stage 2: Builder ──────────────────────────────────────
 FROM node:24-alpine AS builder
@@ -18,8 +21,9 @@ COPY package.json package-lock.json* tsconfig.json ./
 COPY src ./src
 COPY scripts ./scripts
 
-# Install all deps (including devDeps for typescript compilation)
-RUN npm ci && npm cache clean --force
+# Install all deps (including devDeps for typescript compilation).
+# See the deps stage above for why this uses `npm install` rather than `npm ci`.
+RUN npm install && npm cache clean --force
 
 # Compile TypeScript
 RUN npm run build
