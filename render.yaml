@@ -23,11 +23,13 @@ services:
       - key: JWT_ADMIN_SECRET
         generateValue: true
       - key: CLIENT_URL
-        sync: false
+        value: https://alumni.uposa.org
       - key: ADMIN_URL
-        sync: false
+        value: https://admin.uposa.org
       - key: ALLOWED_ORIGINS
-        sync: false
+        value: https://uposa.org,https://www.uposa.org,https://admin.uposa.org,https://alumni.uposa.org,https://uposa-admin.vercel.app,https://uposa-alumni.vercel.app
+      - key: PAYMENT_CALLBACK_BASE_URL
+        value: https://alumni.uposa.org
       - key: RESEND_API_KEY
         sync: false
       - key: FROM_EMAIL
@@ -51,45 +53,3 @@ services:
       - key: CREDENTIALS_ENCRYPTION_KEY
         generateValue: true
     healthCheckPath: /health
-
-  # ── Admin Dashboard (Static Site) ───────────────────────
-  - type: web
-    name: uposa-admin
-    runtime: static
-    region: oregon
-    rootDir: apps/admin
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
-    envVars:
-      - key: NPM_CONFIG_PRODUCTION
-        value: "false"
-      - key: VITE_API_URL
-        value: https://uposa-api.onrender.com/api
-
-  # ── Alumni Portal (Static Site) ─────────────────────────
-  - type: web
-    name: uposa-alumni
-    runtime: static
-    region: oregon
-    rootDir: apps/alumni
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
-    envVars:
-      - key: NPM_CONFIG_PRODUCTION
-        value: "false"
-      - key: VITE_API_URL
-        value: https://uposa-api.onrender.com/api
-
-  # ── Marketing Site (Static Site) ────────────────────────
-  - type: web
-    name: uposa-marketing
-    runtime: static
-    region: oregon
-    rootDir: apps/marketing
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
-    envVars:
-      - key: NPM_CONFIG_PRODUCTION
-        value: "false"
-      - key: VITE_API_URL
-        value: https://uposa-api.onrender.com/api

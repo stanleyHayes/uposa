@@ -37,7 +37,7 @@ const variantClasses: Record<BadgeVariant, string> = {
   cancelled: 'bg-red-100 text-red-800',
   confirmed: 'bg-green-100 text-green-800',
   anonymous: 'bg-slate-100 dark:bg-dark-hover text-slate-600 dark:text-slate-300',
-  super_admin: 'bg-purple-100 text-purple-800',
+  super_admin: 'bg-cream-100 text-brand-950',
   content_manager: 'bg-blue-100 text-blue-800',
   membership_manager: 'bg-teal-100 text-teal-800',
   moderator: 'bg-gray-100 dark:bg-dark-hover text-gray-700 dark:text-gray-300',
@@ -51,10 +51,10 @@ const variantClasses: Record<BadgeVariant, string> = {
   closed: 'bg-gray-100 dark:bg-dark-hover text-gray-600 dark:text-gray-400',
   // Job types
   'Full-time': 'bg-blue-100 text-blue-800',
-  'Part-time': 'bg-indigo-100 text-indigo-800',
+  'Part-time': 'bg-brand-100 text-brand-800',
   'Contract': 'bg-orange-100 text-orange-800',
   'Internship': 'bg-teal-100 text-teal-800',
-  'Volunteer': 'bg-purple-100 text-purple-800',
+  'Volunteer': 'bg-cream-100 text-brand-950',
   // Forum status
   open: 'bg-green-100 text-green-800',
   pinned: 'bg-brand-100 text-brand-700',
@@ -66,7 +66,7 @@ export default function Badge({ variant = 'default', label, className }: BadgePr
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+        'font-status inline-flex items-center border border-current/10 px-2.5 py-0.5 text-xs font-bold uppercase tracking-[0.08em]',
         variantClasses[variant] ?? variantClasses.default,
         className
       )}

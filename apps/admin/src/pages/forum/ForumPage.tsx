@@ -235,7 +235,7 @@ export default function ForumPage() {
             Back to all threads
           </button>
 
-          <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+          <div className="admin-card-surface p-6">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -290,10 +290,12 @@ export default function ForumPage() {
           </h2>
 
           {threadReplies.length === 0 ? (
-            <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-8 text-center">
-              <MessageSquare size={28} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">No replies yet.</p>
-            </div>
+            <EmptyState
+              icon={<MessageSquare size={40} />}
+              title="No replies yet"
+              description="Replies from members will appear here once the discussion starts."
+              className="min-h-[220px] py-12"
+            />
           ) : (
             <div className="space-y-3 stagger-fast">
               {threadReplies.map((reply) => {
@@ -302,7 +304,7 @@ export default function ForumPage() {
                   <div
                     key={reply.id}
                     className={cn(
-                      'card-enter bg-white dark:bg-dark-card rounded-xl border shadow-sm p-4 transition-all',
+                      'card-enter admin-card-surface p-4 transition-all',
                       reply.status === 'flagged'
                         ? 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20'
                         : reply.status === 'hidden'
@@ -403,7 +405,7 @@ export default function ForumPage() {
         {/* Admin reply box */}
         {freshThread.status !== 'closed' && freshThread.status !== 'deleted' && (
           <RoleGate permission="forum:moderate">
-            <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-4">
+            <div className="admin-card-surface p-4">
               <label className="text-sm font-semibold text-gray-900 dark:text-gray-100 block mb-2">
                 Reply as Admin
               </label>
@@ -501,7 +503,7 @@ export default function ForumPage() {
         </select>
       </div>
 
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+      <div className="admin-card-surface overflow-hidden">
         {filtered.length === 0 ? (
           <EmptyState
             icon={<MessageSquare size={40} />}

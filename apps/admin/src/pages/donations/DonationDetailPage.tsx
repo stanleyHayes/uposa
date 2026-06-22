@@ -56,7 +56,7 @@ export default function DonationDetailPage() {
             </Button>
           }
         />
-        <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-12 text-center">
+        <div className="admin-card-surface p-12 text-center">
           <HandCoins size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-4" />
           <p className="text-gray-500 dark:text-gray-400">This donation record could not be found. It may have been deleted.</p>
         </div>
@@ -103,7 +103,7 @@ export default function DonationDetailPage() {
         {/* Main Info */}
         <div className="lg:col-span-2 space-y-6">
           {/* Donor Information */}
-          <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+          <div className="admin-card-surface p-6">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Donor Information</h3>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
               <div>
@@ -126,7 +126,7 @@ export default function DonationDetailPage() {
           </div>
 
           {/* Payment Details */}
-          <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+          <div className="admin-card-surface p-6">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Payment Details</h3>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
               <div>
@@ -162,7 +162,7 @@ export default function DonationDetailPage() {
 
           {/* Notes */}
           {donation.notes && (
-            <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+            <div className="admin-card-surface p-6">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Notes</h3>
               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{donation.notes}</p>
             </div>
@@ -172,7 +172,7 @@ export default function DonationDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Status Card */}
-          <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+          <div className="admin-card-surface p-6">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Status</h3>
             <Badge
               variant={donation.status.toLowerCase() as any}
@@ -181,7 +181,7 @@ export default function DonationDetailPage() {
           </div>
 
           {/* Dates Card */}
-          <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+          <div className="admin-card-surface p-6">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Timeline</h3>
             <dl className="space-y-3">
               <div>
@@ -196,7 +196,7 @@ export default function DonationDetailPage() {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+          <div className="admin-card-surface p-6">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h3>
             <div className="space-y-2">
               <RoleGate permission="donations:edit">

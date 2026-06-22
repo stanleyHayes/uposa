@@ -23,14 +23,15 @@ const variants: Record<string, string> = {
 }
 
 interface Props {
-  status: string
+  status?: string | null
   className?: string
 }
 
 export default function StatusBadge({ status, className }: Props) {
+  const value = (status ?? '').toString()
   return (
-    <span className={cn('badge badge-sm', variants[status] || 'badge-ghost', className)}>
-      {status.replace(/_/g, ' ')}
+    <span className={cn('badge badge-sm font-status', variants[value] || 'badge-ghost', className)}>
+      {value ? value.replace(/_/g, ' ') : '—'}
     </span>
   )
 }

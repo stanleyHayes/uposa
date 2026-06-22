@@ -111,7 +111,7 @@ export default function PollsPage() {
         stats={[
           { label: 'Total Polls', value: stats.total, icon: BarChart3, color: 'text-brand-600', bg: 'bg-brand-50', border: 'border-brand-100' },
           { label: 'Active', value: stats.active, icon: Zap, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100' },
-          { label: 'Total Votes', value: stats.totalVotes, icon: TrendingUp, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100' },
+          { label: 'Total Votes', value: stats.totalVotes, icon: TrendingUp, color: 'text-brand-600', bg: 'bg-cream-100', border: 'border-cream-300' },
           { label: 'Closed', value: stats.closed, icon: CheckCircle, color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' },
         ]}
       />
@@ -133,7 +133,7 @@ export default function PollsPage() {
         const totalPages = Math.ceil(filtered.length / perPage)
 
         return (
-          <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+          <div className="admin-card-surface overflow-hidden">
             {filtered.length === 0 ? (
               <EmptyState
                 icon={<BarChart3 size={40} />}
@@ -219,7 +219,7 @@ export default function PollsPage() {
                 {paginatedItems.map((poll) => {
                   const totalVotes = poll.options.reduce((sum, o) => sum + (o.votes || 0), 0)
                   return (
-                    <div key={poll.id} className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all">
+                    <div key={poll.id} className="admin-card-surface overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all">
                       <div className="p-4">
                         <div className="flex items-center justify-between mb-3">
                           <Badge variant={poll.status === 'ACTIVE' ? 'active' : 'archived'} label={poll.status} />

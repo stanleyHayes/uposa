@@ -1,23 +1,24 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Image, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
-import { Brand, Colors, type Palette } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { eventsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import type { Event } from '@/lib/types';
+import {
+  DetailRow,
+  EmptyState,
+  Field,
+  HeroPanel,
+  LoadingState,
+  Pill,
+  PrimaryButton,
+  ScreenScroll,
+  Surface,
+  formatDateTime,
+} from '@/components/mobile-ui';
 
 export default function EventDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -61,7 +62,7 @@ export default function EventDetailScreen() {
         email: email.trim().toLowerCase(),
         phone: phone.trim() || undefined,
       });
-      Alert.alert('You’re going!', 'Your RSVP has been recorded.');
+      Alert.alert('You are going', 'Your RSVP has been recorded.');
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Could not record your RSVP.';
       Alert.alert('RSVP failed', msg);
@@ -70,19 +71,13 @@ export default function EventDetailScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <ActivityIndicator color={palette.tint} />
-      </View>
-    );
-  }
+  if (loading) return <LoadingState palette={palette} title="Event" />;
 
   if (!event) {
     return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <Text style={{ color: palette.textMuted }}>Event not found.</Text>
-      </View>
+      <ScreenScroll palette={palette}>
+        <EmptyState palette={palette} icon="calendar-outline" title="Event not found" description="This event may have been removed or unpublished." />
+      </ScreenScroll>
     );
   }
 
@@ -90,154 +85,42 @@ export default function EventDetailScreen() {
   const isPast = event.status === 'PAST' || date < new Date();
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.background }}
-      contentContainerStyle={styles.scroll}
-    >
-      {event.imageUrl ? (
-        <Image source={{ uri: event.imageUrl }} style={styles.cover} resizeMode="cover" />
-      ) : null}
-
-      <View style={styles.body}>
-        <Text style={[styles.title, { color: palette.text }]}>{event.title}</Text>
-
-        <View style={[styles.metaCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-          <View style={styles.metaRow}>
-            <Ionicons name="calendar-outline" size={16} color={palette.textMuted} />
-            <Text style={[styles.metaText, { color: palette.text }]}>
-              {date.toLocaleString('en', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-              })}
-            </Text>
+    <ScreenScroll palette={palette} keyboardShouldPersistTaps="handled" padded={false}>
+      {event.imageUrl ? <Image source={{ uri: event.imageUrl }} style={{ width: '100%', height: 230 }} resizeMode="cover" /> : null}
+      <View style={{ padding: 16 }}>
+        <HeroPanel
+          palette={palette}
+          eyebrow={event.status}
+          title={event.title}
+          body={event.description}
+          icon="calendar-outline"
+        >
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <Pill palette={palette} tone="gold">{formatDateTime(event.date)}</Pill>
+            {event.location ? <Pill palette={palette} tone="navy">{event.location}</Pill> : null}
           </View>
-          {event.location ? (
-            <View style={styles.metaRow}>
-              <Ionicons name="location-outline" size={16} color={palette.textMuted} />
-              <Text style={[styles.metaText, { color: palette.text }]}>{event.location}</Text>
-            </View>
-          ) : null}
-          <View style={styles.metaRow}>
-            <Ionicons name="information-circle-outline" size={16} color={palette.textMuted} />
-            <Text style={[styles.metaText, { color: palette.text }]}>{event.status}</Text>
-          </View>
+        </HeroPanel>
+
+        <View style={{ gap: 10 }}>
+          <DetailRow palette={palette} icon="calendar-outline" label="When" value={formatDateTime(event.date)} />
+          {event.location ? <DetailRow palette={palette} icon="location-outline" label="Where" value={event.location} /> : null}
+          <DetailRow palette={palette} icon="information-circle-outline" label="Status" value={event.status} />
         </View>
 
-        <Text style={[styles.description, { color: palette.text }]}>{event.description}</Text>
-
         {!isPast ? (
-          <View style={[styles.formCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-            <Text style={[styles.formTitle, { color: palette.text }]}>RSVP</Text>
-            <Field label="Name" value={name} onChange={setName} palette={palette} />
-            <Field label="Email" value={email} onChange={setEmail} palette={palette} keyboardType="email-address" />
-            <Field label="Phone (optional)" value={phone} onChange={setPhone} palette={palette} keyboardType="phone-pad" />
-
-            <Pressable
-              onPress={onRsvp}
-              disabled={submitting}
-              style={({ pressed }) => [
-                styles.btn,
-                { backgroundColor: Brand.navy, opacity: pressed || submitting ? 0.85 : 1 },
-              ]}
-            >
-              {submitting ? (
-                <ActivityIndicator color={Brand.cream} />
-              ) : (
-                <Text style={styles.btnText}>Confirm RSVP</Text>
-              )}
-            </Pressable>
-          </View>
+          <Surface palette={palette} style={{ padding: 16, gap: 2, marginTop: 18 }}>
+            <Text style={{ color: palette.text, fontSize: 18, fontWeight: '900', marginBottom: 8 }}>RSVP</Text>
+            <Field palette={palette} label="Name" value={name} onChangeText={setName} icon="person-outline" />
+            <Field palette={palette} label="Email" value={email} onChangeText={setEmail} icon="mail-outline" keyboardType="email-address" />
+            <Field palette={palette} label="Phone" value={phone} onChangeText={setPhone} icon="call-outline" keyboardType="phone-pad" />
+            <PrimaryButton label="Confirm RSVP" palette={palette} onPress={onRsvp} loading={submitting} icon="checkmark-done-outline" />
+          </Surface>
         ) : (
-          <View style={[styles.pastCard, { backgroundColor: palette.surfaceMuted, borderColor: palette.border }]}>
-            <Ionicons name="time-outline" size={18} color={palette.textMuted} />
-            <Text style={{ color: palette.textMuted }}>This event has already passed.</Text>
-          </View>
+          <Surface palette={palette} tone="muted" style={{ padding: 14, marginTop: 18 }}>
+            <Text style={{ color: palette.textMuted, fontSize: 14, lineHeight: 20 }}>This event has already passed.</Text>
+          </Surface>
         )}
       </View>
-    </ScrollView>
+    </ScreenScroll>
   );
 }
-
-function Field({
-  label,
-  value,
-  onChange,
-  palette,
-  keyboardType,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  palette: Palette;
-  keyboardType?: 'default' | 'email-address' | 'phone-pad';
-}) {
-  return (
-    <View style={{ marginTop: 10 }}>
-      <Text style={[styles.fieldLabel, { color: palette.textMuted }]}>{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        placeholderTextColor={palette.textMuted}
-        keyboardType={keyboardType}
-        autoCapitalize={keyboardType === 'email-address' ? 'none' : 'sentences'}
-        autoCorrect={false}
-        style={[
-          styles.fieldInput,
-          { color: palette.text, borderColor: palette.border, backgroundColor: palette.background },
-        ]}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  scroll: { paddingBottom: 40 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  cover: { width: '100%', height: 220 },
-  body: { padding: 16, gap: 14 },
-  title: { fontSize: 22, fontWeight: '800' },
-  metaCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 14,
-    gap: 8,
-  },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  metaText: { fontSize: 13 },
-  description: { fontSize: 14, lineHeight: 21 },
-  formCard: {
-    marginTop: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-  },
-  formTitle: { fontSize: 16, fontWeight: '700', marginBottom: 6 },
-  fieldLabel: { fontSize: 12, fontWeight: '600', marginBottom: 6 },
-  fieldInput: {
-    height: 44,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    fontSize: 14,
-  },
-  btn: {
-    marginTop: 18,
-    height: 46,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnText: { color: Brand.cream, fontWeight: '700', fontSize: 15 },
-  pastCard: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-});

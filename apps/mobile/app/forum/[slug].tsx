@@ -1,21 +1,24 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
-import { Brand, Colors } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { forumApi } from '@/lib/api';
-import type { ForumPost, ForumComment } from '@/lib/types';
+import type { ForumComment, ForumPost } from '@/lib/types';
+import {
+  AvatarMark,
+  EmptyState,
+  Field,
+  HeroPanel,
+  LoadingState,
+  Pill,
+  PrimaryButton,
+  ScreenScroll,
+  SectionTitle,
+  Surface,
+  formatShortDate,
+} from '@/components/mobile-ui';
 
 export default function ForumDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -52,9 +55,7 @@ export default function ForumDetailScreen() {
       const res = await forumApi.addComment(post.id, { content });
       const newComment = res.data.data;
       if (newComment) {
-        setPost((prev) =>
-          prev ? { ...prev, comments: [...(prev.comments ?? []), newComment] } : prev
-        );
+        setPost((prev) => (prev ? { ...prev, comments: [...(prev.comments ?? []), newComment] } : prev));
       }
       setComment('');
     } catch (err: any) {
@@ -65,170 +66,87 @@ export default function ForumDetailScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <ActivityIndicator color={palette.tint} />
-      </View>
-    );
-  }
+  if (loading) return <LoadingState palette={palette} title="Discussion" />;
 
   if (!post) {
     return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <Text style={{ color: palette.textMuted }}>Discussion not found.</Text>
-      </View>
+      <ScreenScroll palette={palette}>
+        <EmptyState palette={palette} icon="chatbubble-outline" title="Discussion not found" description="This thread may have been removed or unpublished." />
+      </ScreenScroll>
     );
   }
 
   const comments: ForumComment[] = post.comments ?? [];
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.background }}
-      contentContainerStyle={styles.scroll}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.body}>
-        <View style={[styles.chip, { backgroundColor: Brand.cream, borderColor: palette.border }]}>
-          <Text style={[styles.chipText, { color: Brand.navy }]}>{post.category}</Text>
+    <ScreenScroll palette={palette} keyboardShouldPersistTaps="handled">
+      <HeroPanel
+        palette={palette}
+        eyebrow={post.category}
+        title={post.title}
+        body={`${post.author?.fullName ?? 'Unknown'} · ${formatShortDate(post.createdAt)}`}
+        icon="chatbubbles-outline"
+      >
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {post.isPinned ? <Pill palette={palette} tone="gold">Pinned</Pill> : null}
+          {post.isLocked ? <Pill palette={palette}>Locked</Pill> : null}
+          <Pill palette={palette}>{comments.length} replies</Pill>
         </View>
-        <Text style={[styles.title, { color: palette.text }]}>{post.title}</Text>
-        <Text style={[styles.author, { color: palette.textMuted }]}>
-          {post.author?.fullName ?? 'Unknown'} · {new Date(post.createdAt).toLocaleDateString()}
-        </Text>
-        <Text style={[styles.content, { color: palette.text }]}>{post.content}</Text>
+      </HeroPanel>
 
-        <Text style={[styles.commentsHeading, { color: palette.text }]}>
-          Comments ({comments.length})
-        </Text>
+      <Surface palette={palette} style={{ padding: 16 }}>
+        <Text style={{ color: palette.text, fontSize: 15, lineHeight: 24 }}>{post.content}</Text>
+      </Surface>
 
-        {comments.length === 0 ? (
-          <Text style={[styles.empty, { color: palette.textMuted }]}>
-            No comments yet. Be the first to share your thoughts.
-          </Text>
-        ) : (
-          comments.map((c) => (
-            <View
-              key={c.id}
-              style={[styles.commentCard, { backgroundColor: palette.surface, borderColor: palette.border }]}
-            >
-              <Text style={[styles.commentAuthor, { color: palette.text }]}>
-                {c.author?.fullName ?? 'Anonymous'}
-              </Text>
-              <Text style={[styles.commentText, { color: palette.text }]}>{c.content}</Text>
-              <Text style={[styles.commentTime, { color: palette.textMuted }]}>
-                {new Date(c.createdAt).toLocaleString()}
-              </Text>
-            </View>
-          ))
-        )}
+      <SectionTitle palette={palette} title={`Replies (${comments.length})`} />
+      {comments.length === 0 ? (
+        <EmptyState
+          palette={palette}
+          icon="chatbubble-outline"
+          title="No replies yet"
+          description="Be the first to add a thoughtful note to this discussion."
+        />
+      ) : (
+        <View style={{ gap: 10 }}>
+          {comments.map((item) => (
+            <Surface key={item.id} palette={palette} style={{ padding: 12, flexDirection: 'row', gap: 12 }}>
+              <AvatarMark palette={palette} name={item.author?.fullName ?? 'Anonymous'} photoUrl={item.author?.photoUrl} size={42} />
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={{ color: palette.text, fontSize: 14, fontWeight: '900' }}>{item.author?.fullName ?? 'Anonymous'}</Text>
+                <Text style={{ color: palette.text, fontSize: 14, lineHeight: 20 }}>{item.content}</Text>
+                <Text style={{ color: palette.textMuted, fontSize: 11 }}>{formatShortDate(item.createdAt)}</Text>
+              </View>
+            </Surface>
+          ))}
+        </View>
+      )}
 
-        {!post.isLocked ? (
-          <View style={[styles.formCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-            <Text style={[styles.formTitle, { color: palette.text }]}>Add a comment</Text>
-            <TextInput
-              value={comment}
-              onChangeText={setComment}
-              placeholder="Share your thoughts…"
-              placeholderTextColor={palette.textMuted}
-              style={[
-                styles.input,
-                { color: palette.text, borderColor: palette.border, backgroundColor: palette.background },
-              ]}
-              multiline
-            />
-            <Pressable
-              onPress={onSubmit}
-              disabled={submitting || !comment.trim()}
-              style={({ pressed }) => [
-                styles.btn,
-                {
-                  backgroundColor: Brand.navy,
-                  opacity: pressed || submitting || !comment.trim() ? 0.6 : 1,
-                },
-              ]}
-            >
-              {submitting ? (
-                <ActivityIndicator color={Brand.cream} />
-              ) : (
-                <View style={styles.btnInner}>
-                  <Ionicons name="send" size={15} color={Brand.cream} />
-                  <Text style={styles.btnText}>Post comment</Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
-        ) : (
-          <View style={[styles.lockedCard, { backgroundColor: palette.surfaceMuted, borderColor: palette.border }]}>
-            <Ionicons name="lock-closed-outline" size={16} color={palette.textMuted} />
-            <Text style={{ color: palette.textMuted }}>This discussion is locked.</Text>
-          </View>
-        )}
-      </View>
-    </ScrollView>
+      {!post.isLocked ? (
+        <Surface palette={palette} style={{ padding: 16, marginTop: 18 }}>
+          <Text style={{ color: palette.text, fontSize: 17, fontWeight: '900', marginBottom: 8 }}>Add reply</Text>
+          <Field
+            palette={palette}
+            label="Your comment"
+            value={comment}
+            onChangeText={setComment}
+            placeholder="Share your thoughts..."
+            icon="create-outline"
+            multiline
+          />
+          <PrimaryButton
+            label="Post reply"
+            palette={palette}
+            onPress={onSubmit}
+            disabled={!comment.trim()}
+            loading={submitting}
+            icon="send-outline"
+          />
+        </Surface>
+      ) : (
+        <Surface palette={palette} tone="muted" style={{ padding: 14, marginTop: 18 }}>
+          <Text style={{ color: palette.textMuted, fontSize: 14 }}>This discussion is locked.</Text>
+        </Surface>
+      )}
+    </ScreenScroll>
   );
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  scroll: { paddingBottom: 40 },
-  body: { padding: 16, gap: 8 },
-  chip: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.4 },
-  title: { fontSize: 22, fontWeight: '800', lineHeight: 28, marginTop: 4 },
-  author: { fontSize: 12 },
-  content: { fontSize: 15, lineHeight: 23, marginTop: 6 },
-  commentsHeading: { fontSize: 16, fontWeight: '700', marginTop: 18 },
-  empty: { fontSize: 13, fontStyle: 'italic', paddingVertical: 8 },
-  commentCard: {
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginTop: 8,
-  },
-  commentAuthor: { fontSize: 13, fontWeight: '700' },
-  commentText: { fontSize: 14, marginTop: 4, lineHeight: 20 },
-  commentTime: { fontSize: 11, marginTop: 6 },
-  formCard: {
-    marginTop: 18,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  formTitle: { fontSize: 14, fontWeight: '700', marginBottom: 8 },
-  input: {
-    minHeight: 80,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 14,
-    textAlignVertical: 'top',
-  },
-  btn: {
-    marginTop: 10,
-    height: 44,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnInner: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  btnText: { color: Brand.cream, fontWeight: '700', fontSize: 14 },
-  lockedCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 18,
-  },
-});

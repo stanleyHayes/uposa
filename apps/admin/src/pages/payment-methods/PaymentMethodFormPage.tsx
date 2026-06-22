@@ -117,7 +117,7 @@ export default function PaymentMethodFormPage() {
         />
       </div>
 
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+      <div className="admin-card-surface p-6">
         <div className="space-y-5">
           {/* Security notice */}
           <div className="flex items-start gap-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 p-4">

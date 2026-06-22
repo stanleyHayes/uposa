@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 84,
     height: 84,
-    borderRadius: 42,
+    borderRadius: 0,
     backgroundColor: Brand.navy,
     alignItems: 'center',
     justifyContent: 'center',
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.gold,
     paddingHorizontal: 22,
     height: 46,
-    borderRadius: 12,
+    borderRadius: 0,
   },
   buttonText: {
     color: Brand.navy,

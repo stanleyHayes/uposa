@@ -137,6 +137,7 @@ export default function Sidebar() {
       </AnimatePresence>
 
       <motion.aside
+        data-tour="sidebar"
         className={cn(
           'fixed left-0 top-0 z-40 flex h-full flex-col overflow-hidden border-r border-white/10 bg-[#001B50] text-[#FFF8DC] shadow-[24px_0_80px_rgba(0,27,80,0.18)] transition-all duration-300 lg:sticky lg:top-0 lg:z-auto lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',

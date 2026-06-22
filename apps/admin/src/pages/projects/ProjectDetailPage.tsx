@@ -51,7 +51,7 @@ export default function ProjectDetailPage() {
         >
           <ArrowLeft size={16} /> Back to projects
         </button>
-        <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-12 text-center">
+        <div className="admin-card-surface p-12 text-center">
           <p className="text-gray-500 dark:text-gray-400">Project not found.</p>
         </div>
       </div>
@@ -79,7 +79,7 @@ export default function ProjectDetailPage() {
           </div>
         )}
 
-        <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+        <div className="admin-card-surface p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-2 flex-wrap">

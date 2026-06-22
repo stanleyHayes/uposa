@@ -61,6 +61,9 @@
 :root,
 [data-theme="uposa-light"] {
   color-scheme: light;
+  --uposa-font-display: 'Fraunces', 'Euclid Circular A', ui-serif, Georgia, serif;
+  --uposa-font-body: 'Euclid Circular A', ui-sans-serif, system-ui, sans-serif;
+  --uposa-font-status: 'Outfit', 'Euclid Circular A', ui-sans-serif, system-ui, sans-serif;
   --uposa-hero-grid: rgba(0, 27, 80, 0.26);
   --uposa-nav-grid: rgba(255, 248, 220, 0.78);
   --uposa-watermark-grid: rgba(0, 27, 80, 0.26);
@@ -85,16 +88,228 @@
 @font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Bold Italic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
 
 * {
-  font-family: 'Euclid Circular A', sans-serif;
+  font-family: var(--uposa-font-body);
 }
 
 html {
   scroll-behavior: smooth;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   background: var(--color-base-100);
   color: var(--color-base-content);
+  font-family: var(--uposa-font-body);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+main,
+header,
+footer,
+section,
+article,
+aside,
+nav,
+div {
+  min-width: 0;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  min-width: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+a,
+span {
+  overflow-wrap: break-word;
+}
+
+h1,
+.font-display,
+.text-5xl,
+.text-6xl,
+.text-7xl,
+.text-8xl,
+.text-9xl,
+[class*="text-[clamp"] {
+  font-family: var(--uposa-font-display);
+  font-optical-sizing: auto;
+}
+
+h5,
+h6,
+b,
+strong,
+.font-bold,
+.font-semibold,
+.font-extrabold,
+.font-black {
+  font-family: var(--uposa-font-body);
+}
+
+.font-status,
+.badge,
+[class*="badge-"],
+.text-\[10px\].uppercase,
+.text-\[11px\].uppercase,
+.text-xs.uppercase,
+.text-sm.uppercase {
+  font-family: var(--uposa-font-status);
+}
+
+/* Typography role overrides live after weight utilities so `font-bold` does not
+   flatten large headings back into the body face. */
+h1,
+.font-display,
+.text-4xl,
+.text-5xl,
+.text-6xl,
+.text-7xl,
+.text-8xl,
+.text-9xl,
+[class*="text-[clamp"] {
+  font-family: var(--uposa-font-display);
+  font-optical-sizing: auto;
+}
+
+h5,
+h6 {
+  font-family: var(--uposa-font-body);
+}
+
+.font-status,
+.badge,
+[class*="badge-"],
+.text-\[10px\].uppercase,
+.text-\[11px\].uppercase,
+.text-xs.uppercase,
+.text-sm.uppercase {
+  font-family: var(--uposa-font-status);
+}
+
+[data-theme="uposa-dark"] main {
+  --uposa-content-heading: #fff8dc;
+  --uposa-content-heading-70: color-mix(in oklab, #fff8dc 70%, transparent);
+  --uposa-content-heading-45: color-mix(in oklab, #fff8dc 45%, transparent);
+  --uposa-content-heading-40: color-mix(in oklab, #fff8dc 40%, transparent);
+  --uposa-content-heading-35: color-mix(in oklab, #fff8dc 35%, transparent);
+  --uposa-content-heading-30: color-mix(in oklab, #fff8dc 30%, transparent);
+  --uposa-content-heading-25: color-mix(in oklab, #fff8dc 25%, transparent);
+  --uposa-content-heading-20: color-mix(in oklab, #fff8dc 20%, transparent);
+  --uposa-content-border-25: color-mix(in oklab, #fff8dc 25%, transparent);
+  --uposa-content-border-20: color-mix(in oklab, #fff8dc 20%, transparent);
+  --uposa-content-border-15: color-mix(in oklab, #fff8dc 15%, transparent);
+  --uposa-content-border-10: color-mix(in oklab, #fff8dc 10%, transparent);
+}
+
+[data-theme="uposa-dark"] main .text-primary {
+  color: var(--uposa-content-heading) !important;
+}
+
+[data-theme="uposa-dark"] main .text-primary\/70 {
+  color: var(--uposa-content-heading-70) !important;
+}
+
+[data-theme="uposa-dark"] main .text-primary\/45 {
+  color: var(--uposa-content-heading-45) !important;
+}
+
+[data-theme="uposa-dark"] main .text-primary\/40 {
+  color: var(--uposa-content-heading-40) !important;
+}
+
+[data-theme="uposa-dark"] main .text-primary\/35 {
+  color: var(--uposa-content-heading-35) !important;
+}
+
+[data-theme="uposa-dark"] main .text-primary\/30 {
+  color: var(--uposa-content-heading-30) !important;
+}
+
+[data-theme="uposa-dark"] main .text-primary\/25 {
+  color: var(--uposa-content-heading-25) !important;
+}
+
+[data-theme="uposa-dark"] main .text-primary\/20 {
+  color: var(--uposa-content-heading-20) !important;
+}
+
+[data-theme="uposa-dark"] main .hover\:text-primary:hover,
+[data-theme="uposa-dark"] main .group:hover .group-hover\:text-primary {
+  color: var(--uposa-content-heading) !important;
+}
+
+[data-theme="uposa-dark"] main .border-primary\/25,
+[data-theme="uposa-dark"] main .hover\:border-primary\/25:hover {
+  border-color: var(--uposa-content-border-25) !important;
+}
+
+[data-theme="uposa-dark"] main .border-primary\/20,
+[data-theme="uposa-dark"] main .hover\:border-primary\/20:hover {
+  border-color: var(--uposa-content-border-20) !important;
+}
+
+[data-theme="uposa-dark"] main .border-primary\/15,
+[data-theme="uposa-dark"] main .hover\:border-primary\/15:hover {
+  border-color: var(--uposa-content-border-15) !important;
+}
+
+[data-theme="uposa-dark"] main .border-primary\/10 {
+  border-color: var(--uposa-content-border-10) !important;
+}
+
+[data-theme="uposa-dark"] main .bg-primary\/15 {
+  background-color: color-mix(in oklab, #fff8dc 12%, transparent) !important;
+}
+
+[data-theme="uposa-dark"] main .bg-primary\/10 {
+  background-color: color-mix(in oklab, #fff8dc 9%, transparent) !important;
+}
+
+[data-theme="uposa-dark"] main .bg-primary\/8,
+[data-theme="uposa-dark"] main .bg-primary\/5 {
+  background-color: color-mix(in oklab, #fff8dc 6%, transparent) !important;
+}
+
+[data-theme="uposa-dark"] main .bg-secondary.text-primary,
+[data-theme="uposa-dark"] main .bg-secondary .text-primary,
+[data-theme="uposa-dark"] main .bg-secondary .group-hover\:text-primary,
+[data-theme="uposa-dark"] main .bg-primary-content.text-primary,
+[data-theme="uposa-dark"] main .hover\:bg-primary-content:hover.hover\:text-primary {
+  color: var(--color-secondary-content) !important;
 }
 
 .form-control .input,
@@ -204,6 +419,16 @@ dialog .card::before {
   transform: scale(0.97) translateY(0);
 }
 
+/* Theme switch — circular reveal driven by the View Transitions API (useTheme.ts).
+   Disable the default cross-fade so the expanding clip-path is what we see. */
+::view-transition-old(root) { z-index: 0; }
+::view-transition-new(root) { z-index: 1; }
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
 .btn-accent {
   background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-primary) 100%) !important;
   border: none !important;
@@ -216,4 +441,58 @@ dialog .card::before {
 }
 .btn-accent:active {
   transform: scale(0.97) translateY(0);
+}
+
+@media (max-width: 639px) {
+  main {
+    overflow-x: hidden;
+  }
+
+  h1.text-5xl,
+  h1.text-6xl,
+  h1.text-7xl,
+  h1.text-8xl,
+  h1.text-9xl,
+  h1[class*="text-["] {
+    font-size: clamp(2.65rem, 13vw, 3.75rem) !important;
+    line-height: 0.98 !important;
+  }
+
+  h2.text-4xl,
+  h2.text-5xl,
+  h2.text-6xl,
+  h2[class*="text-["] {
+    font-size: clamp(2rem, 9vw, 2.65rem) !important;
+    line-height: 1.04 !important;
+  }
+
+  h3.text-3xl,
+  h3.text-4xl {
+    font-size: clamp(1.45rem, 7vw, 2rem) !important;
+    line-height: 1.12 !important;
+  }
+
+  .btn {
+    max-width: 100%;
+    min-height: 2.75rem;
+    height: auto;
+    white-space: normal;
+    line-height: 1.15;
+    text-align: center;
+  }
+
+  .btn-lg {
+    width: 100%;
+    min-height: 3rem;
+    padding-inline: 1rem;
+    font-size: 0.95rem;
+  }
+
+  .btn-sm {
+    width: auto;
+  }
+
+  .inline-flex {
+    max-width: 100%;
+  }
 }

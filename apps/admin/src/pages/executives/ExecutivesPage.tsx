@@ -127,7 +127,7 @@ export default function ExecutivesPage() {
         />
       </div>
 
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+      <div className="admin-card-surface overflow-hidden">
         {filtered.length === 0 ? (
           <EmptyState
             icon={<Crown size={40} />}

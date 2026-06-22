@@ -114,7 +114,7 @@ export function CardHeader({
   action,
 }: CardHeaderProps) {
   return (
-    <div className="flex items-center justify-between px-6 pt-5">
+    <div className="flex items-center justify-between px-4 pt-4 sm:px-6 sm:pt-5">
       <div className="flex items-center gap-2.5">
         {icon && (
           <div
@@ -139,7 +139,7 @@ export function CardBody({
   children: ReactNode
   className?: string
 }) {
-  return <div className={`px-6 py-5 ${className}`}>{children}</div>
+  return <div className={`px-4 py-4 sm:px-6 sm:py-5 ${className}`}>{children}</div>
 }
 
 /* ─── Footer ────────────────────────────────────────────────── */
@@ -152,7 +152,7 @@ export function CardFooter({
   className?: string
 }) {
   return (
-    <div className={`px-6 pb-5 pt-3 border-t border-base-300/40 ${className}`}>
+    <div className={`border-t border-base-300/40 px-4 pb-4 pt-3 sm:px-6 sm:pb-5 ${className}`}>
       {children}
     </div>
   )

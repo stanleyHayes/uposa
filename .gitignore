@@ -4,6 +4,7 @@ dist
 .env
 .env.local
 .env.*.local
+production.env
 .DS_Store
 *.log
 uploads/*
@@ -15,3 +16,8 @@ package-lock.json
 *.tsbuildinfo
 apps/*/vite.config.d.ts
 apps/*/vite.config.js
+
+# E2E / test artifacts
+test-results
+playwright-report
+.playwright

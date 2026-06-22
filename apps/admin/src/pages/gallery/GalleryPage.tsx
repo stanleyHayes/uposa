@@ -134,7 +134,7 @@ export default function GalleryPage() {
 
       {/* Create Category Panel */}
       {showCreate && (
-        <div className="mb-6 bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+        <div className="mb-6 admin-card-surface p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-900 dark:text-gray-100">New Category</h3>
             <button onClick={resetCreate} className="text-gray-400 hover:text-gray-600 transition-colors">
@@ -180,7 +180,7 @@ export default function GalleryPage() {
 
       {/* Category Grid */}
       {categories.length === 0 ? (
-        <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm">
+        <div className="admin-card-surface">
           <EmptyState
             icon={<Images size={40} />}
             title="No gallery categories yet"
@@ -199,7 +199,7 @@ export default function GalleryPage() {
           {categories.map((cat) => (
             <div
               key={cat.id}
-              className="group bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
+              className="group admin-card-surface overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
               onClick={() => navigate(`/gallery/${cat.id}`)}
             >
               {/* Cover Image */}

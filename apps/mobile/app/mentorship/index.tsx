@@ -1,23 +1,21 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  Modal,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, FlatList, Modal, Pressable, RefreshControl, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Brand, Colors } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { mentorshipApi } from '@/lib/api';
 import type { Member } from '@/lib/types';
+import {
+  AvatarMark,
+  EmptyState,
+  Field,
+  LoadingState,
+  Pill,
+  PrimaryButton,
+  ScreenHeader,
+  Surface,
+} from '@/components/mobile-ui';
 
 export default function MentorshipScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -67,171 +65,80 @@ export default function MentorshipScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <ActivityIndicator color={palette.tint} />
-      </View>
-    );
-  }
+  if (loading) return <LoadingState palette={palette} title="Mentorship" />;
 
   return (
     <>
       <FlatList
         style={{ backgroundColor: palette.background }}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         data={mentors}
         keyExtractor={(item) => item.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.tint} />}
-        ListEmptyComponent={
-          <View style={[styles.empty, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-            <Ionicons name="people-outline" size={36} color={palette.textMuted} />
-            <Text style={{ color: palette.textMuted }}>No mentors are available right now.</Text>
-          </View>
+        ListHeaderComponent={
+          <ScreenHeader
+            palette={palette}
+            eyebrow="Guidance"
+            title="Mentorship"
+            description="Connect with old students who can guide professional, academic, and life decisions."
+            icon="people-outline"
+          />
         }
+        ListEmptyComponent={
+          <EmptyState palette={palette} icon="people-outline" title="Mentor profiles are coming soon" description="Registered alumni can opt in from their profile or membership desk." />
+        }
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         renderItem={({ item }) => (
-          <Pressable
-            onPress={() => setSelected(item)}
-            style={({ pressed }) => [
-              styles.row,
-              { backgroundColor: palette.surface, borderColor: palette.border, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            {item.photoUrl ? (
-              <Image source={{ uri: item.photoUrl }} style={styles.avatar} />
-            ) : (
-              <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: Brand.navy }]}>
-                <Text style={[styles.avatarLetter, { color: Brand.gold }]}>
-                  {item.fullName.charAt(0).toUpperCase()}
+          <Pressable onPress={() => setSelected(item)} style={({ pressed }) => ({ opacity: pressed ? 0.78 : 1 })}>
+            <Surface palette={palette} style={{ padding: 12, flexDirection: 'row', gap: 12 }}>
+              <AvatarMark palette={palette} name={item.fullName} photoUrl={item.photoUrl} />
+              <View style={{ flex: 1, gap: 5 }}>
+                <Text style={{ color: palette.text, fontSize: 16, fontWeight: '900' }}>{item.fullName}</Text>
+                <Text style={{ color: palette.textMuted, fontSize: 12 }} numberOfLines={1}>
+                  {[item.occupation, item.organization].filter(Boolean).join(' · ') || 'Mentor'}
                 </Text>
+                {item.mentorBio ? (
+                  <Text style={{ color: palette.textMuted, fontSize: 12, lineHeight: 18 }} numberOfLines={2}>
+                    {item.mentorBio}
+                  </Text>
+                ) : null}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {(item.areaOfExpertise ?? []).slice(0, 2).map((tag) => <Pill key={tag} palette={palette}>{tag}</Pill>)}
+                </View>
               </View>
-            )}
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.name, { color: palette.text }]}>{item.fullName}</Text>
-              <Text style={[styles.subtitle, { color: palette.textMuted }]} numberOfLines={1}>
-                {[item.occupation, item.organization].filter(Boolean).join(' · ') || 'Mentor'}
-              </Text>
-              {item.mentorBio ? (
-                <Text style={[styles.bio, { color: palette.textMuted }]} numberOfLines={2}>
-                  {item.mentorBio}
-                </Text>
-              ) : null}
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
+              <Ionicons name="arrow-forward" size={18} color={palette.textMuted} />
+            </Surface>
           </Pressable>
         )}
       />
 
-      <Modal
-        visible={!!selected}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setSelected(null)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: palette.text }]}>Request mentorship</Text>
+      <Modal visible={!!selected} transparent animationType="slide" onRequestClose={() => setSelected(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }}>
+          <Surface palette={palette} style={{ padding: 18, borderBottomWidth: 0 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: palette.text, fontSize: 18, fontWeight: '900' }}>Request mentorship</Text>
+                <Text style={{ color: palette.textMuted, fontSize: 13, marginTop: 3 }} numberOfLines={1}>
+                  {selected ? `Send a note to ${selected.fullName}` : ''}
+                </Text>
+              </View>
               <Pressable onPress={() => setSelected(null)} hitSlop={10}>
-                <Ionicons name="close" size={22} color={palette.textMuted} />
+                <Ionicons name="close" size={24} color={palette.textMuted} />
               </Pressable>
             </View>
-            {selected ? (
-              <Text style={[styles.modalSub, { color: palette.textMuted }]}>
-                Send a brief message to {selected.fullName}.
-              </Text>
-            ) : null}
-            <TextInput
+            <Field
+              palette={palette}
+              label="Message"
               value={message}
               onChangeText={setMessage}
               placeholder="What do you hope to learn?"
-              placeholderTextColor={palette.textMuted}
+              icon="create-outline"
               multiline
-              style={[
-                styles.modalInput,
-                { color: palette.text, borderColor: palette.border, backgroundColor: palette.background },
-              ]}
             />
-            <Pressable
-              onPress={onSubmit}
-              disabled={submitting}
-              style={({ pressed }) => [
-                styles.btn,
-                { backgroundColor: Brand.navy, opacity: pressed || submitting ? 0.85 : 1 },
-              ]}
-            >
-              {submitting ? (
-                <ActivityIndicator color={Brand.cream} />
-              ) : (
-                <Text style={styles.btnText}>Send request</Text>
-              )}
-            </Pressable>
-          </View>
+            <PrimaryButton label="Send request" palette={palette} onPress={onSubmit} loading={submitting} icon="send-outline" />
+          </Surface>
         </View>
       </Modal>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  list: { padding: 16, paddingBottom: 40 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 10,
-  },
-  avatar: { width: 48, height: 48, borderRadius: 24 },
-  avatarFallback: { alignItems: 'center', justifyContent: 'center' },
-  avatarLetter: { fontSize: 20, fontWeight: '800' },
-  name: { fontSize: 15, fontWeight: '700' },
-  subtitle: { fontSize: 12, marginTop: 2 },
-  bio: { fontSize: 12, marginTop: 4, lineHeight: 17 },
-  empty: {
-    padding: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    gap: 10,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderWidth: 1,
-    padding: 20,
-    gap: 8,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  modalTitle: { fontSize: 17, fontWeight: '800' },
-  modalSub: { fontSize: 13 },
-  modalInput: {
-    minHeight: 100,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 14,
-    textAlignVertical: 'top',
-    marginTop: 8,
-  },
-  btn: {
-    marginTop: 12,
-    height: 46,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnText: { color: Brand.cream, fontWeight: '700', fontSize: 15 },
-});

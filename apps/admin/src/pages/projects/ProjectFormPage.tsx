@@ -154,7 +154,7 @@ export default function ProjectFormPage() {
         description={isEdit ? `Editing "${editingProject?.title || ''}"` : 'Create a new project'}
       />
 
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+      <div className="admin-card-surface p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input label="Title" error={errors.title?.message} {...register('title')} />
           <Input label="Slug" helperText="URL-friendly identifier" error={errors.slug?.message} {...register('slug')} />

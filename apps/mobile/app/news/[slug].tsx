@@ -1,18 +1,12 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Image, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { Brand, Colors } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { newsApi } from '@/lib/api';
 import type { News } from '@/lib/types';
+import { EmptyState, HeroPanel, LoadingState, Pill, ScreenScroll, Surface, formatShortDate } from '@/components/mobile-ui';
 
 const CATEGORY_LABEL: Record<News['category'], string> = {
   ANNOUNCEMENT: 'Announcement',
@@ -45,75 +39,42 @@ export default function NewsDetailScreen() {
     load();
   }, [load]);
 
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <ActivityIndicator color={palette.tint} />
-      </View>
-    );
-  }
+  if (loading) return <LoadingState palette={palette} title="Article" />;
 
   if (!item) {
     return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <Text style={{ color: palette.textMuted }}>Article not found.</Text>
-      </View>
+      <ScreenScroll palette={palette}>
+        <EmptyState palette={palette} icon="newspaper-outline" title="Article not found" description="This dispatch may have been removed or unpublished." />
+      </ScreenScroll>
     );
   }
 
-  const date = new Date(item.publishedAt ?? item.createdAt);
+  const date = formatShortDate(item.publishedAt ?? item.createdAt);
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.background }}
-      contentContainerStyle={styles.scroll}
-    >
-      {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={styles.cover} resizeMode="cover" />
-      ) : null}
-
-      <View style={styles.body}>
-        <View style={[styles.chip, { backgroundColor: Brand.cream, borderColor: palette.border }]}>
-          <Text style={[styles.chipText, { color: Brand.navy }]}>
-            {CATEGORY_LABEL[item.category]}
-          </Text>
-        </View>
-
-        <Text style={[styles.title, { color: palette.text }]}>{item.title}</Text>
-
-        <Text style={[styles.meta, { color: palette.textMuted }]}>
-          {item.authorName ? `${item.authorName} · ` : ''}
-          {date.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}
-        </Text>
-
+    <ScreenScroll palette={palette} padded={false}>
+      {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={{ width: '100%', height: 238 }} resizeMode="cover" /> : null}
+      <View style={{ padding: 16, gap: 14 }}>
+        <HeroPanel
+          palette={palette}
+          eyebrow={CATEGORY_LABEL[item.category]}
+          title={item.title}
+          body={item.authorName ? `${item.authorName} · ${date}` : date}
+          icon="newspaper-outline"
+        />
         {item.excerpt ? (
-          <Text style={[styles.excerpt, { color: palette.text }]}>{item.excerpt}</Text>
+          <Surface palette={palette} tone="muted" style={{ padding: 16 }}>
+            <Text style={{ color: palette.text, fontSize: 17, lineHeight: 25, fontWeight: '800' }}>{item.excerpt}</Text>
+          </Surface>
         ) : null}
-
-        <Text style={[styles.content, { color: palette.text }]}>{item.content}</Text>
+        <Surface palette={palette} style={{ padding: 16, gap: 12 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <Pill palette={palette} tone="gold">{CATEGORY_LABEL[item.category]}</Pill>
+            <Pill palette={palette}>{date}</Pill>
+          </View>
+          <Text style={{ color: palette.text, fontSize: 15, lineHeight: 24 }}>{item.content}</Text>
+        </Surface>
       </View>
-    </ScrollView>
+    </ScreenScroll>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { paddingBottom: 40 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  cover: { width: '100%', height: 220 },
-  body: { padding: 16, gap: 10 },
-  chip: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  chipText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.4 },
-  title: { fontSize: 24, fontWeight: '800', lineHeight: 30 },
-  meta: { fontSize: 12 },
-  excerpt: { fontSize: 16, lineHeight: 24, fontStyle: 'italic', marginTop: 6 },
-  content: { fontSize: 15, lineHeight: 24, marginTop: 8 },
-});

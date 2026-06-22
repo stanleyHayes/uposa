@@ -1,20 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 
 import { Brand, Colors, type Palette } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { pollsApi } from '@/lib/api';
 import type { Poll } from '@/lib/types';
+import { EmptyState, LoadingState, Pill, ProgressBar, ScreenHeader, Surface } from '@/components/mobile-ui';
 
 export default function PollsScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -56,149 +47,72 @@ export default function PollsScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <ActivityIndicator color={palette.tint} />
-      </View>
-    );
-  }
+  if (loading) return <LoadingState palette={palette} title="Polls" />;
 
   return (
     <FlatList
       style={{ backgroundColor: palette.background }}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
       data={polls}
       keyExtractor={(item) => item.id}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.tint} />}
-      ListEmptyComponent={
-        <View style={[styles.empty, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-          <Ionicons name="bar-chart-outline" size={36} color={palette.textMuted} />
-          <Text style={{ color: palette.textMuted }}>No active polls.</Text>
-        </View>
+      ListHeaderComponent={
+        <ScreenHeader
+          palette={palette}
+          eyebrow="Decisions"
+          title="Polls"
+          description="Quick community signals and association decisions open to members."
+          icon="bar-chart-outline"
+        />
       }
+      ListEmptyComponent={
+        <EmptyState palette={palette} icon="bar-chart-outline" title="No active polls" description="Open member polls will appear here." />
+      }
+      ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
       renderItem={({ item }) => <PollCard poll={item} palette={palette} onVote={onVote} />}
     />
   );
 }
 
-function PollCard({
-  poll,
-  palette,
-  onVote,
-}: {
-  poll: Poll;
-  palette: Palette;
-  onVote: (poll: Poll, optionIds: number[]) => void;
-}) {
+function PollCard({ poll, palette, onVote }: { poll: Poll; palette: Palette; onVote: (poll: Poll, optionIds: number[]) => void }) {
   const closed = poll.status === 'CLOSED';
   const totalVotes = poll.options.reduce((sum, opt) => sum + opt.votes, 0);
+  const showResults = poll.hasVoted || closed;
 
   return (
-    <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-      <View style={styles.headerRow}>
-        <Text style={[styles.question, { color: palette.text }]}>{poll.question}</Text>
-        <View
-          style={[
-            styles.statusChip,
-            { backgroundColor: closed ? palette.surfaceMuted : Brand.gold },
-          ]}
-        >
-          <Text style={[styles.statusText, { color: Brand.navy }]}>
-            {closed ? 'CLOSED' : 'OPEN'}
-          </Text>
-        </View>
+    <Surface palette={palette} style={{ padding: 16, gap: 10 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+        <Text style={{ flex: 1, color: palette.text, fontSize: 17, fontWeight: '900', lineHeight: 23 }}>{poll.question}</Text>
+        <Pill palette={palette} tone={closed ? 'muted' : 'gold'}>{closed ? 'Closed' : 'Open'}</Pill>
       </View>
-      {poll.description ? (
-        <Text style={[styles.desc, { color: palette.textMuted }]}>{poll.description}</Text>
-      ) : null}
+      {poll.description ? <Text style={{ color: palette.textMuted, fontSize: 13, lineHeight: 19 }}>{poll.description}</Text> : null}
 
-      <View style={{ marginTop: 8 }}>
-        {poll.options.map((opt) => {
-          const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
-          const showResults = poll.hasVoted || closed;
-          const myVoted = poll.myVote?.includes(opt.id);
+      <View style={{ gap: 9 }}>
+        {poll.options.map((option) => {
+          const pct = totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0;
+          const myVoted = poll.myVote?.includes(option.id);
           return (
             <Pressable
-              key={opt.id}
-              onPress={() => !poll.hasVoted && !closed && onVote(poll, [opt.id])}
+              key={option.id}
+              onPress={() => !poll.hasVoted && !closed && onVote(poll, [option.id])}
               disabled={!!poll.hasVoted || closed}
-              style={({ pressed }) => [
-                styles.option,
-                {
-                  borderColor: myVoted ? Brand.gold : palette.border,
-                  backgroundColor: palette.background,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
+              style={({ pressed }) => ({ opacity: pressed ? 0.78 : poll.hasVoted || closed ? 0.82 : 1 })}
             >
-              {showResults ? (
-                <View
-                  style={[
-                    styles.optionFill,
-                    { backgroundColor: myVoted ? 'rgba(212,175,55,0.25)' : 'rgba(0,27,80,0.08)', width: `${pct}%` },
-                  ]}
-                />
-              ) : null}
-              <Text style={[styles.optionText, { color: palette.text }]}>{opt.text}</Text>
-              {showResults ? (
-                <Text style={[styles.optionPct, { color: palette.textMuted }]}>
-                  {pct}% · {opt.votes}
-                </Text>
-              ) : null}
+              <Surface palette={palette} tone={myVoted ? 'gold' : 'default'} style={{ padding: 12, gap: 8 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
+                  <Text style={{ flex: 1, color: myVoted ? Brand.navy : palette.text, fontSize: 14, fontWeight: '900' }}>{option.text}</Text>
+                  {showResults ? <Text style={{ color: myVoted ? Brand.navy : palette.textMuted, fontSize: 12, fontWeight: '900' }}>{pct}%</Text> : null}
+                </View>
+                {showResults ? <ProgressBar palette={palette} percent={pct} /> : null}
+              </Surface>
             </Pressable>
           );
         })}
       </View>
 
-      <Text style={[styles.totalText, { color: palette.textMuted }]}>
-        {totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}
-        {poll.hasVoted ? ' · You voted' : ''}
+      <Text style={{ color: palette.textMuted, fontSize: 11, fontWeight: '700' }}>
+        {totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}{poll.hasVoted ? ' · You voted' : ''}
       </Text>
-    </View>
+    </Surface>
   );
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  list: { padding: 16, paddingBottom: 40 },
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 14,
-  },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  question: { flex: 1, fontSize: 16, fontWeight: '700' },
-  statusChip: { paddingHorizontal: 8, height: 20, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
-  statusText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
-  desc: { fontSize: 13, marginTop: 4, lineHeight: 18 },
-  option: {
-    position: 'relative',
-    overflow: 'hidden',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1.5,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginTop: 8,
-  },
-  optionFill: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-  },
-  optionText: { fontSize: 14, fontWeight: '600', flex: 1 },
-  optionPct: { fontSize: 12, fontWeight: '600' },
-  totalText: { fontSize: 11, marginTop: 10 },
-  empty: {
-    padding: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    gap: 10,
-  },
-});

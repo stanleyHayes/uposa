@@ -116,7 +116,7 @@ export default function ProjectsPage() {
         <ViewToggle view={viewMode} onChange={(v) => { setViewMode(v); setCurrentPage(1) }} />
       </div>
 
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+      <div className="admin-card-surface overflow-hidden">
         {filtered.length === 0 ? (
           <EmptyState
             icon={<FolderKanban size={40} />}
@@ -198,7 +198,7 @@ export default function ProjectsPage() {
             {paginatedItems.map((project) => {
               const progress = project.goalAmount > 0 ? Math.round((project.raisedAmount / project.goalAmount) * 100) : 0
               return (
-                <div key={project.id} className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group" onClick={() => navigate(`/projects/${project.id}`)}>
+                <div key={project.id} className="admin-card-surface overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group" onClick={() => navigate(`/projects/${project.id}`)}>
                   {project.imageUrl ? (
                     <img src={project.imageUrl} alt={project.title} className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
                   ) : (

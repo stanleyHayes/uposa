@@ -169,7 +169,7 @@ export default function ResetPasswordPage() {
 
                   <motion.button
                     type="submit"
-                    className={`btn btn-primary w-full h-12 text-base ${loading ? 'loading' : ''}`}
+                    className={`btn btn-auth-cream w-full h-12 text-base ${loading ? 'loading' : ''}`}
                     disabled={loading}
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}

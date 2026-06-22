@@ -34,10 +34,10 @@ const providerMeta: Record<string, { icon: typeof CreditCard; color: string; bg:
   },
   STRIPE: {
     icon: CreditCard,
-    color: 'text-indigo-600',
-    bg: 'bg-indigo-50',
-    border: 'border-indigo-200',
-    gradient: 'from-indigo-500/10 to-indigo-500/5',
+    color: 'text-brand-600',
+    bg: 'bg-brand-50',
+    border: 'border-brand-200',
+    gradient: 'from-brand-500/10 to-brand-500/5',
   },
   CRYPTO: {
     icon: Bitcoin,
@@ -129,7 +129,7 @@ export default function PaymentMethodsPage() {
       />
 
       {methods.length === 0 ? (
-        <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm">
+        <div className="admin-card-surface">
           <EmptyState
             icon={<Wallet size={32} />}
             title="No payment methods configured"
@@ -146,7 +146,7 @@ export default function PaymentMethodsPage() {
             return (
               <div
                 key={method.id}
-                className={`card-enter card-lift bg-white dark:bg-dark-card rounded-2xl border shadow-[0_1px_4px_rgba(0,27,80,0.05)] hover:shadow-[0_8px_30px_rgba(0,27,80,0.07)] transition-all duration-300 ease-out overflow-hidden ${
+                className={`card-enter card-lift admin-card-surface border shadow-[0_1px_4px_rgba(0,27,80,0.05)] hover:shadow-[0_8px_30px_rgba(0,27,80,0.07)] transition-all duration-300 ease-out overflow-hidden ${
                   !method.isEnabled ? 'opacity-70' : ''
                 } border-gray-200/80 dark:border-dark-border`}
               >

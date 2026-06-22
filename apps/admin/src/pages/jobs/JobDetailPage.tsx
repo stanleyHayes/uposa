@@ -55,7 +55,7 @@ export default function JobDetailPage() {
           Back to Jobs
         </button>
 
-        <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+        <div className="admin-card-surface p-6">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -146,7 +146,7 @@ export default function JobDetailPage() {
           <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">
             {job.applications.length} {job.applications.length === 1 ? 'Application' : 'Applications'}
           </h2>
-          <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+          <div className="admin-card-surface overflow-hidden">
             <div className="overflow-x-auto">
               <table className="data-table w-full text-sm">
                 <thead className="bg-gradient-to-r from-gray-50 to-gray-50/50 dark:from-dark-hover dark:to-dark-hover/50 border-b-2 border-gray-100 dark:border-dark-border">

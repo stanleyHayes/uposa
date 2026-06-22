@@ -13,6 +13,7 @@ export type ForumCategory = 'GENERAL' | 'ANNOUNCEMENTS' | 'CAREERS' | 'EDUCATION
 export type PollStatus = 'ACTIVE' | 'CLOSED';
 export type ElectionStatus = 'UPCOMING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 export type DonationChannel = 'MOMO' | 'BANK' | 'PAYPAL' | 'PAYSTACK' | 'STRIPE' | 'CRYPTO' | 'CASH' | 'OTHER';
+export type PaymentProvider = 'PAYSTACK' | 'STRIPE' | 'CRYPTO';
 export type DonationStatus = 'PENDING' | 'CONFIRMED' | 'FAILED';
 
 export interface Member {
@@ -248,6 +249,20 @@ export interface ContactMessage {
   email: string;
   subject: string;
   message: string;
+}
+
+export interface PaymentMethod {
+  id: string;
+  provider: PaymentProvider;
+  displayName: string;
+  description?: string;
+  isEnabled: boolean;
+  supportedCurrencies: string[];
+  countries: string[];
+  hasCredentials: boolean;
+  config?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ApiResponse<T = unknown> {

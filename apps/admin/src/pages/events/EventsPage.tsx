@@ -138,7 +138,7 @@ export default function EventsPage() {
         <ViewToggle view={viewMode} onChange={(v) => { setViewMode(v); setCurrentPage(1) }} />
       </div>
 
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+      <div className="admin-card-surface overflow-hidden">
         {filteredEvents.length === 0 ? (
           <EmptyState
             icon={<Calendar size={40} />}
@@ -216,7 +216,7 @@ export default function EventsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
             {filteredEvents.slice((currentPage - 1) * 12, currentPage * 12).map((ev) => (
-              <div key={ev.id} onClick={() => navigate(`/events/${ev.id}`)} className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group">
+              <div key={ev.id} onClick={() => navigate(`/events/${ev.id}`)} className="admin-card-surface overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group">
                 {ev.imageUrl ? (
                   <img src={ev.imageUrl} alt={ev.title} className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
                 ) : (

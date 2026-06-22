@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import {
   Globe, Phone, CreditCard, GraduationCap, BarChart3, BookOpen,
   Save, AtSign, Camera, MessageCircle, History, School,
-  PlusCircle, Trash2, Heart,
+  PlusCircle, Trash2, Heart, Eye, FileText, ListOrdered,
 } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import Button from '../../components/ui/Button'
@@ -129,6 +129,26 @@ export default function SiteConfigPage() {
     { key: 'stories', label: 'Stories', icon: Heart },
   ]
 
+  const updateHistoryParagraph = (index: number, value: string) => {
+    const paragraphs = [...history.paragraphs]
+    paragraphs[index] = value
+    setHistory({ paragraphs })
+  }
+
+  const removeHistoryParagraph = (index: number) => {
+    const paragraphs = history.paragraphs.length <= 1
+      ? ['']
+      : history.paragraphs.filter((_, i) => i !== index)
+    setHistory({ paragraphs })
+  }
+
+  const addHistoryParagraph = () => {
+    setHistory({ paragraphs: [...history.paragraphs, ''] })
+  }
+
+  const completedHistoryParagraphs = history.paragraphs.filter((paragraph) => paragraph.trim().length > 0)
+  const historyWordCount = completedHistoryParagraphs.reduce((total, paragraph) => total + paragraph.trim().split(/\s+/).filter(Boolean).length, 0)
+
   if (loading) {
     return (
       <div className="page-enter">
@@ -137,7 +157,7 @@ export default function SiteConfigPage() {
           <div className="flex gap-4 border-b border-gray-200 dark:border-dark-border mb-6 pb-3">
             {Array.from({ length: 9 }).map((_, i) => <Skeleton key={i} className="w-16 h-4" />)}
           </div>
-          <div className="bg-white dark:bg-dark-card rounded-2xl border border-gray-200/80 dark:border-dark-border p-6 space-y-5">
+          <div className="admin-card-surface p-6 space-y-5">
             <Skeleton className="w-40 h-5" />
             <div className="grid grid-cols-2 gap-4">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -157,7 +177,7 @@ export default function SiteConfigPage() {
     <div className="page-enter">
       <PageHeader title="Site Configuration" description="Manage public website content and settings" />
 
-      <div className="max-w-4xl">
+      <div className={activeTab === 'history' ? 'max-w-6xl' : 'max-w-4xl'}>
         <div className="flex gap-0 border-b border-gray-200 dark:border-dark-border mb-6 overflow-x-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon
@@ -206,7 +226,7 @@ export default function SiteConfigPage() {
           <Card title="Social Media Links">
             <div className="space-y-4">
               <div className="flex items-center gap-3"><AtSign size={18} className="text-blue-600 shrink-0" /><Input label="Facebook URL" value={social.facebook} onChange={(e) => setSocial({ ...social, facebook: e.target.value })} /></div>
-              <div className="flex items-center gap-3"><Camera size={18} className="text-pink-500 shrink-0" /><Input label="Instagram URL" value={social.instagram} onChange={(e) => setSocial({ ...social, instagram: e.target.value })} /></div>
+              <div className="flex items-center gap-3"><Camera size={18} className="text-brand-600 shrink-0" /><Input label="Instagram URL" value={social.instagram} onChange={(e) => setSocial({ ...social, instagram: e.target.value })} /></div>
               <div className="flex items-center gap-3"><MessageCircle size={18} className="text-green-500 shrink-0" /><Input label="WhatsApp Channel URL" value={social.whatsapp} onChange={(e) => setSocial({ ...social, whatsapp: e.target.value })} /></div>
               <div className="flex justify-end pt-2">
                 <Button loading={saving} onClick={() => saveConfig('social', social)}><Save size={14} className="mr-1" /> Save Social Links</Button>
@@ -325,22 +345,159 @@ export default function SiteConfigPage() {
 
         {/* History Tab (NEW) */}
         {activeTab === 'history' && (
-          <Card title="Organization History">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Each paragraph appears as a timeline entry on the About page.</p>
-            <div className="space-y-3">
-              {history.paragraphs.map((p, idx) => (
-                <div key={idx} className="flex gap-3 items-start">
-                  <span className="text-xs font-bold text-gray-400 dark:text-gray-500 mt-3 shrink-0 w-6 text-center">{idx + 1}</span>
-                  <Textarea rows={3} value={p} onChange={(e) => { const u = [...history.paragraphs]; u[idx] = e.target.value; setHistory({ paragraphs: u }) }} />
-                  <button onClick={() => setHistory({ paragraphs: history.paragraphs.filter((_, i) => i !== idx) })} className="text-red-500 hover:text-red-700 p-2 mt-1 shrink-0"><Trash2 size={14} /></button>
+          <div className="space-y-5">
+            <section className="admin-card-surface relative overflow-hidden">
+              <div className="absolute inset-x-0 top-0 h-1.5 bg-cream-500" />
+              <div className="absolute right-0 top-0 hidden h-full w-1/3 bg-gradient-to-l from-cream-500/20 to-transparent dark:from-white/[0.03] lg:block" />
+              <div className="relative grid gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
+                <div>
+                  <div className="mb-5 inline-flex items-center gap-3 border border-cream-500/30 bg-cream-500/15 px-4 py-2 text-brand-950 dark:border-white/10 dark:bg-white/[0.04] dark:text-cream-100">
+                    <History size={18} />
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-950/45 dark:text-gray-500">About page timeline</p>
+                      <p className="text-sm font-bold">Organization History</p>
+                    </div>
+                  </div>
+                  <h2 className="max-w-2xl text-2xl font-black leading-tight tracking-tight text-brand-950 dark:text-gray-100 md:text-3xl">
+                    Shape the story visitors read before they meet the association.
+                  </h2>
+                  <p className="mt-4 max-w-2xl text-sm leading-6 text-brand-950/60 dark:text-gray-400">
+                    Each paragraph becomes a separate timeline entry on the public About page. Keep entries focused, chronological, and easy to scan.
+                  </p>
                 </div>
-              ))}
-              <Button variant="ghost" onClick={() => setHistory({ paragraphs: [...history.paragraphs, ''] })}><PlusCircle size={14} className="mr-1" /> Add Paragraph</Button>
+
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: 'Entries', value: history.paragraphs.length, icon: ListOrdered },
+                    { label: 'Filled', value: completedHistoryParagraphs.length, icon: FileText },
+                    { label: 'Words', value: historyWordCount, icon: BarChart3 },
+                  ].map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <div key={item.label} className="border border-brand-950/10 bg-brand-950/[0.03] p-3 text-center dark:border-white/10 dark:bg-white/[0.03]">
+                        <Icon size={17} className="mx-auto mb-2 text-cream-600 dark:text-cream-300" />
+                        <p className="text-xl font-black text-brand-950 dark:text-gray-100">{item.value}</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-950/40 dark:text-gray-500">{item.label}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </section>
+
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+              <section className="admin-card-surface overflow-hidden">
+                <div className="flex flex-col gap-3 border-b border-brand-950/10 bg-cream-100/60 px-5 py-4 dark:border-dark-border dark:bg-white/[0.03] sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 place-items-center border border-cream-500/35 bg-cream-500/20 text-brand-950 dark:border-white/10 dark:bg-white/[0.04] dark:text-cream-100">
+                      <FileText size={19} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black uppercase tracking-[0.16em] text-brand-950 dark:text-gray-100">Timeline entries</h3>
+                      <p className="text-xs font-semibold text-brand-950/45 dark:text-gray-500">Edit the public story one entry at a time.</p>
+                    </div>
+                  </div>
+                  <Button variant="secondary" size="sm" leftIcon={<PlusCircle size={15} />} onClick={addHistoryParagraph}>
+                    Add Entry
+                  </Button>
+                </div>
+
+                <div className="space-y-4 p-5">
+                  {history.paragraphs.map((paragraph, idx) => (
+                    <div key={idx} className="grid gap-3 border border-brand-950/10 bg-brand-950/[0.025] p-4 dark:border-white/10 dark:bg-white/[0.03] md:grid-cols-[72px_minmax(0,1fr)_auto]">
+                      <div>
+                        <span className="inline-flex h-12 w-12 items-center justify-center border border-cream-500/35 bg-cream-500/20 text-lg font-black text-brand-950 dark:border-white/10 dark:bg-white/[0.04] dark:text-cream-100">
+                          {String(idx + 1).padStart(2, '0')}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <Textarea
+                          label={`Timeline paragraph ${idx + 1}`}
+                          rows={4}
+                          value={paragraph}
+                          onChange={(e) => updateHistoryParagraph(idx, e.target.value)}
+                          placeholder="Write a focused milestone, transition, or legacy moment..."
+                        />
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs font-semibold text-brand-950/45 dark:text-gray-500">
+                          <span>{paragraph.trim().split(/\s+/).filter(Boolean).length} words</span>
+                          <span>{paragraph.trim().length} characters</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeHistoryParagraph(idx)}
+                        className="h-10 w-10 text-red-500 transition-colors hover:bg-red-500/10 hover:text-red-700 md:mt-6"
+                        aria-label={`Remove history paragraph ${idx + 1}`}
+                      >
+                        <Trash2 size={16} className="mx-auto" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col gap-3 border-t border-brand-950/10 bg-cream-100/45 px-5 py-4 dark:border-dark-border dark:bg-white/[0.03] sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs font-semibold text-brand-950/50 dark:text-gray-500">
+                    Save only when the entries are ready to publish on the About page.
+                  </p>
+                  <Button loading={saving} onClick={() => saveConfig('history', history)}>
+                    <Save size={14} className="mr-1" /> Save History
+                  </Button>
+                </div>
+              </section>
+
+              <aside className="space-y-5 lg:sticky lg:top-24">
+                <section className="admin-card-surface p-5">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="grid h-10 w-10 place-items-center border border-cream-500/35 bg-cream-500/20 text-brand-950 dark:border-white/10 dark:bg-white/[0.04] dark:text-cream-100">
+                      <Eye size={19} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-950/45 dark:text-gray-500">Live shape</p>
+                      <h3 className="text-lg font-black text-brand-950 dark:text-gray-100">About page preview</h3>
+                    </div>
+                  </div>
+
+                  {completedHistoryParagraphs.length === 0 ? (
+                    <div className="border border-brand-950/10 bg-brand-950/[0.03] p-4 text-sm leading-6 text-brand-950/55 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-400">
+                      Add at least one paragraph to preview the history timeline.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {completedHistoryParagraphs.slice(0, 3).map((paragraph, idx) => (
+                        <div key={`${idx}-${paragraph.slice(0, 12)}`} className="relative border-l border-brand-950/15 pb-4 pl-5 last:pb-0 dark:border-white/10">
+                          <span className="absolute -left-[5px] top-1 h-2.5 w-2.5 border border-brand-950/15 bg-cream-500 dark:border-white/10" />
+                          <p className="mb-1 text-xs font-black uppercase tracking-[0.14em] text-brand-950/40 dark:text-gray-500">
+                            Entry {idx + 1}
+                          </p>
+                          <p className="line-clamp-4 text-sm leading-6 text-brand-950/65 dark:text-gray-300">{paragraph}</p>
+                        </div>
+                      ))}
+                      {completedHistoryParagraphs.length > 3 && (
+                        <p className="border border-brand-950/10 bg-brand-950/[0.03] px-3 py-2 text-xs font-bold text-brand-950/45 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-500">
+                          +{completedHistoryParagraphs.length - 3} more entr{completedHistoryParagraphs.length - 3 === 1 ? 'y' : 'ies'} in the full timeline
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </section>
+
+                <section className="admin-card-surface p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-950/45 dark:text-gray-500">Editorial rhythm</p>
+                  <div className="mt-4 grid gap-3">
+                    {[
+                      'One milestone or era per paragraph.',
+                      'Put the earliest foundation story first.',
+                      'Keep public-facing language warm and specific.',
+                    ].map((tip) => (
+                      <div key={tip} className="border border-brand-950/10 bg-brand-950/[0.03] p-3 text-sm font-semibold leading-5 text-brand-950/60 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-400">
+                        {tip}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </aside>
             </div>
-            <div className="flex justify-end pt-4">
-              <Button loading={saving} onClick={() => saveConfig('history', history)}><Save size={14} className="mr-1" /> Save History</Button>
-            </div>
-          </Card>
+          </div>
         )}
 
         {/* School Info Tab (NEW) */}

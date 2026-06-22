@@ -744,7 +744,7 @@ export default function RegisterPage() {
                       {step < TOTAL_STEPS ? (
                         <motion.button
                           type="button"
-                          className="btn btn-primary h-12 flex-1 justify-between px-5 text-base"
+                          className="btn btn-auth-cream h-12 flex-1 justify-between px-5 text-base"
                           onClick={nextStep}
                           whileHover={{ scale: 1.01 }}
                           whileTap={{ scale: 0.98 }}
@@ -754,7 +754,7 @@ export default function RegisterPage() {
                       ) : (
                         <motion.button
                           type="submit"
-                          className="btn btn-primary h-12 flex-1 justify-between px-5 text-base"
+                          className="btn btn-auth-cream h-12 flex-1 justify-between px-5 text-base"
                           disabled={loading}
                           whileHover={{ scale: loading ? 1 : 1.01 }}
                           whileTap={{ scale: loading ? 1 : 0.98 }}

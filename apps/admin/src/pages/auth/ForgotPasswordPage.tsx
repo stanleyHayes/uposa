@@ -80,6 +80,7 @@ export default function ForgotPasswordPage() {
 
             <Button
               type="submit"
+              variant="accent"
               className="w-full"
               size="lg"
               loading={isSubmitting}

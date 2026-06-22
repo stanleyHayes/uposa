@@ -153,7 +153,7 @@ export default function AlumniRegistrationsPage() {
 
       <PageStats
         stats={[
-          { label: 'Total Registrations', value: stats.total, icon: Users, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100' },
+          { label: 'Total Registrations', value: stats.total, icon: Users, color: 'text-brand-600', bg: 'bg-brand-50', border: 'border-brand-100' },
           { label: 'Approved', value: stats.approved, icon: UserCheck, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100' },
           { label: 'Pending', value: stats.pending, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
           { label: 'Rejected', value: stats.rejected, icon: UserX, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
@@ -189,7 +189,7 @@ export default function AlumniRegistrationsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+      <div className="admin-card-surface overflow-hidden">
         {paginated.length === 0 ? (
           <EmptyState
             icon={<Users size={40} />}

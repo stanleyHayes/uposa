@@ -119,7 +119,7 @@ export default function AdminUsersPage() {
           { label: 'Total Users', value: stats.total, icon: ShieldCheck, color: 'text-brand-600', bg: 'bg-brand-50', border: 'border-brand-100' },
           { label: 'Active', value: stats.active, icon: UserCheck, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100' },
           { label: 'Inactive', value: stats.inactive, icon: UserX, color: 'text-gray-500', bg: 'bg-gray-50', border: 'border-gray-100' },
-          { label: 'Super Admins', value: stats.superAdmins, icon: ShieldCheck, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100' },
+          { label: 'Super Admins', value: stats.superAdmins, icon: ShieldCheck, color: 'text-brand-600', bg: 'bg-cream-100', border: 'border-cream-300' },
         ]}
       />
 
@@ -133,7 +133,7 @@ export default function AdminUsersPage() {
         />
       </div>
 
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+      <div className="admin-card-surface overflow-hidden">
         {filtered.length === 0 ? (
           <EmptyState
             icon={<ShieldCheck size={40} />}
@@ -162,7 +162,7 @@ export default function AdminUsersPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <img
-                            src={user.avatarUrl ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4f46e5&color=fff`}
+                            src={user.avatarUrl ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=001B50&color=FFF8DC&bold=true`}
                             alt={user.name}
                             className="w-8 h-8 rounded-full object-cover"
                           />

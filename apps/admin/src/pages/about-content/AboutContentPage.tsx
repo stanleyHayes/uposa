@@ -132,7 +132,7 @@ export default function AboutContentPage() {
 
       <div className="grid grid-cols-1 gap-6 max-w-4xl">
         {/* Mission & Vision */}
-        <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+        <div className="admin-card-surface p-6">
           <div className="flex items-center gap-2 mb-4">
             <BookOpen size={18} className="text-brand-600" />
             <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Mission & Vision</h2>
@@ -154,7 +154,7 @@ export default function AboutContentPage() {
         </div>
 
         {/* History */}
-        <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+        <div className="admin-card-surface p-6">
           <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">History</h2>
           <Textarea
             label="Founding Story & Timeline"
@@ -165,7 +165,7 @@ export default function AboutContentPage() {
         </div>
 
         {/* Constitution */}
-        <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+        <div className="admin-card-surface p-6">
           <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Constitution / Bylaws</h2>
           <div className="space-y-4">
             {/* PDF Upload */}
@@ -245,7 +245,7 @@ export default function AboutContentPage() {
         </div>
 
         {/* What We Do */}
-        <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+        <div className="admin-card-surface p-6">
           <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">What We Do</h2>
           <Textarea
             label="Description of Activities"

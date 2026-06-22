@@ -8,16 +8,299 @@
 @font-face { font-family: 'Euclid Circular A'; src: url('/fonts/Euclid Circular A Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
 
 * {
-  font-family: 'Euclid Circular A', ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--uposa-font-body);
+}
+
+*,
+*::before,
+*::after {
+  border-radius: 0 !important;
+  clip-path: none !important;
+}
+
+:root {
+  --uposa-font-display: 'Fraunces', 'Euclid Circular A', ui-serif, Georgia, serif;
+  --uposa-font-body: 'Euclid Circular A', ui-sans-serif, system-ui, sans-serif;
+  --uposa-font-status: 'Outfit', 'Euclid Circular A', ui-sans-serif, system-ui, sans-serif;
+  --uposa-primary: #001B50;
+  --uposa-primary-soft: #003380;
+  --uposa-secondary: #D4AF37;
+  --uposa-cream: #FFF8DC;
+  --uposa-cream-soft: #FFFDF5;
+  --uposa-cream-muted: #F5EDCF;
+  --uposa-cream-line: #EBE3C3;
 }
 
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply bg-cream-50 text-gray-900 antialiased;
+    font-family: var(--uposa-font-body);
   }
   .dark body {
     @apply bg-dark-bg text-gray-100;
   }
+
+  h1,
+  .font-display,
+  .text-5xl,
+  .text-6xl,
+  .text-7xl,
+  .text-8xl,
+  .text-9xl,
+  [class*="text-[clamp"] {
+    font-family: var(--uposa-font-display);
+    font-optical-sizing: auto;
+  }
+
+  h5,
+  h6,
+  b,
+  strong,
+  .font-bold,
+  .font-semibold,
+  .font-extrabold,
+  .font-black {
+    font-family: var(--uposa-font-body);
+  }
+
+  .font-status,
+  .badge,
+  [class*="badge-"],
+  .text-\[10px\].uppercase,
+  .text-\[11px\].uppercase,
+  .text-xs.uppercase,
+  .text-sm.uppercase {
+    font-family: var(--uposa-font-status);
+  }
+}
+
+/* Unlayered typography role overrides. These must sit outside `@layer base`
+   because the global body font rule is also unlayered. */
+h1,
+.font-display,
+.text-4xl,
+.text-5xl,
+.text-6xl,
+.text-7xl,
+.text-8xl,
+.text-9xl,
+[class*="text-[clamp"] {
+  font-family: var(--uposa-font-display);
+  font-optical-sizing: auto;
+}
+
+h5,
+h6 {
+  font-family: var(--uposa-font-body);
+}
+
+.font-status,
+.badge,
+[class*="badge-"],
+.text-\[10px\].uppercase,
+.text-\[11px\].uppercase,
+.text-xs.uppercase,
+.text-sm.uppercase {
+  font-family: var(--uposa-font-status);
+}
+
+/* Theme switch — circular reveal driven by the View Transitions API (themeTransition.ts). */
+::view-transition-old(root) { z-index: 0; }
+::view-transition-new(root) { z-index: 1; }
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Alumni-inspired admin surfaces */
+.bg-white {
+  background-color: var(--uposa-cream-soft);
+}
+
+.bg-gray-50 {
+  background-color: var(--uposa-cream);
+}
+
+.bg-gray-100 {
+  background-color: var(--uposa-cream-muted);
+}
+
+.border-gray-200,
+.border-gray-200\/80,
+.border-gray-100,
+.border-gray-100\/80 {
+  border-color: rgba(0, 27, 80, 0.12);
+}
+
+.dark .dark\:bg-dark-card {
+  background-color: #0d1f42;
+}
+
+.dark .dark\:bg-dark-hover {
+  background-color: #112550;
+}
+
+.dark .dark\:border-dark-border {
+  border-color: #1a3060;
+}
+
+.admin-card-surface {
+  border: 1px solid rgba(0, 27, 80, 0.1);
+  background:
+    linear-gradient(145deg, rgba(255, 253, 245, 0.98), rgba(255, 248, 220, 0.94)),
+    var(--uposa-cream-soft);
+  box-shadow:
+    0 2px 10px rgba(0, 27, 80, 0.06),
+    0 0 0 1px rgba(0, 27, 80, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.admin-card-surface:hover {
+  border-color: rgba(0, 27, 80, 0.16);
+  box-shadow:
+    0 12px 42px rgba(0, 27, 80, 0.1),
+    0 2px 6px rgba(0, 27, 80, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.68);
+}
+
+.dark .admin-card-surface {
+  border-color: rgba(74, 123, 199, 0.25);
+  background:
+    linear-gradient(145deg, rgba(13, 31, 66, 0.98), rgba(10, 26, 58, 0.94)),
+    #0d1f42;
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(74, 123, 199, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.dark .admin-card-surface:hover {
+  border-color: rgba(74, 123, 199, 0.35);
+  box-shadow:
+    0 12px 42px rgba(0, 0, 0, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Theme bridge for the third-party markdown editor */
+.markdown-editor-shell,
+.markdown-editor-shell .wmde-markdown,
+.markdown-editor-shell .wmde-markdown-var,
+.markdown-editor-preview .wmde-markdown,
+.markdown-editor-preview .wmde-markdown-var {
+  --color-fg-default: var(--uposa-primary);
+  --color-fg-muted: rgba(0, 27, 80, 0.58);
+  --color-fg-subtle: rgba(0, 27, 80, 0.4);
+  --color-canvas-default: var(--uposa-cream-soft);
+  --color-canvas-subtle: var(--uposa-cream);
+  --color-border-default: rgba(0, 27, 80, 0.16);
+  --color-border-muted: rgba(0, 27, 80, 0.1);
+  --color-neutral-muted: rgba(0, 27, 80, 0.07);
+  --color-accent-fg: var(--uposa-primary);
+  --color-accent-emphasis: var(--uposa-primary);
+  --color-danger-fg: #b91c1c;
+  --md-editor-background-color: var(--uposa-cream-soft);
+  --md-editor-box-shadow-color: rgba(0, 27, 80, 0.16);
+  color-scheme: light;
+}
+
+.dark .markdown-editor-shell,
+.dark .markdown-editor-shell .wmde-markdown,
+.dark .markdown-editor-shell .wmde-markdown-var,
+.dark .markdown-editor-preview .wmde-markdown,
+.dark .markdown-editor-preview .wmde-markdown-var {
+  --color-fg-default: #f3f4f6;
+  --color-fg-muted: #aeb8ca;
+  --color-fg-subtle: #7d8ba3;
+  --color-canvas-default: #0d1f42;
+  --color-canvas-subtle: #112550;
+  --color-border-default: #1a3060;
+  --color-border-muted: rgba(255, 255, 255, 0.08);
+  --color-neutral-muted: rgba(255, 255, 255, 0.08);
+  --color-accent-fg: #f4d36a;
+  --color-accent-emphasis: #d4af37;
+  --color-danger-fg: #f87171;
+  --md-editor-background-color: #0d1f42;
+  --md-editor-box-shadow-color: #1a3060;
+  color-scheme: dark;
+}
+
+.markdown-editor-shell .w-md-editor {
+  border: 1px solid rgba(0, 27, 80, 0.14);
+  background: var(--uposa-cream-soft) !important;
+  box-shadow: 0 2px 10px rgba(0, 27, 80, 0.06);
+  color: var(--uposa-primary);
+  font-family: 'Euclid Circular A', ui-sans-serif, system-ui, sans-serif;
+}
+
+.dark .markdown-editor-shell .w-md-editor {
+  border-color: #1a3060;
+  background: #0d1f42 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  color: #f3f4f6;
+}
+
+.markdown-editor-shell .w-md-editor-toolbar {
+  border-bottom-color: rgba(0, 27, 80, 0.12);
+  background: var(--uposa-cream) !important;
+}
+
+.dark .markdown-editor-shell .w-md-editor-toolbar {
+  border-bottom-color: #1a3060;
+  background: #112550 !important;
+}
+
+.markdown-editor-shell .w-md-editor-content,
+.markdown-editor-shell .w-md-editor-area,
+.markdown-editor-shell .w-md-editor-input,
+.markdown-editor-shell .w-md-editor-preview,
+.markdown-editor-shell .w-md-editor-text,
+.markdown-editor-shell .w-md-editor-text-pre {
+  background: var(--uposa-cream-soft) !important;
+}
+
+.dark .markdown-editor-shell .w-md-editor-content,
+.dark .markdown-editor-shell .w-md-editor-area,
+.dark .markdown-editor-shell .w-md-editor-input,
+.dark .markdown-editor-shell .w-md-editor-preview,
+.dark .markdown-editor-shell .w-md-editor-text,
+.dark .markdown-editor-shell .w-md-editor-text-pre {
+  background: #0d1f42 !important;
+}
+
+.markdown-editor-shell .w-md-editor-text-input,
+.markdown-editor-shell .w-md-editor-text-pre > code {
+  caret-color: var(--uposa-primary);
+  color: var(--uposa-primary) !important;
+}
+
+.dark .markdown-editor-shell .w-md-editor-text-input,
+.dark .markdown-editor-shell .w-md-editor-text-pre > code {
+  caret-color: #f4d36a;
+  color: #f3f4f6 !important;
+}
+
+.markdown-editor-shell .w-md-editor-toolbar li > button {
+  color: rgba(0, 27, 80, 0.68);
+}
+
+.markdown-editor-shell .w-md-editor-toolbar li > button:hover,
+.markdown-editor-shell .w-md-editor-toolbar li > button:focus,
+.markdown-editor-shell .w-md-editor-toolbar li.active > button {
+  background: rgba(0, 27, 80, 0.07);
+  color: var(--uposa-primary);
+}
+
+.dark .markdown-editor-shell .w-md-editor-toolbar li > button {
+  color: #c5cedd;
+}
+
+.dark .markdown-editor-shell .w-md-editor-toolbar li > button:hover,
+.dark .markdown-editor-shell .w-md-editor-toolbar li > button:focus,
+.dark .markdown-editor-shell .w-md-editor-toolbar li.active > button {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f4d36a;
 }
 
 /* ─── Select dropdown ────────────────────────────────────── */

@@ -1,16 +1,34 @@
-import { useState, useRef } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Camera, Save, User, Briefcase, GraduationCap, Phone, Upload, Mail, Shield } from 'lucide-react'
+import {
+  AlertCircle,
+  BadgeCheck,
+  Briefcase,
+  Building2,
+  Camera,
+  CheckCircle2,
+  GraduationCap,
+  HeartHandshake,
+  Mail,
+  MapPin,
+  Phone,
+  Save,
+  Shield,
+  Sparkles,
+  Upload,
+  User,
+  type LucideIcon,
+} from 'lucide-react'
 import { motion } from 'framer-motion'
 import PageTransition from '../../components/common/PageTransition'
-import PageHeader from '../../components/ui/PageHeader'
+import Avatar from '../../components/ui/Avatar'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { useAuthStore } from '../../stores/auth.store'
 import { membersApi } from '../../api/services'
 import { useToast } from '../../hooks/useToast'
-import { formatEnum } from '../../utils/formatters'
+import { formatDate, formatEnum } from '../../utils/formatters'
 
 const schema = z.object({
   fullName: z.string().min(2),
@@ -38,15 +56,83 @@ const schema = z.object({
   nextOfKinRelationship: z.string().optional(),
 })
 
-const inputCls = 'input input-bordered w-full bg-base-200/30 border-base-300 focus:border-primary focus:bg-base-100 transition-colors'
-const selectCls = 'select select-bordered w-full bg-base-200/30 border-base-300 focus:border-primary focus:bg-base-100 transition-colors'
-const labelCls = 'label-text font-medium text-sm'
+const regions = ['Ahafo', 'Ashanti', 'Bono', 'Bono East', 'Central', 'Eastern', 'Greater Accra', 'North East', 'Northern', 'Oti', 'Savannah', 'Upper East', 'Upper West', 'Volta', 'Western', 'Western North']
+const cities = ['Accra', 'Kumasi', 'Cape Coast', 'Takoradi', 'Tamale', 'Sunyani', 'Ho', 'Koforidua', 'Bolgatanga', 'Wa', 'Techiman', 'Obuasi', 'Tema', 'Winneba', 'Other']
+const programmes = ['GENERAL_ARTS', 'BUSINESS', 'HOME_ECONOMICS', 'VISUAL_ARTS', 'SCIENCE']
+const houses = ['ACKAH', 'DENSU', 'TANO', 'NKRUMAH', 'PRA', 'VOLTA']
+const employmentTypes = ['RETIRED', 'STUDENT', 'UNEMPLOYED', 'SELF_EMPLOYED', 'GOVERNMENT_WORKER', 'PRIVATE_WORKER']
+const maritalStatuses = ['SINGLE', 'MARRIED', 'SEPARATED', 'DIVORCED', 'WIDOWED']
+
+const inputCls = 'input input-bordered h-12 w-full border-primary/10 bg-base-100 px-4 text-base-content shadow-none transition-colors placeholder:text-base-content/35 focus:border-primary focus:bg-base-100 focus:outline-none'
+const selectCls = 'select select-bordered h-12 w-full border-primary/10 bg-base-100 text-base-content shadow-none transition-colors focus:border-primary focus:bg-base-100 focus:outline-none'
+const textareaCls = 'textarea textarea-bordered min-h-32 w-full border-primary/10 bg-base-100 text-base-content shadow-none transition-colors placeholder:text-base-content/35 focus:border-primary focus:bg-base-100 focus:outline-none'
+const labelCls = 'text-xs font-bold uppercase tracking-[0.14em] text-base-content/50'
+
+type TabKey = 'personal' | 'academic' | 'professional' | 'emergency'
+
+const tabs: Array<{ key: TabKey; label: string; icon: LucideIcon; helper: string }> = [
+  { key: 'personal', label: 'Personal', icon: User, helper: 'Identity and contact' },
+  { key: 'academic', label: 'Academic', icon: GraduationCap, helper: 'Year group record' },
+  { key: 'professional', label: 'Professional', icon: Briefcase, helper: 'Work and mentorship' },
+  { key: 'emergency', label: 'Emergency', icon: Phone, helper: 'Trusted contacts' },
+]
+
+function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
+  return (
+    <label className="form-control">
+      <span className="label pb-2">
+        <span className={labelCls}>{label}</span>
+      </span>
+      {children}
+      {error && <span className="mt-2 text-xs font-semibold text-error">{error}</span>}
+    </label>
+  )
+}
+
+function ProfileFact({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: ReactNode }) {
+  return (
+    <div className="flex min-w-0 items-center gap-3 border border-primary-content/10 bg-primary-content/[0.06] p-3 rounded-[18px_4px_18px_4px]">
+      <span className="grid h-10 w-10 shrink-0 place-items-center bg-secondary text-primary rounded-[14px_3px_14px_3px]">
+        <Icon className="h-4 w-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-primary-content/42">{label}</span>
+        <span className="mt-1 block truncate text-sm font-bold text-primary-content">{value}</span>
+      </span>
+    </div>
+  )
+}
+
+function StatusRailItem({ complete, label }: { complete: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-[12px_3px_12px_3px] ${complete ? 'bg-success/12 text-success' : 'bg-base-300/45 text-base-content/34'}`}>
+        {complete ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+      </span>
+      <span className="text-sm font-semibold text-base-content/72">{label}</span>
+    </div>
+  )
+}
+
+function SectionTitle({ icon: Icon, eyebrow, title }: { icon: LucideIcon; eyebrow: string; title: string }) {
+  return (
+    <div className="mb-5 flex items-center gap-3">
+      <span className="grid h-11 w-11 shrink-0 place-items-center bg-primary/8 text-primary rounded-[14px_3px_14px_3px]">
+        <Icon className="h-5 w-5" />
+      </span>
+      <span>
+        <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-secondary">{eyebrow}</span>
+        <span className="mt-1 block text-lg font-bold leading-tight text-base-content">{title}</span>
+      </span>
+    </div>
+  )
+}
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [tab, setTab] = useState<'personal' | 'academic' | 'professional' | 'emergency'>('personal')
+  const [tab, setTab] = useState<TabKey>('personal')
   const fileRef = useRef<HTMLInputElement>(null)
   const toast = useToast()
 
@@ -62,7 +148,7 @@ export default function ProfilePage() {
       altPhoneNumber: user?.altPhoneNumber || '',
       residentialAddress: user?.residentialAddress || '',
       city: user?.city || '',
-      region: (user as any)?.region || '',
+      region: user?.region || '',
       country: user?.country || 'Ghana',
       yearGroup: user?.yearGroup?.toString() || '',
       programme: user?.programme || '',
@@ -79,6 +165,19 @@ export default function ProfilePage() {
       nextOfKinRelationship: user?.nextOfKinRelationship || '',
     },
   })
+
+  const profileChecks = [
+    { label: 'Identity', complete: Boolean(user?.fullName && user?.email) },
+    { label: 'Contact', complete: Boolean(user?.mobileNumber && user?.city) },
+    { label: 'Academic', complete: Boolean(user?.yearGroup && user?.programme && user?.house) },
+    { label: 'Work', complete: Boolean(user?.occupation || user?.organization) },
+    { label: 'Emergency', complete: Boolean(user?.emergencyContactNumber || user?.nextOfKinContact) },
+  ]
+  const completion = Math.round((profileChecks.filter((item) => item.complete).length / profileChecks.length) * 100)
+  const location = [user?.city, user?.country].filter(Boolean).join(', ') || 'Location pending'
+  const workLabel = user?.occupation
+    ? `${user.occupation}${user.organization ? ` at ${user.organization}` : ''}`
+    : 'Professional details pending'
 
   const onSubmit = async (data: Record<string, unknown>) => {
     setLoading(true)
@@ -120,288 +219,354 @@ export default function ProfilePage() {
     }
   }
 
-  const tabs = [
-    { key: 'personal' as const, label: 'Personal', icon: User },
-    { key: 'academic' as const, label: 'Academic', icon: GraduationCap },
-    { key: 'professional' as const, label: 'Professional', icon: Briefcase },
-    { key: 'emergency' as const, label: 'Emergency', icon: Phone },
-  ]
-
   return (
     <PageTransition>
-      <PageHeader title="My Profile" description="Manage your alumni profile" />
+      <div className="relative space-y-6">
+        <img
+          src="/logo.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none fixed right-[-8rem] top-24 z-0 hidden h-[26rem] w-[26rem] object-contain opacity-[0.025] xl:block"
+        />
 
-      {/* Profile header card */}
-      <div className="bg-gradient-to-r from-primary via-primary/95 to-accent rounded-2xl p-6 mb-6 text-primary-content relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
-        <div className="relative flex flex-col sm:flex-row items-center gap-5">
-          {/* Photo upload */}
-          <div className="relative group">
-            <div className="w-24 h-24 rounded-2xl overflow-hidden border-3 border-primary-content/20 shadow-lg">
-              {user?.photoUrl ? (
-                <img src={user.photoUrl} alt={user.fullName} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-primary-content/10 flex items-center justify-center">
-                  <User size={32} className="text-primary-content/40" />
+        <section className="relative z-10 overflow-hidden bg-primary text-primary-content shadow-[0_24px_80px_rgba(0,27,80,0.18)] rounded-[28px_6px_28px_6px]">
+          <img
+            src="/logo.png"
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 object-contain opacity-[0.055]"
+          />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-secondary/80 to-transparent" />
+          <div className="relative grid gap-8 p-5 sm:p-7 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:p-8">
+            <div className="flex min-w-0 flex-col gap-6">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                <div className="relative w-fit">
+                  <Avatar src={user?.photoUrl} name={user?.fullName || 'UPOSA Member'} size="xl" className="ring-4 ring-primary-content/12" />
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                    className="absolute -bottom-2 -right-2 grid h-10 w-10 place-items-center bg-secondary text-primary shadow-lg transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 rounded-[14px_3px_14px_3px]"
+                    aria-label="Upload profile photo"
+                  >
+                    {uploading ? <span className="h-4 w-4 animate-pulse bg-primary/40" /> : <Camera className="h-4 w-4" />}
+                  </button>
+                  <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoUpload} />
                 </div>
-              )}
+
+                <div className="min-w-0">
+                  <div className="mb-3 inline-flex items-center gap-2 border border-primary-content/15 bg-primary-content/10 px-3 py-2 text-xs font-semibold text-primary-content/70 rounded-[14px_3px_14px_3px]">
+                    <Sparkles className="h-4 w-4 text-secondary" />
+                    Member profile
+                  </div>
+                  <h1 className="text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">{user?.fullName || 'UPOSA Member'}</h1>
+                  <p className="mt-3 flex max-w-2xl items-center gap-2 text-sm leading-relaxed text-primary-content/62 sm:text-base">
+                    <Mail className="h-4 w-4 shrink-0 text-secondary" />
+                    <span className="min-w-0 truncate">{user?.email || 'Email pending'}</span>
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <StatusBadge status={user?.membershipStatus || 'PENDING'} className="border-primary-content/15 bg-primary-content/12 text-primary-content" />
+                    {user?.isAvailableAsMentor && (
+                      <span className="inline-flex items-center gap-1.5 border border-secondary/30 bg-secondary/15 px-3 py-1.5 text-xs font-bold text-secondary">
+                        <HeartHandshake className="h-3.5 w-3.5" />
+                        Mentor
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => fileRef.current?.click()}
+                      disabled={uploading}
+                      className="inline-flex items-center gap-1.5 border border-primary-content/15 bg-primary-content/10 px-3 py-1.5 text-xs font-bold text-primary-content/70 transition-colors hover:bg-primary-content/15 disabled:opacity-60 sm:hidden"
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      {uploading ? 'Uploading' : 'Photo'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <ProfileFact icon={GraduationCap} label="Year group" value={user?.yearGroup ? `Class of ${user.yearGroup}` : 'Pending'} />
+                <ProfileFact icon={Shield} label="House" value={user?.house ? `${formatEnum(user.house)} House` : 'Not set'} />
+                <ProfileFact icon={MapPin} label="Location" value={location} />
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              className="absolute inset-0 rounded-2xl bg-black/0 group-hover:bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-            >
-              {uploading ? (
-                <span className="loading loading-spinner loading-sm text-white" />
-              ) : (
-                <Camera size={20} className="text-white" />
-              )}
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={handlePhotoUpload}
-            />
-          </div>
 
-          {/* Info */}
-          <div className="text-center sm:text-left flex-1">
-            <h2 className="text-2xl font-bold">{user?.fullName}</h2>
-            <p className="text-primary-content/60 text-sm flex items-center gap-1.5 justify-center sm:justify-start mt-1">
-              <Mail size={13} /> {user?.email}
-            </p>
-            <div className="flex flex-wrap items-center gap-2 mt-3 justify-center sm:justify-start">
-              <StatusBadge status={user?.membershipStatus || 'PENDING'} />
-              {user?.yearGroup && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-content/15 text-primary-content/80">
-                  <GraduationCap size={12} /> Class of {user.yearGroup}
+            <aside className="flex flex-col justify-between gap-5 border border-primary-content/10 bg-primary-content/[0.06] p-5 rounded-[22px_4px_22px_4px]">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">Profile strength</p>
+                <div className="mt-4 flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-5xl font-bold leading-none text-primary-content">{completion}%</p>
+                    <p className="mt-2 text-sm leading-relaxed text-primary-content/55">Your record is checked against the details that help alumni find, verify, and support you.</p>
+                  </div>
+                  <BadgeCheck className="h-12 w-12 shrink-0 text-secondary" />
+                </div>
+                <div className="mt-5 h-2 overflow-hidden bg-primary-content/12">
+                  <div className="h-full bg-secondary transition-all duration-500" style={{ width: `${completion}%` }} />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-content/42">Current work</p>
+                <p className="text-sm font-semibold leading-relaxed text-primary-content/78">{workLabel}</p>
+                <p className="text-xs text-primary-content/42">
+                  Joined {user?.createdAt ? formatDate(user.createdAt, 'MMM yyyy') : 'date pending'}
+                </p>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section className="relative z-10 grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <aside className="space-y-4">
+            <div className="border border-primary/10 bg-base-100/90 p-5 shadow-[0_12px_34px_rgba(0,27,80,0.07)] rounded-[22px_4px_22px_4px]">
+              <div className="flex items-center gap-3">
+                <span className="grid h-11 w-11 place-items-center bg-primary/8 text-primary rounded-[14px_3px_14px_3px]">
+                  <CheckCircle2 className="h-5 w-5" />
                 </span>
-              )}
-              {user?.house && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-content/15 text-primary-content/80">
-                  <Shield size={12} /> {formatEnum(user.house)}
-                </span>
-              )}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-secondary">Record check</p>
+                  <h2 className="mt-1 text-lg font-bold">Profile readiness</h2>
+                </div>
+              </div>
+              <div className="mt-5 space-y-3">
+                {profileChecks.map((item) => (
+                  <StatusRailItem key={item.label} complete={item.complete} label={item.label} />
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Upload button (mobile fallback) */}
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="btn btn-sm bg-primary-content/15 border-primary-content/20 text-primary-content hover:bg-primary-content/25 gap-1.5 sm:hidden"
-          >
-            <Upload size={14} /> {uploading ? 'Uploading...' : 'Change Photo'}
-          </button>
-        </div>
-      </div>
+            <div className="grid gap-2 rounded-[22px_4px_22px_4px] border border-primary/10 bg-base-100/80 p-3 shadow-[0_12px_34px_rgba(0,27,80,0.05)]">
+              {tabs.map((item) => {
+                const isActive = tab === item.key
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setTab(item.key)}
+                    className={`group flex w-full items-center gap-3 p-3 text-left transition-all rounded-[18px_3px_18px_3px] ${
+                      isActive ? 'bg-primary text-primary-content shadow-[0_14px_30px_rgba(0,27,80,0.14)]' : 'text-base-content/70 hover:bg-base-200/70 hover:text-primary'
+                    }`}
+                  >
+                    <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-[14px_3px_14px_3px] ${isActive ? 'bg-secondary text-primary' : 'bg-primary/8 text-primary'}`}>
+                      <item.icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-bold">{item.label}</span>
+                      <span className={`mt-0.5 block truncate text-xs ${isActive ? 'text-primary-content/55' : 'text-base-content/45'}`}>{item.helper}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </aside>
 
-      {/* Form */}
-      <div className="bg-base-100 rounded-2xl border border-base-300/60 shadow-sm overflow-hidden">
-        {/* Tabs */}
-        <div className="border-b border-base-300/50 px-4">
-          <div className="flex gap-0 overflow-x-auto">
-            {tabs.map((t) => {
-              const isActive = tab === t.key
-              return (
-                <button
-                  key={t.key}
-                  onClick={() => setTab(t.key)}
-                  className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap -mb-px ${
-                    isActive ? 'border-primary text-primary' : 'border-transparent text-base-content/50 hover:text-base-content/80'
-                  }`}
-                >
-                  <t.icon size={15} />
-                  {t.label}
+          <form onSubmit={handleSubmit(onSubmit)} className="min-w-0">
+            <div className="overflow-hidden border border-primary/10 bg-base-100/92 shadow-[0_18px_50px_rgba(0,27,80,0.08)] rounded-[24px_4px_24px_4px]">
+              <div className="h-1 bg-gradient-to-r from-secondary via-primary to-secondary" />
+              <div className="p-5 sm:p-6 lg:p-7">
+                {tab === 'personal' && (
+                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                    <SectionTitle icon={User} eyebrow="Identity" title="Personal and contact details" />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Full name" error={errors.fullName?.message?.toString()}>
+                        <input type="text" className={`${inputCls} ${errors.fullName ? 'input-error' : ''}`} {...register('fullName')} />
+                      </Field>
+                      <Field label="Gender">
+                        <select className={selectCls} {...register('gender')}>
+                          <option value="">Select</option>
+                          <option value="MALE">Male</option>
+                          <option value="FEMALE">Female</option>
+                          <option value="OTHER">Other</option>
+                        </select>
+                      </Field>
+                      <Field label="Date of birth">
+                        <input type="date" className={inputCls} {...register('dateOfBirth')} />
+                      </Field>
+                      <Field label="Marital status">
+                        <select className={selectCls} {...register('maritalStatus')}>
+                          <option value="">Select</option>
+                          {maritalStatuses.map((status) => (
+                            <option key={status} value={status}>{formatEnum(status)}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Mobile number">
+                        <input type="tel" className={inputCls} {...register('mobileNumber')} />
+                      </Field>
+                      <Field label="Alternative phone">
+                        <input type="tel" className={inputCls} {...register('altPhoneNumber')} />
+                      </Field>
+                    </div>
+                    <Field label="Residential address">
+                      <input type="text" className={inputCls} {...register('residentialAddress')} />
+                    </Field>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <Field label="Region">
+                        <select className={selectCls} {...register('region')}>
+                          <option value="">Select region</option>
+                          {regions.map((region) => (
+                            <option key={region}>{region}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="City">
+                        <select className={selectCls} {...register('city')}>
+                          <option value="">Select city</option>
+                          {cities.map((city) => (
+                            <option key={city}>{city}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Country">
+                        <input type="text" className={inputCls} {...register('country')} />
+                      </Field>
+                    </div>
+                  </motion.div>
+                )}
+
+                {tab === 'academic' && (
+                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                    <SectionTitle icon={GraduationCap} eyebrow="UPOSA record" title="School history" />
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <Field label="Year group">
+                        <select className={selectCls} {...register('yearGroup')}>
+                          <option value="">Select year</option>
+                          {Array.from({ length: new Date().getFullYear() - 1980 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Programme">
+                        <select className={selectCls} {...register('programme')}>
+                          <option value="">Select</option>
+                          {programmes.map((programme) => (
+                            <option key={programme} value={programme}>{formatEnum(programme)}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="House">
+                        <select className={selectCls} {...register('house')}>
+                          <option value="">Select</option>
+                          {houses.map((house) => (
+                            <option key={house} value={house}>{formatEnum(house)}</option>
+                          ))}
+                        </select>
+                      </Field>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="border border-primary/8 bg-base-200/40 p-4 rounded-[18px_4px_18px_4px]">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-base-content/42">Directory label</p>
+                        <p className="mt-2 text-lg font-bold text-primary">{user?.yearGroup ? `Class of ${user.yearGroup}` : 'Not set'}</p>
+                      </div>
+                      <div className="border border-primary/8 bg-base-200/40 p-4 rounded-[18px_4px_18px_4px]">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-base-content/42">Programme</p>
+                        <p className="mt-2 text-lg font-bold text-primary">{user?.programme ? formatEnum(user.programme) : 'Not set'}</p>
+                      </div>
+                      <div className="border border-primary/8 bg-base-200/40 p-4 rounded-[18px_4px_18px_4px]">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-base-content/42">House network</p>
+                        <p className="mt-2 text-lg font-bold text-primary">{user?.house ? formatEnum(user.house) : 'Not set'}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {tab === 'professional' && (
+                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                    <SectionTitle icon={Briefcase} eyebrow="Work profile" title="Professional and mentorship details" />
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <Field label="Employment type">
+                        <select className={selectCls} {...register('employmentType')}>
+                          <option value="">Select</option>
+                          {employmentTypes.map((type) => (
+                            <option key={type} value={type}>{formatEnum(type)}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Occupation">
+                        <input type="text" className={inputCls} {...register('occupation')} />
+                      </Field>
+                      <Field label="Organization">
+                        <input type="text" className={inputCls} {...register('organization')} />
+                      </Field>
+                    </div>
+                    <div className="grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+                      <label className="flex h-full cursor-pointer items-start gap-4 border border-primary/10 bg-base-200/45 p-4 transition-colors hover:border-primary/18 hover:bg-base-200/70 rounded-[20px_4px_20px_4px]">
+                        <input type="checkbox" className="checkbox checkbox-primary checkbox-sm mt-1" {...register('isAvailableAsMentor')} />
+                        <span>
+                          <span className="flex items-center gap-2 font-bold text-base-content">
+                            <HeartHandshake className="h-4 w-4 text-primary" />
+                            Available as a mentor
+                          </span>
+                          <span className="mt-2 block text-sm leading-relaxed text-base-content/58">Show alumni that you are open to career, school, and life guidance requests.</span>
+                        </span>
+                      </label>
+                      <Field label="Mentor bio">
+                        <textarea className={textareaCls} placeholder="Share your focus areas, experience, and the kind of guidance you can offer." {...register('mentorBio')} />
+                      </Field>
+                    </div>
+                    <div className="flex items-center gap-3 border border-secondary/25 bg-secondary/10 p-4 text-sm font-semibold leading-relaxed text-primary rounded-[18px_4px_18px_4px]">
+                      <Building2 className="h-5 w-5 shrink-0" />
+                      {workLabel}
+                    </div>
+                  </motion.div>
+                )}
+
+                {tab === 'emergency' && (
+                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                    <SectionTitle icon={Phone} eyebrow="Safety net" title="Emergency and next of kin" />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Emergency contact">
+                        <input type="tel" className={inputCls} {...register('emergencyContactNumber')} />
+                      </Field>
+                      <Field label="Emergency relationship">
+                        <input type="text" className={inputCls} {...register('emergencyRelationship')} />
+                      </Field>
+                    </div>
+                    <div className="h-px bg-gradient-to-r from-transparent via-primary/12 to-transparent" />
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <Field label="Next of kin name">
+                        <input type="text" className={inputCls} {...register('nextOfKinName')} />
+                      </Field>
+                      <Field label="Next of kin contact">
+                        <input type="tel" className={inputCls} {...register('nextOfKinContact')} />
+                      </Field>
+                      <Field label="Next of kin relationship">
+                        <input type="text" className={inputCls} {...register('nextOfKinRelationship')} />
+                      </Field>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3 border-t border-primary/8 bg-base-200/35 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-7">
+                <div className="flex items-center gap-2 text-sm font-semibold text-base-content/55">
+                  {isDirty ? (
+                    <>
+                      <AlertCircle className="h-4 w-4 text-warning" />
+                      Unsaved changes
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-success" />
+                      Profile is in sync
+                    </>
+                  )}
+                </div>
+                <button type="submit" className="btn btn-primary min-h-12 gap-2 px-6" disabled={loading || !isDirty}>
+                  {loading ? (
+                    <span className="h-4 w-20 animate-pulse bg-primary-content/35" />
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Save profile
+                    </>
+                  )}
                 </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6">
-          {tab === 'personal' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>Full Name *</span></label>
-                  <input type="text" className={`${inputCls} ${errors.fullName ? 'input-error' : ''}`} {...register('fullName')} />
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>Gender</span></label>
-                  <select className={selectCls} {...register('gender')}>
-                    <option value="">Select</option>
-                    <option value="MALE">Male</option>
-                    <option value="FEMALE">Female</option>
-                    <option value="OTHER">Other</option>
-                  </select>
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>Date of Birth</span></label>
-                  <input type="date" className={inputCls} {...register('dateOfBirth')} />
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>Marital Status</span></label>
-                  <select className={selectCls} {...register('maritalStatus')}>
-                    <option value="">Select</option>
-                    {['SINGLE', 'MARRIED', 'SEPARATED', 'DIVORCED', 'WIDOWED'].map((s) => (
-                      <option key={s} value={s}>{formatEnum(s)}</option>
-                    ))}
-                  </select>
-                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>Mobile Number</span></label>
-                  <input type="tel" className={inputCls} {...register('mobileNumber')} />
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>Alt Phone</span></label>
-                  <input type="tel" className={inputCls} {...register('altPhoneNumber')} />
-                </div>
-              </div>
-              <div className="form-control">
-                <label className="label"><span className={labelCls}>Residential Address</span></label>
-                <input type="text" className={inputCls} {...register('residentialAddress')} />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>Region</span></label>
-                  <select className={selectCls} {...register('region')}>
-                    <option value="">Select region</option>
-                    {['Ahafo','Ashanti','Bono','Bono East','Central','Eastern','Greater Accra','North East','Northern','Oti','Savannah','Upper East','Upper West','Volta','Western','Western North'].map(r => (
-                      <option key={r}>{r}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>City</span></label>
-                  <select className={selectCls} {...register('city')}>
-                    <option value="">Select city</option>
-                    {['Accra','Kumasi','Cape Coast','Takoradi','Tamale','Sunyani','Ho','Koforidua','Bolgatanga','Wa','Techiman','Obuasi','Tema','Winneba','Other'].map(c => (
-                      <option key={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>Country</span></label>
-                  <input type="text" className={inputCls} {...register('country')} />
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {tab === 'academic' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="form-control">
-                <label className="label"><span className={labelCls}>Year Group</span></label>
-                <select className={selectCls} {...register('yearGroup')}>
-                  <option value="">Select year</option>
-                  {Array.from({ length: new Date().getFullYear() - 1980 }, (_, i) => new Date().getFullYear() - i).map(y => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-control">
-                <label className="label"><span className={labelCls}>Programme</span></label>
-                <select className={selectCls} {...register('programme')}>
-                  <option value="">Select</option>
-                  {['GENERAL_ARTS', 'BUSINESS', 'HOME_ECONOMICS', 'VISUAL_ARTS', 'SCIENCE'].map((p) => (
-                    <option key={p} value={p}>{formatEnum(p)}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-control">
-                <label className="label"><span className={labelCls}>House</span></label>
-                <select className={selectCls} {...register('house')}>
-                  <option value="">Select</option>
-                  {['ACKAH', 'DENSU', 'TANO', 'NKRUMAH', 'PRA', 'VOLTA'].map((h) => (
-                    <option key={h} value={h}>{formatEnum(h)}</option>
-                  ))}
-                </select>
-              </div>
-            </motion.div>
-          )}
-
-          {tab === 'professional' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>Employment Type</span></label>
-                  <select className={selectCls} {...register('employmentType')}>
-                    <option value="">Select</option>
-                    {['RETIRED', 'STUDENT', 'UNEMPLOYED', 'SELF_EMPLOYED', 'GOVERNMENT_WORKER', 'PRIVATE_WORKER'].map((e) => (
-                      <option key={e} value={e}>{formatEnum(e)}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>Occupation</span></label>
-                  <input type="text" className={inputCls} {...register('occupation')} />
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>Organization</span></label>
-                  <input type="text" className={inputCls} {...register('organization')} />
-                </div>
-              </div>
-              <div className="border-t border-base-300/50 pt-4 mt-4">
-                <h3 className="font-semibold text-sm mb-3 flex items-center gap-2"><User size={14} className="text-primary" /> Mentorship</h3>
-                <label className="cursor-pointer flex items-center gap-3 p-3 rounded-xl bg-base-200/30 border border-base-300/50 hover:bg-base-200/50 transition-colors mb-3">
-                  <input type="checkbox" className="checkbox checkbox-primary checkbox-sm" {...register('isAvailableAsMentor')} />
-                  <span className="text-sm font-medium">I'm available as a mentor</span>
-                </label>
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>Mentor Bio</span></label>
-                  <textarea className="textarea textarea-bordered h-24 bg-base-200/30 border-base-300" placeholder="Tell mentees about your expertise..." {...register('mentorBio')} />
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {tab === 'emergency' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-              <h3 className="font-semibold text-sm flex items-center gap-2"><Phone size={14} className="text-primary" /> Emergency Contact</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>Contact Number</span></label>
-                  <input type="tel" className={inputCls} {...register('emergencyContactNumber')} />
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className={labelCls}>Relationship</span></label>
-                  <input type="text" className={inputCls} {...register('emergencyRelationship')} />
-                </div>
-              </div>
-              <div className="border-t border-base-300/50 pt-4 mt-2">
-                <h3 className="font-semibold text-sm mb-3 flex items-center gap-2"><User size={14} className="text-primary" /> Next of Kin</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="form-control">
-                    <label className="label"><span className={labelCls}>Name</span></label>
-                    <input type="text" className={inputCls} {...register('nextOfKinName')} />
-                  </div>
-                  <div className="form-control">
-                    <label className="label"><span className={labelCls}>Contact</span></label>
-                    <input type="tel" className={inputCls} {...register('nextOfKinContact')} />
-                  </div>
-                  <div className="form-control">
-                    <label className="label"><span className={labelCls}>Relationship</span></label>
-                    <input type="text" className={inputCls} {...register('nextOfKinRelationship')} />
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          <div className="flex justify-end pt-6 mt-4 border-t border-base-300/50">
-            <button type="submit" className={`btn btn-primary gap-2 ${loading ? 'loading' : ''}`} disabled={loading || !isDirty}>
-              {!loading && <Save size={16} />}
-              {loading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
+            </div>
+          </form>
+        </section>
       </div>
     </PageTransition>
   )

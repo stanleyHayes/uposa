@@ -120,7 +120,7 @@ export default function EventFormPage() {
         description={isEditMode ? `Editing "${existingEvent?.title}"` : 'Create a new event'}
       />
 
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+      <div className="admin-card-surface p-6">
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           <Input label="Title" error={errors.title?.message} {...register('title')} />
           <Input label="Slug" helperText="URL-friendly identifier" error={errors.slug?.message} {...register('slug')} />

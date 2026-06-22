@@ -1,13 +1,26 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
-  FileText, Award, Send, CheckCircle, Clock, User, Mail, Phone, Calendar,
+  ArrowRight,
+  Award,
+  Calendar,
+  CheckCircle2,
+  Clock3,
+  FileCheck2,
+  FileText,
+  Mail,
+  MapPin,
+  Phone,
+  ReceiptText,
+  Send,
+  Sparkles,
+  User,
+  type LucideIcon,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PageTransition from '../../components/common/PageTransition'
-import PageHeader from '../../components/ui/PageHeader'
 import ScrollReveal from '../../components/common/ScrollReveal'
 import { useAuthStore } from '../../stores/auth.store'
 import { useToast } from '../../hooks/useToast'
@@ -19,7 +32,7 @@ const transcriptSchema = z.object({
   phone: z.string().min(5, 'Phone number is required'),
   yearGroup: z.string().min(4, 'Year group is required'),
   programme: z.string().min(1, 'Programme is required'),
-  copies: z.string().optional().default('1'),
+  copies: z.string().optional(),
   deliveryMethod: z.enum(['pickup', 'mail', 'email']),
   mailingAddress: z.string().optional(),
   purpose: z.string().min(5, 'Purpose is required'),
@@ -43,17 +56,205 @@ const recommendationSchema = z.object({
 
 type TranscriptForm = z.infer<typeof transcriptSchema>
 type RecommendationForm = z.infer<typeof recommendationSchema>
+type RequestTab = 'transcript' | 'recommendation'
+
+const programmes = [
+  { value: 'GENERAL_ARTS', label: 'General Arts' },
+  { value: 'BUSINESS', label: 'Business' },
+  { value: 'HOME_ECONOMICS', label: 'Home Economics' },
+  { value: 'VISUAL_ARTS', label: 'Visual Arts' },
+  { value: 'SCIENCE', label: 'Science' },
+]
+
+const inputCls = 'input input-bordered min-h-12 w-full border-primary/10 bg-base-200/45 focus:border-primary focus:bg-base-100'
+const inputIconCls = `${inputCls} pl-10`
+const selectCls = 'select select-bordered min-h-12 w-full border-primary/10 bg-base-200/45 focus:border-primary focus:bg-base-100'
+const textareaCls = 'textarea textarea-bordered w-full border-primary/10 bg-base-200/45 leading-relaxed focus:border-primary focus:bg-base-100'
+const labelCls = 'text-xs font-bold uppercase tracking-[0.14em] text-base-content/44'
+
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone = 'bg-primary-content/[0.06] text-secondary',
+}: {
+  icon: LucideIcon
+  label: string
+  value: ReactNode
+  detail: string
+  tone?: string
+}) {
+  return (
+    <div className="flex h-full flex-col border border-primary-content/10 bg-primary-content/[0.055] p-4 rounded-[18px_4px_18px_4px]">
+      <span className={`grid h-10 w-10 place-items-center rounded-[14px_3px_14px_3px] ${tone}`}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-primary-content/42">{label}</p>
+      <p className="mt-2 truncate text-2xl font-bold text-secondary">{value}</p>
+      <p className="mt-auto pt-2 text-xs font-semibold text-primary-content/45">{detail}</p>
+    </div>
+  )
+}
+
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string
+  error?: string
+  children: ReactNode
+}) {
+  return (
+    <label className="form-control">
+      <span className="mb-2">
+        <span className={labelCls}>{label}</span>
+      </span>
+      {children}
+      {error && <span className="mt-2 text-xs font-bold text-error">{error}</span>}
+    </label>
+  )
+}
+
+function IconInput({
+  icon: Icon,
+  children,
+}: {
+  icon: LucideIcon
+  children: ReactNode
+}) {
+  return (
+    <div className="relative">
+      <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/38" />
+      {children}
+    </div>
+  )
+}
+
+function PanelHeader({
+  icon: Icon,
+  eyebrow,
+  title,
+  description,
+}: {
+  icon: LucideIcon
+  eyebrow: string
+  title: string
+  description: string
+}) {
+  return (
+    <div className="flex items-start gap-4">
+      <span className="grid h-12 w-12 shrink-0 place-items-center bg-primary/8 text-primary rounded-[16px_3px_16px_3px]">
+        <Icon className="h-5 w-5" />
+      </span>
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-secondary">{eyebrow}</p>
+        <h2 className="mt-1 text-2xl font-bold leading-tight">{title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-base-content/56">{description}</p>
+      </div>
+    </div>
+  )
+}
+
+function RequestTypeButton({
+  active,
+  icon: Icon,
+  label,
+  helper,
+  detail,
+  onClick,
+}: {
+  active: boolean
+  icon: LucideIcon
+  label: string
+  helper: string
+  detail: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className={`flex min-h-24 items-start gap-3 border p-4 text-left transition-all rounded-[22px_4px_22px_4px] ${
+        active ? 'border-primary bg-primary/7 shadow-[0_10px_24px_rgba(0,27,80,0.08)]' : 'border-primary/10 bg-base-100 hover:border-primary/20'
+      }`}
+      onClick={onClick}
+    >
+      <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-[16px_3px_16px_3px] ${active ? 'bg-primary text-primary-content' : 'bg-primary/8 text-primary'}`}>
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold">{label}</span>
+        <span className="mt-1 block text-xs font-semibold text-secondary">{helper}</span>
+        <span className="mt-2 block text-xs leading-relaxed text-base-content/50">{detail}</span>
+      </span>
+    </button>
+  )
+}
+
+function InfoCard({
+  icon: Icon,
+  label,
+  title,
+  description,
+}: {
+  icon: LucideIcon
+  label: string
+  title: string
+  description: string
+}) {
+  return (
+    <div className="border border-primary/10 bg-base-100/86 p-4 rounded-[20px_4px_20px_4px]">
+      <span className="grid h-11 w-11 place-items-center bg-primary/8 text-primary rounded-[15px_3px_15px_3px]">
+        <Icon className="h-5 w-5" />
+      </span>
+      <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.16em] text-secondary">{label}</p>
+      <h3 className="mt-1 text-base font-bold">{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-base-content/54">{description}</p>
+    </div>
+  )
+}
+
+function SuccessPanel({ submitted, onReset }: { submitted: RequestTab; onReset: () => void }) {
+  return (
+    <motion.div
+      key="success"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -12 }}
+      className="relative flex min-h-[34rem] flex-col items-center justify-center overflow-hidden border border-success/15 bg-base-100/90 px-6 py-12 text-center shadow-[0_18px_50px_rgba(0,27,80,0.08)] rounded-[28px_6px_28px_6px]"
+    >
+      <img src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 h-72 w-72 object-contain opacity-[0.035]" />
+      <span className="grid h-20 w-20 place-items-center bg-success/10 text-success rounded-[22px_5px_22px_5px]">
+        <CheckCircle2 className="h-10 w-10" />
+      </span>
+      <h2 className="mt-6 text-2xl font-bold">Request submitted</h2>
+      <p className="mt-3 max-w-md text-sm leading-relaxed text-base-content/58">
+        {submitted === 'transcript'
+          ? 'Your transcript request has been sent. Watch your email for payment instructions, confirmation, and processing details.'
+          : 'Your recommendation request has been sent. The school administration will review the details and process the letter.'}
+      </p>
+      <div className="mt-5 flex items-center gap-2 text-sm font-bold text-base-content/45">
+        <Clock3 className="h-4 w-4" />
+        {submitted === 'transcript' ? 'Estimated processing: 5-10 business days' : 'Estimated processing: 7-14 business days'}
+      </div>
+      <button type="button" className="btn btn-primary mt-7 min-h-11 gap-2" onClick={onReset}>
+        Submit another request
+        <ArrowRight className="h-4 w-4" />
+      </button>
+    </motion.div>
+  )
+}
 
 export default function RequestsPage() {
   const user = useAuthStore((s) => s.user)
   const toast = useToast()
-  const [tab, setTab] = useState<'transcript' | 'recommendation'>('transcript')
+  const [tab, setTab] = useState<RequestTab>('transcript')
   const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState<string | null>(null)
+  const [submitted, setSubmitted] = useState<RequestTab | null>(null)
 
   const transcriptForm = useForm<TranscriptForm>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(transcriptSchema) as any,
+    resolver: zodResolver(transcriptSchema),
     defaultValues: {
       fullName: user?.fullName || '',
       email: user?.email || '',
@@ -102,9 +303,11 @@ export default function RequestsPage() {
       })
       setSubmitted('transcript')
       toast.success('Transcript request submitted!')
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to submit transcript request.'
-      toast.error(msg)
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined
+      toast.error(msg || 'Failed to submit transcript request.')
     } finally {
       setSubmitting(false)
     }
@@ -136,323 +339,354 @@ export default function RequestsPage() {
       })
       setSubmitted('recommendation')
       toast.success('Recommendation request submitted!')
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to submit recommendation request.'
-      toast.error(msg)
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined
+      toast.error(msg || 'Failed to submit recommendation request.')
     } finally {
       setSubmitting(false)
     }
   }
 
   const watchDelivery = transcriptForm.watch('deliveryMethod')
+  const isTranscript = tab === 'transcript'
 
   return (
     <PageTransition>
-      <PageHeader title="Requests" description="Request transcripts, recommendations, and testimonials" />
+      <div className="relative space-y-6">
+        <img
+          src="/logo.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none fixed right-[-8rem] top-24 z-0 hidden h-[26rem] w-[26rem] object-contain opacity-[0.025] xl:block"
+        />
 
-      {/* Tab selector */}
-      <div className="flex gap-3 mb-8">
-        {[
-          { key: 'transcript' as const, label: 'Transcript Request', icon: FileText, desc: 'Academic records' },
-          { key: 'recommendation' as const, label: 'Recommendation Letter', icon: Award, desc: 'From school' },
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => { setTab(t.key); setSubmitted(null) }}
-            className={`flex-1 flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
-              tab === t.key
-                ? 'border-primary bg-primary/5'
-                : 'border-base-300 hover:border-base-content/20'
-            }`}
-          >
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-              tab === t.key ? 'bg-primary text-primary-content' : 'bg-base-200 text-base-content/50'
-            }`}>
-              <t.icon className="w-5 h-5" />
-            </div>
-            <div className="text-left">
-              <p className="font-semibold text-sm">{t.label}</p>
-              <p className="text-xs text-base-content/50">{t.desc}</p>
-            </div>
-          </button>
-        ))}
-      </div>
-
-      <AnimatePresence mode="wait">
-        {submitted ? (
-          <motion.div
-            key="success"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            className="max-w-lg mx-auto"
-          >
-            <div className="card bg-base-100 shadow-[0_2px_8px_rgba(0,27,80,0.06)]">
-              <div className="card-body items-center text-center py-12">
-                <motion.div
-                  className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mb-4"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', delay: 0.2 }}
-                >
-                  <CheckCircle className="w-10 h-10 text-success" />
-                </motion.div>
-                <h2 className="text-xl font-bold mb-2">Request Submitted!</h2>
-                <p className="text-base-content/60 max-w-sm">
-                  {submitted === 'transcript'
-                    ? 'Your transcript request has been submitted. You will receive a confirmation email with processing details and estimated timeline.'
-                    : 'Your recommendation letter request has been submitted. The school administration will review and process your request.'}
-                </p>
-                <div className="flex items-center gap-2 mt-4 text-sm text-base-content/50">
-                  <Clock className="w-4 h-4" />
-                  <span>Estimated processing time: 5-10 business days</span>
-                </div>
-                <button className="btn btn-primary btn-sm mt-6" onClick={() => setSubmitted(null)}>
-                  Submit Another Request
-                </button>
+        <section className="relative z-10 overflow-hidden bg-primary text-primary-content shadow-[0_24px_80px_rgba(0,27,80,0.18)] rounded-[28px_6px_28px_6px]">
+          <img src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 object-contain opacity-[0.055]" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-secondary/80 to-transparent" />
+          <div className="relative grid gap-8 p-5 sm:p-7 lg:grid-cols-[minmax(0,1.08fr)_minmax(340px,0.92fr)] lg:p-8">
+            <div className="min-w-0">
+              <div className="mb-4 inline-flex items-center gap-2 border border-primary-content/15 bg-primary-content/10 px-3 py-2 text-xs font-semibold text-primary-content/70 rounded-[14px_3px_14px_3px]">
+                <Sparkles className="h-4 w-4 text-secondary" />
+                Service requests
               </div>
+              <h1 className="max-w-3xl text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
+                Start official school support from one desk.
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-primary-content/62 sm:text-base">
+                Request transcripts, recommendations, and service support with the details the administration needs to process them cleanly.
+              </p>
             </div>
-          </motion.div>
-        ) : tab === 'transcript' ? (
-          <motion.div key="transcript" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <ScrollReveal>
-              <div className="card bg-base-100 shadow-[0_2px_8px_rgba(0,27,80,0.06)] max-w-2xl">
-                <div className="card-body">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold">Transcript Request Form</h3>
-                      <p className="text-xs text-base-content/50">Request official academic transcripts from the school</p>
-                    </div>
-                  </div>
 
-                  <form onSubmit={transcriptForm.handleSubmit(onTranscriptSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Full Name *</span></label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
-                          <input type="text" className={`input input-bordered w-full pl-10 ${transcriptForm.formState.errors.fullName ? 'input-error' : ''}`} {...transcriptForm.register('fullName')} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <StatTile icon={FileText} label="Transcript" value="5-10" detail="Business days" />
+              <StatTile icon={Award} label="Letters" value="7-14" detail="Business days" />
+              <StatTile icon={ReceiptText} label="Fee" value="GHS 20" detail="Per transcript copy" tone="bg-secondary/18 text-primary" />
+              <StatTile icon={FileCheck2} label="Routing" value="Admin" detail="Sent to school desk" tone="bg-success/12 text-success" />
+            </div>
+          </div>
+        </section>
+
+        <section className="relative z-10 grid gap-3 md:grid-cols-2">
+          <RequestTypeButton
+            active={tab === 'transcript'}
+            icon={FileText}
+            label="Transcript request"
+            helper="Academic records"
+            detail="Official records, copies, and delivery preference."
+            onClick={() => { setTab('transcript'); setSubmitted(null) }}
+          />
+          <RequestTypeButton
+            active={tab === 'recommendation'}
+            icon={Award}
+            label="Recommendation letter"
+            helper="School testimonial"
+            detail="Reference letters for work, admissions, scholarships, or professional use."
+            onClick={() => { setTab('recommendation'); setSubmitted(null) }}
+          />
+        </section>
+
+        <AnimatePresence mode="wait">
+          {submitted ? (
+            <SuccessPanel submitted={submitted} onReset={() => setSubmitted(null)} />
+          ) : (
+            <motion.section
+              key={tab}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              className="relative z-10 grid gap-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(330px,0.92fr)]"
+            >
+              <ScrollReveal>
+                <div className="flex h-full flex-col overflow-hidden border border-primary/10 bg-base-100/92 shadow-[0_18px_50px_rgba(0,27,80,0.08)] rounded-[28px_6px_28px_6px]">
+                  <div className="h-1 bg-secondary" />
+                  <div className="flex flex-1 flex-col p-5 sm:p-6">
+                    <PanelHeader
+                      icon={isTranscript ? FileText : Award}
+                      eyebrow={isTranscript ? 'Transcript form' : 'Recommendation form'}
+                      title={isTranscript ? 'Request academic records' : 'Request a school letter'}
+                      description={isTranscript
+                        ? 'Add your identity, programme, delivery choice, and purpose so the school can prepare the right record.'
+                        : 'Share recipient details, purpose, and deadlines so the administration can prepare the letter properly.'}
+                    />
+
+                    {isTranscript ? (
+                      <form onSubmit={transcriptForm.handleSubmit(onTranscriptSubmit)} className="mt-6 flex flex-1 flex-col">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <Field label="Full name" error={transcriptForm.formState.errors.fullName?.message}>
+                            <IconInput icon={User}>
+                              <input type="text" className={`${inputIconCls} ${transcriptForm.formState.errors.fullName ? 'input-error' : ''}`} {...transcriptForm.register('fullName')} />
+                            </IconInput>
+                          </Field>
+                          <Field label="Email" error={transcriptForm.formState.errors.email?.message}>
+                            <IconInput icon={Mail}>
+                              <input type="email" className={`${inputIconCls} ${transcriptForm.formState.errors.email ? 'input-error' : ''}`} {...transcriptForm.register('email')} />
+                            </IconInput>
+                          </Field>
+                          <Field label="Phone" error={transcriptForm.formState.errors.phone?.message}>
+                            <IconInput icon={Phone}>
+                              <input type="tel" className={`${inputIconCls} ${transcriptForm.formState.errors.phone ? 'input-error' : ''}`} {...transcriptForm.register('phone')} />
+                            </IconInput>
+                          </Field>
+                          <Field label="Year group" error={transcriptForm.formState.errors.yearGroup?.message}>
+                            <input type="text" className={`${inputCls} ${transcriptForm.formState.errors.yearGroup ? 'input-error' : ''}`} {...transcriptForm.register('yearGroup')} />
+                          </Field>
                         </div>
-                        {transcriptForm.formState.errors.fullName && <p className="text-error text-xs mt-1">{transcriptForm.formState.errors.fullName.message}</p>}
-                      </div>
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Email *</span></label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
-                          <input type="email" className={`input input-bordered w-full pl-10 ${transcriptForm.formState.errors.email ? 'input-error' : ''}`} {...transcriptForm.register('email')} />
+
+                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                          <Field label="Programme" error={transcriptForm.formState.errors.programme?.message}>
+                            <select className={`${selectCls} ${transcriptForm.formState.errors.programme ? 'select-error' : ''}`} {...transcriptForm.register('programme')}>
+                              <option value="">Select programme</option>
+                              {programmes.map((programme) => (
+                                <option key={programme.value} value={programme.value}>{programme.label}</option>
+                              ))}
+                            </select>
+                          </Field>
+                          <Field label="Copies">
+                            <select className={selectCls} {...transcriptForm.register('copies')}>
+                              {[1, 2, 3, 4, 5].map((count) => <option key={count} value={count}>{count}</option>)}
+                            </select>
+                          </Field>
                         </div>
-                      </div>
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Phone *</span></label>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
-                          <input type="tel" className={`input input-bordered w-full pl-10 ${transcriptForm.formState.errors.phone ? 'input-error' : ''}`} {...transcriptForm.register('phone')} />
+
+                        <div className="mt-4">
+                          <Field label="Delivery method">
+                            <div className="grid gap-2 sm:grid-cols-3">
+                              {[
+                                { value: 'pickup', label: 'Pick up', icon: FileCheck2 },
+                                { value: 'mail', label: 'Mail', icon: MapPin },
+                                { value: 'email', label: 'Email scan', icon: Mail },
+                              ].map((method) => {
+                                const Icon = method.icon
+                                const active = watchDelivery === method.value
+                                return (
+                                  <label
+                                    key={method.value}
+                                    className={`flex min-h-16 cursor-pointer items-center gap-3 border p-3 transition-all rounded-[18px_4px_18px_4px] ${
+                                      active ? 'border-primary bg-primary/7 shadow-[0_10px_24px_rgba(0,27,80,0.08)]' : 'border-primary/10 bg-base-100 hover:border-primary/18'
+                                    }`}
+                                  >
+                                    <input type="radio" className="radio radio-primary radio-sm" value={method.value} {...transcriptForm.register('deliveryMethod')} />
+                                    <Icon className="h-4 w-4 text-primary" />
+                                    <span className="text-sm font-bold">{method.label}</span>
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          </Field>
                         </div>
-                      </div>
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Year Group *</span></label>
-                        <input type="text" className={`input input-bordered ${transcriptForm.formState.errors.yearGroup ? 'input-error' : ''}`} {...transcriptForm.register('yearGroup')} />
-                      </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Programme *</span></label>
-                        <select className={`select select-bordered ${transcriptForm.formState.errors.programme ? 'select-error' : ''}`} {...transcriptForm.register('programme')}>
-                          <option value="">Select</option>
-                          <option value="GENERAL_ARTS">General Arts</option>
-                          <option value="BUSINESS">Business</option>
-                          <option value="HOME_ECONOMICS">Home Economics</option>
-                          <option value="VISUAL_ARTS">Visual Arts</option>
-                          <option value="SCIENCE">Science</option>
-                        </select>
-                      </div>
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Number of Copies</span></label>
-                        <select className="select select-bordered" {...transcriptForm.register('copies')}>
-                          {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
-                        </select>
-                      </div>
-                    </div>
+                        {watchDelivery === 'mail' && (
+                          <div className="mt-4">
+                            <Field label="Mailing address">
+                              <textarea className={`${textareaCls} min-h-24`} placeholder="Full postal address..." {...transcriptForm.register('mailingAddress')} />
+                            </Field>
+                          </div>
+                        )}
 
-                    <div className="form-control">
-                      <label className="label"><span className="label-text font-medium">Delivery Method *</span></label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[
-                          { value: 'pickup', label: 'Pick Up' },
-                          { value: 'mail', label: 'Mail' },
-                          { value: 'email', label: 'Email (Scanned)' },
-                        ].map((m) => (
-                          <label key={m.value} className={`flex items-center justify-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
-                            watchDelivery === m.value ? 'border-primary bg-primary/5' : 'border-base-300'
-                          }`}>
-                            <input type="radio" className="radio radio-primary radio-sm" value={m.value} {...transcriptForm.register('deliveryMethod')} />
-                            <span className="text-sm">{m.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
+                        <div className="mt-4">
+                          <Field label="Purpose" error={transcriptForm.formState.errors.purpose?.message}>
+                            <textarea className={`${textareaCls} min-h-28 ${transcriptForm.formState.errors.purpose ? 'textarea-error' : ''}`} placeholder="e.g. University admission, job application..." {...transcriptForm.register('purpose')} />
+                          </Field>
+                        </div>
 
-                    {watchDelivery === 'mail' && (
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Mailing Address *</span></label>
-                        <textarea className="textarea textarea-bordered h-20" placeholder="Full postal address..." {...transcriptForm.register('mailingAddress')} />
-                      </div>
+                        <div className="mt-4">
+                          <Field label="Additional notes">
+                            <textarea className={`${textareaCls} min-h-24`} placeholder="Any special instructions..." {...transcriptForm.register('additionalNotes')} />
+                          </Field>
+                        </div>
+
+                        <div className="mt-auto flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="max-w-md text-xs font-semibold leading-relaxed text-base-content/42">
+                            Processing fee is GHS 20 per copy. Payment instructions will be sent after submission.
+                          </p>
+                          <button type="submit" className="btn btn-primary min-h-11 gap-2 sm:min-w-48" disabled={submitting}>
+                            {submitting ? (
+                              <span className="h-4 w-28 animate-pulse bg-primary-content/35" />
+                            ) : (
+                              <>
+                                Submit request
+                                <Send className="h-4 w-4" />
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <form onSubmit={recommendationForm.handleSubmit(onRecommendationSubmit)} className="mt-6 flex flex-1 flex-col">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <Field label="Full name" error={recommendationForm.formState.errors.fullName?.message}>
+                            <IconInput icon={User}>
+                              <input type="text" className={`${inputIconCls} ${recommendationForm.formState.errors.fullName ? 'input-error' : ''}`} {...recommendationForm.register('fullName')} />
+                            </IconInput>
+                          </Field>
+                          <Field label="Email" error={recommendationForm.formState.errors.email?.message}>
+                            <IconInput icon={Mail}>
+                              <input type="email" className={`${inputIconCls} ${recommendationForm.formState.errors.email ? 'input-error' : ''}`} {...recommendationForm.register('email')} />
+                            </IconInput>
+                          </Field>
+                          <Field label="Phone" error={recommendationForm.formState.errors.phone?.message}>
+                            <IconInput icon={Phone}>
+                              <input type="tel" className={`${inputIconCls} ${recommendationForm.formState.errors.phone ? 'input-error' : ''}`} {...recommendationForm.register('phone')} />
+                            </IconInput>
+                          </Field>
+                          <Field label="Year group" error={recommendationForm.formState.errors.yearGroup?.message}>
+                            <input type="text" className={`${inputCls} ${recommendationForm.formState.errors.yearGroup ? 'input-error' : ''}`} {...recommendationForm.register('yearGroup')} />
+                          </Field>
+                        </div>
+
+                        <div className="mt-4">
+                          <Field label="Programme" error={recommendationForm.formState.errors.programme?.message}>
+                            <select className={`${selectCls} ${recommendationForm.formState.errors.programme ? 'select-error' : ''}`} {...recommendationForm.register('programme')}>
+                              <option value="">Select programme</option>
+                              {programmes.map((programme) => (
+                                <option key={programme.value} value={programme.value}>{programme.label}</option>
+                              ))}
+                            </select>
+                          </Field>
+                        </div>
+
+                        <div className="my-5 flex items-center gap-3">
+                          <span className="h-px flex-1 bg-primary/10" />
+                          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-secondary">Recipient details</span>
+                          <span className="h-px flex-1 bg-primary/10" />
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <Field label="Recipient / addressed to" error={recommendationForm.formState.errors.recipientName?.message}>
+                            <input type="text" className={`${inputCls} ${recommendationForm.formState.errors.recipientName ? 'input-error' : ''}`} placeholder="e.g. Admissions Office" {...recommendationForm.register('recipientName')} />
+                          </Field>
+                          <Field label="Organization" error={recommendationForm.formState.errors.recipientOrg?.message}>
+                            <input type="text" className={`${inputCls} ${recommendationForm.formState.errors.recipientOrg ? 'input-error' : ''}`} placeholder="e.g. University of Ghana" {...recommendationForm.register('recipientOrg')} />
+                          </Field>
+                          <Field label="Recipient email" error={recommendationForm.formState.errors.recipientEmail?.message}>
+                            <input type="email" className={`${inputCls} ${recommendationForm.formState.errors.recipientEmail ? 'input-error' : ''}`} placeholder="Optional direct submission" {...recommendationForm.register('recipientEmail')} />
+                          </Field>
+                          <Field label="Deadline">
+                            <IconInput icon={Calendar}>
+                              <input type="date" className={inputIconCls} {...recommendationForm.register('deadline')} />
+                            </IconInput>
+                          </Field>
+                        </div>
+
+                        <div className="mt-4">
+                          <Field label="Purpose" error={recommendationForm.formState.errors.purpose?.message}>
+                            <select className={`${selectCls} ${recommendationForm.formState.errors.purpose ? 'select-error' : ''}`} {...recommendationForm.register('purpose')}>
+                              <option value="employment">Employment</option>
+                              <option value="further_studies">Further Studies / Admission</option>
+                              <option value="scholarship">Scholarship Application</option>
+                              <option value="professional">Professional Certification</option>
+                              <option value="other">Other</option>
+                            </select>
+                          </Field>
+                        </div>
+
+                        <div className="mt-4">
+                          <Field label="Details" error={recommendationForm.formState.errors.purposeDetails?.message}>
+                            <textarea className={`${textareaCls} min-h-32 ${recommendationForm.formState.errors.purposeDetails ? 'textarea-error' : ''}`} placeholder="Describe what the letter should highlight..." {...recommendationForm.register('purposeDetails')} />
+                          </Field>
+                        </div>
+
+                        <div className="mt-4">
+                          <Field label="Additional notes">
+                            <textarea className={`${textareaCls} min-h-24`} placeholder="Any other information..." {...recommendationForm.register('additionalNotes')} />
+                          </Field>
+                        </div>
+
+                        <div className="mt-auto flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="max-w-md text-xs font-semibold leading-relaxed text-base-content/42">
+                            Letters are prepared from school records. Urgent requests may incur additional fees.
+                          </p>
+                          <button type="submit" className="btn btn-primary min-h-11 gap-2 sm:min-w-48" disabled={submitting}>
+                            {submitting ? (
+                              <span className="h-4 w-28 animate-pulse bg-primary-content/35" />
+                            ) : (
+                              <>
+                                Submit request
+                                <Send className="h-4 w-4" />
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </form>
                     )}
-
-                    <div className="form-control">
-                      <label className="label"><span className="label-text font-medium">Purpose *</span></label>
-                      <textarea className={`textarea textarea-bordered h-20 ${transcriptForm.formState.errors.purpose ? 'textarea-error' : ''}`} placeholder="e.g. University admission, Job application..." {...transcriptForm.register('purpose')} />
-                      {transcriptForm.formState.errors.purpose && <p className="text-error text-xs mt-1">{transcriptForm.formState.errors.purpose.message}</p>}
-                    </div>
-
-                    <div className="form-control">
-                      <label className="label"><span className="label-text font-medium">Additional Notes</span></label>
-                      <textarea className="textarea textarea-bordered h-16" placeholder="Any special instructions..." {...transcriptForm.register('additionalNotes')} />
-                    </div>
-
-                    <div className="bg-base-200/50 rounded-xl p-4 border border-base-300">
-                      <p className="text-xs text-base-content/60">
-                        <strong>Processing fee:</strong> GHS 20 per copy. Payment instructions will be sent to your email after submission.
-                        Processing takes 5-10 business days.
-                      </p>
-                    </div>
-
-                    <button type="submit" className={`btn btn-primary ${submitting ? 'loading' : ''}`} disabled={submitting}>
-                      {!submitting && <Send className="w-4 h-4" />}
-                      {submitting ? 'Submitting...' : 'Submit Request'}
-                    </button>
-                  </form>
-                </div>
-              </div>
-            </ScrollReveal>
-          </motion.div>
-        ) : (
-          <motion.div key="recommendation" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <ScrollReveal>
-              <div className="card bg-base-100 shadow-[0_2px_8px_rgba(0,27,80,0.06)] max-w-2xl">
-                <div className="card-body">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center">
-                      <Award className="w-5 h-5 text-secondary" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold">Recommendation Letter Request</h3>
-                      <p className="text-xs text-base-content/50">Request a recommendation or testimonial from the school</p>
-                    </div>
                   </div>
+                </div>
+              </ScrollReveal>
 
-                  <form onSubmit={recommendationForm.handleSubmit(onRecommendationSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Full Name *</span></label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
-                          <input type="text" className="input input-bordered w-full pl-10" {...recommendationForm.register('fullName')} />
-                        </div>
-                      </div>
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Email *</span></label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
-                          <input type="email" className="input input-bordered w-full pl-10" {...recommendationForm.register('email')} />
-                        </div>
-                      </div>
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Phone *</span></label>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
-                          <input type="tel" className="input input-bordered w-full pl-10" {...recommendationForm.register('phone')} />
-                        </div>
-                      </div>
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Year Group *</span></label>
-                        <input type="text" className="input input-bordered" {...recommendationForm.register('yearGroup')} />
-                      </div>
-                    </div>
-
-                    <div className="form-control">
-                      <label className="label"><span className="label-text font-medium">Programme *</span></label>
-                      <select className="select select-bordered" {...recommendationForm.register('programme')}>
-                        <option value="">Select</option>
-                        <option value="GENERAL_ARTS">General Arts</option>
-                        <option value="BUSINESS">Business</option>
-                        <option value="HOME_ECONOMICS">Home Economics</option>
-                        <option value="VISUAL_ARTS">Visual Arts</option>
-                        <option value="SCIENCE">Science</option>
-                      </select>
-                    </div>
-
-                    <div className="divider text-xs">RECIPIENT DETAILS</div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Recipient / Addressed To *</span></label>
-                        <input type="text" className={`input input-bordered ${recommendationForm.formState.errors.recipientName ? 'input-error' : ''}`} placeholder="e.g. Admissions Office" {...recommendationForm.register('recipientName')} />
-                      </div>
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Organization *</span></label>
-                        <input type="text" className={`input input-bordered ${recommendationForm.formState.errors.recipientOrg ? 'input-error' : ''}`} placeholder="e.g. University of Ghana" {...recommendationForm.register('recipientOrg')} />
+              <div className="grid gap-5">
+                <ScrollReveal delay={0.05}>
+                  <aside className="relative overflow-hidden border border-primary/10 bg-base-100/90 shadow-[0_14px_38px_rgba(0,27,80,0.06)] rounded-[24px_4px_24px_4px]">
+                    <div className="h-1 bg-primary" />
+                    <div className="p-5">
+                      <PanelHeader
+                        icon={isTranscript ? ReceiptText : Award}
+                        eyebrow="Processing guide"
+                        title={isTranscript ? 'Transcript route' : 'Letter route'}
+                        description={isTranscript
+                          ? 'Transcript requests go to the school administration desk for review, fee confirmation, and delivery.'
+                          : 'Recommendation requests are sent as a service message for administrative review and preparation.'}
+                      />
+                      <div className="mt-5 grid gap-3">
+                        {isTranscript ? (
+                          <>
+                            <InfoCard icon={ReceiptText} label="Fee" title="GHS 20 per copy" description="Payment instructions are sent after your request has been received." />
+                            <InfoCard icon={Clock3} label="Timeline" title="5-10 business days" description="Processing starts after the school confirms request details and payment." />
+                            <InfoCard icon={FileCheck2} label="Delivery" title="Pickup, mail, or scan" description="Choose the delivery method that fits the destination of the transcript." />
+                          </>
+                        ) : (
+                          <>
+                            <InfoCard icon={Award} label="Review" title="School-admin prepared" description="Letters are based on your school records and the purpose you provide." />
+                            <InfoCard icon={Clock3} label="Timeline" title="7-14 business days" description="Urgent requests may require extra follow-up and possible fees." />
+                            <InfoCard icon={Mail} label="Recipient" title="Direct email optional" description="Add a recipient email when the institution accepts direct submission." />
+                          </>
+                        )}
                       </div>
                     </div>
+                  </aside>
+                </ScrollReveal>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Recipient Email</span></label>
-                        <input type="email" className="input input-bordered" placeholder="Optional - for direct submission" {...recommendationForm.register('recipientEmail')} />
-                      </div>
-                      <div className="form-control">
-                        <label className="label"><span className="label-text font-medium">Deadline</span></label>
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
-                          <input type="date" className="input input-bordered w-full pl-10" {...recommendationForm.register('deadline')} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="form-control">
-                      <label className="label"><span className="label-text font-medium">Purpose *</span></label>
-                      <select className="select select-bordered" {...recommendationForm.register('purpose')}>
-                        <option value="employment">Employment</option>
-                        <option value="further_studies">Further Studies / Admission</option>
-                        <option value="scholarship">Scholarship Application</option>
-                        <option value="professional">Professional Certification</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-
-                    <div className="form-control">
-                      <label className="label"><span className="label-text font-medium">Details *</span></label>
-                      <textarea className={`textarea textarea-bordered h-24 ${recommendationForm.formState.errors.purposeDetails ? 'textarea-error' : ''}`} placeholder="Describe what the letter should highlight - your achievements, role, or any specific points to mention..." {...recommendationForm.register('purposeDetails')} />
-                      {recommendationForm.formState.errors.purposeDetails && <p className="text-error text-xs mt-1">{recommendationForm.formState.errors.purposeDetails.message}</p>}
-                    </div>
-
-                    <div className="form-control">
-                      <label className="label"><span className="label-text font-medium">Additional Notes</span></label>
-                      <textarea className="textarea textarea-bordered h-16" placeholder="Any other information..." {...recommendationForm.register('additionalNotes')} />
-                    </div>
-
-                    <div className="bg-base-200/50 rounded-xl p-4 border border-base-300">
-                      <p className="text-xs text-base-content/60">
-                        Recommendation letters are prepared by the school administration based on your academic records.
-                        Processing takes 7-14 business days. Urgent requests may incur additional fees.
+                <ScrollReveal delay={0.1}>
+                  <aside className="relative overflow-hidden border border-primary/10 bg-primary text-primary-content shadow-[0_18px_48px_rgba(0,27,80,0.14)] rounded-[24px_4px_24px_4px]">
+                    <img src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -right-14 -top-16 h-56 w-56 object-contain opacity-[0.055]" />
+                    <div className="relative p-5">
+                      <span className="grid h-12 w-12 place-items-center bg-primary-content/10 text-secondary rounded-[16px_3px_16px_3px]">
+                        <FileCheck2 className="h-5 w-5" />
+                      </span>
+                      <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.18em] text-primary-content/42">Before submission</p>
+                      <h2 className="mt-2 text-2xl font-bold">Check the details once.</h2>
+                      <p className="mt-4 text-sm leading-relaxed text-primary-content/62">
+                        Names, year group, programme, recipient information, and deadlines should be accurate before sending. Clean details make the request easier to process.
                       </p>
                     </div>
-
-                    <button type="submit" className={`btn btn-primary ${submitting ? 'loading' : ''}`} disabled={submitting}>
-                      {!submitting && <Send className="w-4 h-4" />}
-                      {submitting ? 'Submitting...' : 'Submit Request'}
-                    </button>
-                  </form>
-                </div>
+                  </aside>
+                </ScrollReveal>
               </div>
-            </ScrollReveal>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.section>
+          )}
+        </AnimatePresence>
+      </div>
     </PageTransition>
   )
 }

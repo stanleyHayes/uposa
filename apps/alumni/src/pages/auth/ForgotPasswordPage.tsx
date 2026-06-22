@@ -209,7 +209,7 @@ export default function ForgotPasswordPage() {
                         </p>
 
                         <div className="mt-8 grid gap-3">
-                          <Link to="/login" className="btn btn-primary h-12 w-full justify-between px-5 text-base">
+                          <Link to="/login" className="btn btn-auth-cream h-12 w-full justify-between px-5 text-base">
                             Return to sign in <ArrowRight className="h-4 w-4" />
                           </Link>
                           <button
@@ -271,7 +271,7 @@ export default function ForgotPasswordPage() {
 
                           <motion.button
                             type="submit"
-                            className="btn btn-primary h-12 w-full justify-between px-5 text-base"
+                            className="btn btn-auth-cream h-12 w-full justify-between px-5 text-base"
                             disabled={loading}
                             whileHover={{ scale: loading ? 1 : 1.01 }}
                             whileTap={{ scale: loading ? 1 : 0.97 }}
@@ -283,7 +283,7 @@ export default function ForgotPasswordPage() {
                                   {[0, 1, 2].map((dot) => (
                                     <motion.span
                                       key={dot}
-                                      className="h-2 w-2 bg-primary-content/70"
+                                      className="h-2 w-2 bg-primary/45"
                                       animate={{ opacity: [0.35, 1, 0.35] }}
                                       transition={{ duration: 0.9, repeat: Infinity, delay: dot * 0.12 }}
                                     />

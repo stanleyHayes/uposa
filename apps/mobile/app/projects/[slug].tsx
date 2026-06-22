@@ -1,19 +1,23 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Image, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
-import { Brand, Colors } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { projectsApi } from '@/lib/api';
 import type { Project } from '@/lib/types';
+import {
+  EmptyState,
+  HeroPanel,
+  LoadingState,
+  Pill,
+  ProgressBar,
+  ScreenScroll,
+  SectionTitle,
+  Surface,
+  formatMoney,
+  formatShortDate,
+} from '@/components/mobile-ui';
 
 export default function ProjectDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -39,128 +43,71 @@ export default function ProjectDetailScreen() {
     load();
   }, [load]);
 
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <ActivityIndicator color={palette.tint} />
-      </View>
-    );
-  }
+  if (loading) return <LoadingState palette={palette} title="Project" />;
 
   if (!project) {
     return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <Text style={{ color: palette.textMuted }}>Project not found.</Text>
-      </View>
+      <ScreenScroll palette={palette}>
+        <EmptyState palette={palette} icon="construct-outline" title="Project not found" description="This project may have been removed or unpublished." />
+      </ScreenScroll>
     );
   }
 
   const pct = project.goalAmount > 0 ? Math.min(100, Math.round((project.raisedAmount / project.goalAmount) * 100)) : 0;
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.background }}
-      contentContainerStyle={styles.scroll}
-    >
-      {project.imageUrl ? (
-        <Image source={{ uri: project.imageUrl }} style={styles.cover} resizeMode="cover" />
-      ) : null}
-
-      <View style={styles.body}>
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: palette.text }]}>{project.title}</Text>
-          <View
-            style={[
-              styles.statusChip,
-              { backgroundColor: project.status === 'ONGOING' ? Brand.gold : palette.surfaceMuted },
-            ]}
-          >
-            <Text style={[styles.statusText, { color: Brand.navy }]}>{project.status}</Text>
+    <ScreenScroll palette={palette} padded={false}>
+      {project.imageUrl ? <Image source={{ uri: project.imageUrl }} style={{ width: '100%', height: 230 }} resizeMode="cover" /> : null}
+      <View style={{ padding: 16 }}>
+        <HeroPanel
+          palette={palette}
+          eyebrow={project.status}
+          title={project.title}
+          body={project.description}
+          icon="construct-outline"
+        >
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <Pill palette={palette} tone="gold">{pct}% funded</Pill>
+            <Pill palette={palette}>{formatMoney(project.raisedAmount)} raised</Pill>
           </View>
-        </View>
+        </HeroPanel>
 
-        <View style={[styles.progressCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-          <View style={[styles.progressTrack, { backgroundColor: palette.surfaceMuted }]}>
-            <View style={[styles.progressFill, { width: `${pct}%` }]} />
-          </View>
-          <View style={styles.progressRow}>
-            <Text style={[styles.raised, { color: palette.text }]}>
-              GHS {project.raisedAmount.toLocaleString()}
-            </Text>
-            <Text style={[styles.goal, { color: palette.textMuted }]}>
-              of GHS {project.goalAmount.toLocaleString()} ({pct}%)
-            </Text>
-          </View>
-        </View>
+        <Surface palette={palette} style={{ padding: 16, gap: 10 }}>
+          <ProgressBar palette={palette} percent={pct} />
+          <Text style={{ color: palette.text, fontSize: 22, fontWeight: '900' }}>{formatMoney(project.raisedAmount)}</Text>
+          <Text style={{ color: palette.textMuted, fontSize: 13 }}>
+            of {formatMoney(project.goalAmount)} target
+          </Text>
+        </Surface>
 
-        <Text style={[styles.description, { color: palette.text }]}>{project.description}</Text>
         {project.content ? (
-          <Text style={[styles.content, { color: palette.text }]}>{project.content}</Text>
+          <Surface palette={palette} style={{ padding: 16, marginTop: 14 }}>
+            <Text style={{ color: palette.text, fontSize: 15, lineHeight: 24 }}>{project.content}</Text>
+          </Surface>
         ) : null}
 
         {project.milestones && project.milestones.length > 0 ? (
           <>
-            <Text style={[styles.sectionHeading, { color: palette.text }]}>Milestones</Text>
-            {project.milestones.map((m, idx) => (
-              <View
-                key={`${m.title}-${idx}`}
-                style={[styles.milestone, { backgroundColor: palette.surface, borderColor: palette.border }]}
-              >
-                <Ionicons
-                  name={m.completed ? 'checkmark-circle' : 'ellipse-outline'}
-                  size={20}
-                  color={m.completed ? Brand.gold : palette.textMuted}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.milestoneTitle, { color: palette.text }]}>{m.title}</Text>
-                  {m.description ? (
-                    <Text style={[styles.milestoneDesc, { color: palette.textMuted }]}>{m.description}</Text>
-                  ) : null}
-                  {m.date ? (
-                    <Text style={[styles.milestoneDate, { color: palette.textMuted }]}>
-                      {new Date(m.date).toLocaleDateString()}
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
-            ))}
+            <SectionTitle palette={palette} title="Milestones" />
+            <View style={{ gap: 10 }}>
+              {project.milestones.map((milestone, index) => (
+                <Surface key={`${milestone.title}-${index}`} palette={palette} style={{ padding: 12, flexDirection: 'row', gap: 12 }}>
+                  <Pill palette={palette} tone={milestone.completed ? 'gold' : 'muted'}>{milestone.completed ? 'Done' : 'Open'}</Pill>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: palette.text, fontSize: 14, fontWeight: '900' }}>{milestone.title}</Text>
+                    {milestone.description ? (
+                      <Text style={{ color: palette.textMuted, fontSize: 12, lineHeight: 18, marginTop: 3 }}>{milestone.description}</Text>
+                    ) : null}
+                    {milestone.date ? (
+                      <Text style={{ color: palette.textMuted, fontSize: 11, marginTop: 5 }}>{formatShortDate(milestone.date)}</Text>
+                    ) : null}
+                  </View>
+                </Surface>
+              ))}
+            </View>
           </>
         ) : null}
       </View>
-    </ScrollView>
+    </ScreenScroll>
   );
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  scroll: { paddingBottom: 40 },
-  cover: { width: '100%', height: 220 },
-  body: { padding: 16, gap: 12 },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  title: { flex: 1, fontSize: 22, fontWeight: '800' },
-  statusChip: { paddingHorizontal: 8, height: 22, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
-  statusText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.4 },
-  progressCard: {
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  progressTrack: { height: 10, borderRadius: 5, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: Brand.gold },
-  progressRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 8 },
-  raised: { fontSize: 18, fontWeight: '800' },
-  goal: { fontSize: 12 },
-  description: { fontSize: 14, lineHeight: 22 },
-  content: { fontSize: 14, lineHeight: 22, marginTop: 4 },
-  sectionHeading: { fontSize: 16, fontWeight: '700', marginTop: 14 },
-  milestone: {
-    flexDirection: 'row',
-    gap: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  milestoneTitle: { fontSize: 14, fontWeight: '700' },
-  milestoneDesc: { fontSize: 12, marginTop: 2, lineHeight: 17 },
-  milestoneDate: { fontSize: 11, marginTop: 4 },
-});

@@ -173,7 +173,7 @@ export default function ExecutiveFormPage() {
         />
       </div>
 
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+      <div className="admin-card-surface p-6">
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           {/* Photo upload */}
           <div>

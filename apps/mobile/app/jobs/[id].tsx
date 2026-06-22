@@ -1,22 +1,23 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Linking, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
-import { Brand, Colors } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { jobsApi } from '@/lib/api';
 import type { Job } from '@/lib/types';
+import {
+  DetailRow,
+  EmptyState,
+  Field,
+  HeroPanel,
+  LoadingState,
+  Pill,
+  PrimaryButton,
+  ScreenScroll,
+  Surface,
+  formatShortDate,
+} from '@/components/mobile-ui';
 
 const TYPE_LABEL: Record<Job['jobType'], string> = {
   FULL_TIME: 'Full-time',
@@ -67,153 +68,56 @@ export default function JobDetailScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <ActivityIndicator color={palette.tint} />
-      </View>
-    );
-  }
+  if (loading) return <LoadingState palette={palette} title="Job" />;
 
   if (!job) {
     return (
-      <View style={[styles.center, { backgroundColor: palette.background }]}>
-        <Text style={{ color: palette.textMuted }}>Job not found.</Text>
-      </View>
+      <ScreenScroll palette={palette}>
+        <EmptyState palette={palette} icon="briefcase-outline" title="Job not found" description="This opportunity may have expired or been removed." />
+      </ScreenScroll>
     );
   }
 
   return (
-    <ScrollView
-      style={{ backgroundColor: palette.background }}
-      contentContainerStyle={styles.scroll}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.body}>
-        <Text style={[styles.title, { color: palette.text }]}>{job.title}</Text>
-        <Text style={[styles.company, { color: Brand.navy }]}>{job.company}</Text>
-
-        <View style={styles.metaRow}>
-          <View style={[styles.chip, { backgroundColor: Brand.cream, borderColor: palette.border }]}>
-            <Text style={[styles.chipText, { color: Brand.navy }]}>{TYPE_LABEL[job.jobType]}</Text>
-          </View>
-          {job.location ? (
-            <View style={styles.metaItem}>
-              <Ionicons name="location-outline" size={14} color={palette.textMuted} />
-              <Text style={[styles.metaText, { color: palette.textMuted }]}>{job.location}</Text>
-            </View>
-          ) : null}
-          {job.expiresAt ? (
-            <View style={styles.metaItem}>
-              <Ionicons name="time-outline" size={14} color={palette.textMuted} />
-              <Text style={[styles.metaText, { color: palette.textMuted }]}>
-                Expires {new Date(job.expiresAt).toLocaleDateString()}
-              </Text>
-            </View>
-          ) : null}
+    <ScreenScroll palette={palette} keyboardShouldPersistTaps="handled">
+      <HeroPanel
+        palette={palette}
+        eyebrow={TYPE_LABEL[job.jobType]}
+        title={job.title}
+        body={`${job.company}${job.location ? ` · ${job.location}` : ''}`}
+        icon="briefcase-outline"
+      >
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <Pill palette={palette} tone="gold">{TYPE_LABEL[job.jobType]}</Pill>
+          {job.expiresAt ? <Pill palette={palette}>Expires {formatShortDate(job.expiresAt)}</Pill> : null}
         </View>
+      </HeroPanel>
 
-        <Text style={[styles.description, { color: palette.text }]}>{job.description}</Text>
+      <Surface palette={palette} style={{ padding: 16 }}>
+        <Text style={{ color: palette.text, fontSize: 15, lineHeight: 24 }}>{job.description}</Text>
+      </Surface>
 
+      <View style={{ gap: 10, marginTop: 16 }}>
+        <DetailRow palette={palette} icon="business-outline" label="Company" value={job.company} />
+        {job.location ? <DetailRow palette={palette} icon="location-outline" label="Location" value={job.location} /> : null}
         {job.externalUrl ? (
-          <Pressable
-            onPress={() => job.externalUrl && Linking.openURL(job.externalUrl)}
-            style={({ pressed }) => [
-              styles.linkBtn,
-              { borderColor: palette.border, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <Ionicons name="open-outline" size={16} color={palette.text} />
-            <Text style={[styles.linkText, { color: palette.text }]}>Open external posting</Text>
-          </Pressable>
+          <DetailRow palette={palette} icon="open-outline" label="External post" value="Open the original job post" onPress={() => Linking.openURL(job.externalUrl!)} />
         ) : null}
-
-        <View style={[styles.formCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-          <Text style={[styles.formTitle, { color: palette.text }]}>Apply</Text>
-          <Text style={[styles.fieldLabel, { color: palette.textMuted }]}>Cover letter (optional)</Text>
-          <TextInput
-            value={coverLetter}
-            onChangeText={setCoverLetter}
-            placeholder="Tell the poster why you're a good fit…"
-            placeholderTextColor={palette.textMuted}
-            multiline
-            style={[
-              styles.input,
-              { color: palette.text, borderColor: palette.border, backgroundColor: palette.background },
-            ]}
-          />
-          <Pressable
-            onPress={onApply}
-            disabled={submitting}
-            style={({ pressed }) => [
-              styles.btn,
-              { backgroundColor: Brand.navy, opacity: pressed || submitting ? 0.85 : 1 },
-            ]}
-          >
-            {submitting ? (
-              <ActivityIndicator color={Brand.cream} />
-            ) : (
-              <Text style={styles.btnText}>Submit application</Text>
-            )}
-          </Pressable>
-        </View>
       </View>
-    </ScrollView>
+
+      <Surface palette={palette} style={{ padding: 16, marginTop: 18 }}>
+        <Text style={{ color: palette.text, fontSize: 18, fontWeight: '900', marginBottom: 8 }}>Apply</Text>
+        <Field
+          palette={palette}
+          label="Cover letter"
+          value={coverLetter}
+          onChangeText={setCoverLetter}
+          placeholder="Tell the poster why you are a good fit..."
+          icon="create-outline"
+          multiline
+        />
+        <PrimaryButton label="Submit application" palette={palette} onPress={onApply} loading={submitting} icon="send-outline" />
+      </Surface>
+    </ScreenScroll>
   );
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  scroll: { paddingBottom: 40 },
-  body: { padding: 16, gap: 8 },
-  title: { fontSize: 22, fontWeight: '800' },
-  company: { fontSize: 14, fontWeight: '600' },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 12 },
-  chip: {
-    paddingHorizontal: 10,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipText: { fontSize: 11, fontWeight: '700' },
-  description: { fontSize: 14, lineHeight: 22, marginTop: 10 },
-  linkBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 42,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginTop: 12,
-  },
-  linkText: { fontSize: 13, fontWeight: '600' },
-  formCard: {
-    marginTop: 18,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  formTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8 },
-  fieldLabel: { fontSize: 12, fontWeight: '600', marginBottom: 6 },
-  input: {
-    minHeight: 100,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 14,
-    textAlignVertical: 'top',
-  },
-  btn: {
-    marginTop: 12,
-    height: 46,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnText: { color: Brand.cream, fontWeight: '700', fontSize: 15 },
-});

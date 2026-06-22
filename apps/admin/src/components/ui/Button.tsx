@@ -2,7 +2,7 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react'
 import { cn } from '../../utils/cn'
 import Spinner from './Spinner'
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost'
+type ButtonVariant = 'primary' | 'accent' | 'secondary' | 'danger' | 'ghost'
 type ButtonSize = 'sm' | 'md' | 'lg'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -16,6 +16,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
     'bg-gradient-to-r from-brand-800 via-brand-700 to-brand-600 text-white shadow-md shadow-brand-900/20 hover:shadow-lg hover:shadow-brand-900/25 focus-visible:outline-brand-600 disabled:from-brand-300 disabled:via-brand-300 disabled:to-brand-300 disabled:shadow-none',
+  accent:
+    'bg-cream-300 text-brand-950 border border-cream-400 shadow-md shadow-brand-950/10 hover:bg-cream-400 hover:shadow-lg hover:shadow-brand-950/15 focus-visible:outline-cream-400 disabled:bg-cream-100 disabled:text-brand-950/40 disabled:border-cream-200 disabled:shadow-none',
   secondary:
     'bg-white dark:bg-dark-hover text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-dark-hover focus-visible:outline-gray-400 disabled:bg-gray-100 dark:disabled:bg-dark-hover disabled:text-gray-400',
   danger:

@@ -1,18 +1,78 @@
-import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Link, useParams } from 'react-router'
 import {
-  ArrowLeft, Heart, Calendar, MapPin, CheckCircle2, Circle,
-  ChevronLeft, ChevronRight, X, Image as ImageIcon,
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Circle,
+  CircleDollarSign,
+  Flag,
+  FolderOpen,
+  Heart,
+  Image as ImageIcon,
+  Target,
+  Trophy,
+  X,
+  type LucideIcon,
 } from 'lucide-react'
 import PageTransition from '../../components/common/PageTransition'
 import ScrollReveal from '../../components/common/ScrollReveal'
 import StatusBadge from '../../components/ui/StatusBadge'
-import LoadingSpinner from '../../components/ui/LoadingSpinner'
 import MarkdownContent from '../../components/common/MarkdownContent'
-import { Card, CardBody } from '../../components/ui/Card'
 import { projectsApi } from '../../api/services'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import type { Project } from '../../types'
+
+function getProgress(project: Project) {
+  return project.goalAmount > 0 ? Math.min((project.raisedAmount / project.goalAmount) * 100, 100) : 0
+}
+
+function DetailSkeleton() {
+  return (
+    <PageTransition>
+      <div className="space-y-5">
+        <div className="h-11 w-36 animate-pulse bg-base-300/45 rounded-[14px_3px_14px_3px]" />
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="overflow-hidden border border-primary/8 bg-base-100 rounded-[28px_6px_28px_6px]">
+            <div className="h-80 animate-pulse bg-base-300/45" />
+            <div className="space-y-4 p-6">
+              <div className="h-4 w-28 animate-pulse bg-base-300/45" />
+              <div className="h-9 w-4/5 animate-pulse bg-base-300/55" />
+              <div className="h-4 w-full animate-pulse bg-base-300/35" />
+              <div className="h-4 w-5/6 animate-pulse bg-base-300/35" />
+            </div>
+          </div>
+          <div className="h-72 animate-pulse bg-base-300/35 rounded-[24px_4px_24px_4px]" />
+        </div>
+      </div>
+    </PageTransition>
+  )
+}
+
+function DetailMeta({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 border border-primary/8 bg-base-200/45 p-4 rounded-[18px_4px_18px_4px]">
+      <span className="grid h-10 w-10 shrink-0 place-items-center bg-primary/8 text-primary rounded-[14px_3px_14px_3px]">
+        <Icon className="h-4 w-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-base-content/42">{label}</span>
+        <span className="mt-1 block text-sm font-bold leading-snug text-base-content">{children}</span>
+      </span>
+    </div>
+  )
+}
+
+function ProgressBar({ progress }: { progress: number }) {
+  return (
+    <div className="h-3 overflow-hidden bg-base-300/55">
+      <div className="h-full bg-gradient-to-r from-primary via-accent to-secondary transition-all duration-500" style={{ width: `${progress}%` }} />
+    </div>
+  )
+}
 
 export default function ProjectDetailPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -21,252 +81,282 @@ export default function ProjectDetailPage() {
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!slug) return
+    if (!slug) {
+      setLoading(false)
+      return
+    }
+    setLoading(true)
     projectsApi.getBySlug(slug)
       .then((res) => setProject(res.data.data || null))
       .catch(() => setProject(null))
       .finally(() => setLoading(false))
   }, [slug])
 
-  if (loading) return <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
+  if (loading) return <DetailSkeleton />
 
   if (!project) {
     return (
-      <div className="text-center py-16">
-        <p className="text-base-content/60">Project not found</p>
-        <Link to="/projects" className="btn btn-primary mt-4">Back to Projects</Link>
-      </div>
+      <PageTransition>
+        <div className="flex min-h-[60vh] flex-col items-center justify-center border border-primary/10 bg-base-100/88 px-6 py-14 text-center shadow-[0_16px_44px_rgba(0,27,80,0.07)] rounded-[28px_6px_28px_6px]">
+          <span className="grid h-16 w-16 place-items-center bg-primary/8 text-primary rounded-[18px_4px_18px_4px]">
+            <FolderOpen className="h-7 w-7" />
+          </span>
+          <h1 className="mt-5 text-2xl font-bold">Project not found</h1>
+          <p className="mt-2 max-w-md text-sm leading-relaxed text-base-content/55">This project may have moved, closed, or is not available in the alumni portal.</p>
+          <Link to="/projects" className="btn btn-primary mt-6">
+            <ArrowLeft className="h-4 w-4" />
+            Back to projects
+          </Link>
+        </div>
+      </PageTransition>
     )
   }
 
-  const progress = project.goalAmount > 0 ? Math.min((project.raisedAmount / project.goalAmount) * 100, 100) : 0
+  const progress = getProgress(project)
   const allImages = [project.imageUrl, ...(project.gallery || [])].filter(Boolean) as string[]
+  const completedMilestones = project.milestones?.filter((milestone) => milestone.completed).length || 0
+  const milestoneTotal = project.milestones?.length || 0
+  const milestoneProgress = milestoneTotal > 0 ? (completedMilestones / milestoneTotal) * 100 : 0
 
   return (
     <PageTransition>
-      <Link to="/projects" className="btn btn-ghost btn-sm mb-4">
-        <ArrowLeft className="w-4 h-4" /> Back to Projects
-      </Link>
+      <div className="relative space-y-5">
+        <img
+          src="/logo.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none fixed right-[-8rem] top-24 z-0 hidden h-[26rem] w-[26rem] object-contain opacity-[0.025] xl:block"
+        />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Cover image */}
-          {project.imageUrl && (
-            <ScrollReveal>
-              <div className="overflow-hidden rounded-2xl cursor-pointer" onClick={() => setLightboxIdx(0)}>
-                <img
-                  src={project.imageUrl}
-                  alt={project.title}
-                  className="w-full h-64 md:h-80 object-cover hover:scale-[1.02] transition-transform duration-500"
-                />
+        <Link
+          to="/projects"
+          className="relative z-10 inline-flex items-center gap-2 border border-primary/10 bg-base-100/82 px-3 py-2 text-sm font-bold text-base-content/68 transition-colors hover:border-primary/20 hover:text-primary rounded-[14px_3px_14px_3px]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to projects
+        </Link>
+
+        <div className="relative z-10 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <article className="space-y-6">
+            <section className="overflow-hidden border border-primary/10 bg-base-100/94 shadow-[0_20px_58px_rgba(0,27,80,0.08)] rounded-[28px_6px_28px_6px]">
+              <header className="relative overflow-hidden bg-primary text-primary-content">
+                {project.imageUrl ? (
+                  <button type="button" className="absolute inset-0 text-left" onClick={() => setLightboxIdx(0)} aria-label="Open project image">
+                    <img src={project.imageUrl} alt={project.title} className="h-full w-full object-cover opacity-35" />
+                  </button>
+                ) : (
+                  <img src="/logo.png" alt="" aria-hidden="true" className="absolute -right-16 -top-20 h-80 w-80 object-contain opacity-[0.055]" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-primary/62" />
+                <div className="relative min-h-[24rem] p-5 sm:p-7 lg:p-8">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 bg-secondary px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                      <Target className="h-3.5 w-3.5" />
+                      School project
+                    </span>
+                    <StatusBadge status={project.status} className="border-primary-content/15 bg-primary-content/12 text-primary-content" />
+                    {project.isFeatured && (
+                      <span className="border border-primary-content/15 bg-primary-content/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-primary-content/72">Featured</span>
+                    )}
+                  </div>
+                  <div className="flex min-h-[17rem] flex-col justify-end">
+                    <p className="mb-3 text-sm font-bold uppercase tracking-[0.16em] text-secondary">{Math.round(progress)}% funded</p>
+                    <h1 className="max-w-4xl text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">{project.title}</h1>
+                    <p className="mt-4 max-w-3xl text-sm leading-relaxed text-primary-content/66 sm:text-base">{project.description}</p>
+                  </div>
+                </div>
+              </header>
+
+              <div className="p-5 sm:p-7 lg:p-8">
+                {project.content ? (
+                  <MarkdownContent
+                    content={project.content}
+                    className="prose-lg prose-headings:font-bold prose-headings:text-primary prose-p:leading-relaxed prose-li:leading-relaxed"
+                  />
+                ) : (
+                  <p className="text-base leading-relaxed text-base-content/62">{project.description}</p>
+                )}
               </div>
-            </ScrollReveal>
-          )}
+            </section>
 
-          {/* Title & status */}
-          <ScrollReveal>
-            <div className="flex items-center gap-2 mb-3">
-              <StatusBadge status={project.status} />
-              {project.isFeatured && <span className="badge badge-secondary badge-sm">Featured</span>}
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">{project.title}</h1>
-            <p className="text-base-content/60">{project.description}</p>
-          </ScrollReveal>
+            {project.milestones && project.milestones.length > 0 && (
+              <ScrollReveal>
+                <section className="overflow-hidden border border-primary/10 bg-base-100/92 shadow-[0_16px_44px_rgba(0,27,80,0.07)] rounded-[24px_4px_24px_4px]">
+                  <div className="h-1 bg-gradient-to-r from-secondary via-primary to-secondary" />
+                  <div className="p-5 sm:p-6">
+                    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-secondary">Milestones</p>
+                        <h2 className="mt-1 text-2xl font-bold">Project timeline</h2>
+                      </div>
+                      <p className="text-sm font-semibold text-base-content/48">{completedMilestones}/{milestoneTotal} complete</p>
+                    </div>
 
-          {/* Markdown content */}
-          {project.content && (
-            <ScrollReveal delay={0.1}>
-              <Card hover={false}>
-                <CardBody>
-                  <MarkdownContent content={project.content} />
-                </CardBody>
-              </Card>
-            </ScrollReveal>
-          )}
-
-          {/* Milestones */}
-          {project.milestones && project.milestones.length > 0 && (
-            <ScrollReveal delay={0.15}>
-              <Card hover={false}>
-                <CardBody>
-                  <h2 className="font-bold text-lg mb-4">Milestones</h2>
-                  <div className="relative">
-                    <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-base-300" />
-                    <div className="space-y-4">
-                      {project.milestones.map((milestone, i) => (
-                        <div key={i} className="flex gap-3 relative">
-                          <div className="shrink-0 mt-0.5 z-10">
-                            {milestone.completed ? (
-                              <CheckCircle2 className="w-6 h-6 text-success" />
-                            ) : (
-                              <Circle className="w-6 h-6 text-base-300" />
-                            )}
+                    <div className="relative">
+                      <div className="absolute bottom-2 left-5 top-2 w-px bg-primary/12" />
+                      <div className="space-y-4">
+                        {project.milestones.map((milestone, index) => (
+                          <div key={`${milestone.title}-${index}`} className="relative flex gap-4">
+                            <span className={`z-10 grid h-10 w-10 shrink-0 place-items-center rounded-[14px_3px_14px_3px] ${milestone.completed ? 'bg-success/12 text-success' : 'bg-base-300/55 text-base-content/36'}`}>
+                              {milestone.completed ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
+                            </span>
+                            <div className="min-w-0 flex-1 border border-primary/8 bg-base-200/35 p-4 rounded-[18px_4px_18px_4px]">
+                              <p className="font-bold leading-tight text-base-content">{milestone.title}</p>
+                              {milestone.description && <p className="mt-2 text-sm leading-relaxed text-base-content/55">{milestone.description}</p>}
+                              {milestone.date && (
+                                <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-base-content/42">
+                                  <CalendarDays className="h-3.5 w-3.5" />
+                                  {formatDate(milestone.date)}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`font-semibold text-sm ${milestone.completed ? 'text-base-content' : 'text-base-content/60'}`}>
-                              {milestone.title}
-                            </p>
-                            {milestone.description && (
-                              <p className="text-xs text-base-content/50 mt-0.5">{milestone.description}</p>
-                            )}
-                            {milestone.date && (
-                              <p className="text-xs text-base-content/40 mt-1 flex items-center gap-1">
-                                <Calendar className="w-3 h-3" /> {formatDate(milestone.date)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </ScrollReveal>
+            )}
+
+            {allImages.length > 1 && (
+              <ScrollReveal>
+                <section className="overflow-hidden border border-primary/10 bg-base-100/92 shadow-[0_16px_44px_rgba(0,27,80,0.07)] rounded-[24px_4px_24px_4px]">
+                  <div className="p-5 sm:p-6">
+                    <div className="mb-5 flex items-center gap-3">
+                      <span className="grid h-11 w-11 place-items-center bg-primary/8 text-primary rounded-[14px_3px_14px_3px]">
+                        <ImageIcon className="h-5 w-5" />
+                      </span>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-secondary">Gallery</p>
+                        <h2 className="mt-1 text-xl font-bold">Project images</h2>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {allImages.map((url, index) => (
+                        <button
+                          key={`${url}-${index}`}
+                          type="button"
+                          className="group overflow-hidden bg-base-200 text-left rounded-[18px_3px_18px_3px]"
+                          onClick={() => setLightboxIdx(index)}
+                        >
+                          <img
+                            src={url}
+                            alt={`${project.title} - ${index + 1}`}
+                            className="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                        </button>
                       ))}
                     </div>
                   </div>
-                </CardBody>
-              </Card>
-            </ScrollReveal>
-          )}
+                </section>
+              </ScrollReveal>
+            )}
+          </article>
 
-          {/* Gallery */}
-          {allImages.length > 1 && (
-            <ScrollReveal delay={0.2}>
-              <Card hover={false}>
-                <CardBody>
-                  <div className="flex items-center gap-2 mb-4">
-                    <ImageIcon className="w-5 h-5 text-primary" />
-                    <h2 className="font-bold text-lg">Gallery</h2>
+          <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
+            <div className="overflow-hidden border border-primary/10 bg-base-100/90 shadow-[0_16px_44px_rgba(0,27,80,0.07)] rounded-[24px_4px_24px_4px]">
+              <div className="h-1 bg-gradient-to-r from-secondary via-primary to-secondary" />
+              <div className="p-5">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-secondary">Funding progress</p>
+                <div className="mt-5 text-center">
+                  <p className="text-4xl font-bold text-primary">{formatCurrency(project.raisedAmount)}</p>
+                  <p className="mt-2 text-sm font-semibold text-base-content/52">
+                    {project.goalAmount > 0 ? `raised of ${formatCurrency(project.goalAmount)}` : 'raised so far'}
+                  </p>
+                </div>
+                <div className="mt-5">
+                  <div className="mb-2 flex items-center justify-between text-xs font-bold text-base-content/48">
+                    <span>Progress</span>
+                    <span className="text-secondary">{Math.round(progress)}%</span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {allImages.map((url, idx) => (
-                      <div
-                        key={idx}
-                        className="overflow-hidden rounded-xl cursor-pointer group"
-                        onClick={() => setLightboxIdx(idx)}
-                      >
-                        <img
-                          src={url}
-                          alt={`${project.title} - ${idx + 1}`}
-                          className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </CardBody>
-              </Card>
-            </ScrollReveal>
-          )}
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-4">
-          {/* Funding */}
-          <ScrollReveal>
-            <Card hover={false}>
-              <CardBody>
-                <h3 className="font-semibold mb-3">Funding Progress</h3>
-                {project.goalAmount > 0 ? (
-                  <>
-                    <div className="text-center mb-3">
-                      <p className="text-3xl font-bold text-primary">{formatCurrency(project.raisedAmount)}</p>
-                      <p className="text-sm text-base-content/60">raised of {formatCurrency(project.goalAmount)}</p>
-                    </div>
-                    <div className="h-2.5 bg-base-200 rounded-full overflow-hidden mb-2">
-                      <div
-                        className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-500"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                    <p className="text-center text-sm text-base-content/60">{progress.toFixed(0)}% funded</p>
-                  </>
-                ) : (
-                  <p className="text-center text-base-content/60">No funding goal set</p>
-                )}
-                <Link to="/donations" className="btn btn-primary w-full mt-4">
-                  <Heart className="w-4 h-4" /> Donate to Project
+                  <ProgressBar progress={progress} />
+                </div>
+                <Link to="/donations" className="btn btn-primary mt-5 min-h-12 w-full justify-between px-5">
+                  <span className="inline-flex items-center gap-2">
+                    <Heart className="h-4 w-4" />
+                    Donate to project
+                  </span>
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
-              </CardBody>
-            </Card>
-          </ScrollReveal>
+              </div>
+            </div>
 
-          {/* Dates */}
-          {(project.startDate || project.endDate) && (
-            <ScrollReveal delay={0.1}>
-              <Card hover={false}>
-                <CardBody className="text-sm space-y-2">
-                  {project.startDate && (
-                    <div className="flex justify-between">
-                      <span className="text-base-content/60 flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Start Date</span>
-                      <span className="font-medium">{formatDate(project.startDate)}</span>
-                    </div>
-                  )}
-                  {project.endDate && (
-                    <div className="flex justify-between">
-                      <span className="text-base-content/60 flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> End Date</span>
-                      <span className="font-medium">{formatDate(project.endDate)}</span>
-                    </div>
-                  )}
-                </CardBody>
-              </Card>
-            </ScrollReveal>
-          )}
+            <div className="grid gap-3">
+              <DetailMeta icon={CircleDollarSign} label="Goal">
+                {project.goalAmount > 0 ? formatCurrency(project.goalAmount) : 'Open goal'}
+              </DetailMeta>
+              <DetailMeta icon={Flag} label="Status">
+                {project.status}
+              </DetailMeta>
+              {project.startDate && (
+                <DetailMeta icon={CalendarDays} label="Started">
+                  {formatDate(project.startDate)}
+                </DetailMeta>
+              )}
+              {project.endDate && (
+                <DetailMeta icon={Trophy} label="Target date">
+                  {formatDate(project.endDate)}
+                </DetailMeta>
+              )}
+            </div>
 
-          {/* Milestone progress */}
-          {project.milestones && project.milestones.length > 0 && (
-            <ScrollReveal delay={0.15}>
-              <Card hover={false}>
-                <CardBody>
-                  <h3 className="font-semibold text-sm mb-2">Milestone Progress</h3>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 bg-base-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-success rounded-full transition-all duration-500"
-                        style={{ width: `${(project.milestones.filter(m => m.completed).length / project.milestones.length) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-base-content/60 shrink-0">
-                      {project.milestones.filter(m => m.completed).length}/{project.milestones.length}
-                    </span>
-                  </div>
-                </CardBody>
-              </Card>
-            </ScrollReveal>
-          )}
+            {milestoneTotal > 0 && (
+              <div className="border border-primary/10 bg-base-100/90 p-5 shadow-[0_16px_44px_rgba(0,27,80,0.06)] rounded-[24px_4px_24px_4px]">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-secondary">Milestone progress</p>
+                <div className="mt-4 flex items-end justify-between gap-4">
+                  <p className="text-3xl font-bold text-primary">{completedMilestones}/{milestoneTotal}</p>
+                  <p className="text-sm font-bold text-secondary">{Math.round(milestoneProgress)}%</p>
+                </div>
+                <div className="mt-4 h-2 overflow-hidden bg-base-300/55">
+                  <div className="h-full bg-success transition-all duration-500" style={{ width: `${milestoneProgress}%` }} />
+                </div>
+              </div>
+            )}
+          </aside>
         </div>
       </div>
 
-      {/* Lightbox */}
       {lightboxIdx !== null && allImages.length > 0 && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
           onClick={() => setLightboxIdx(null)}
         >
           <button
-            className="absolute top-4 right-4 btn btn-ghost btn-sm btn-circle text-white"
+            type="button"
+            className="btn btn-ghost btn-sm btn-circle absolute right-4 top-4 text-white"
             onClick={() => setLightboxIdx(null)}
+            aria-label="Close image preview"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
           {allImages.length > 1 && (
             <>
               <button
-                className="absolute left-4 top-1/2 -translate-y-1/2 btn btn-ghost btn-sm btn-circle text-white"
-                onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx - 1 + allImages.length) % allImages.length) }}
+                type="button"
+                className="btn btn-ghost btn-sm btn-circle absolute left-4 top-1/2 -translate-y-1/2 text-white"
+                onClick={(event) => { event.stopPropagation(); setLightboxIdx((lightboxIdx - 1 + allImages.length) % allImages.length) }}
+                aria-label="Previous image"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="h-5 w-5" />
               </button>
               <button
-                className="absolute right-4 top-1/2 -translate-y-1/2 btn btn-ghost btn-sm btn-circle text-white"
-                onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx + 1) % allImages.length) }}
+                type="button"
+                className="btn btn-ghost btn-sm btn-circle absolute right-4 top-1/2 -translate-y-1/2 text-white"
+                onClick={(event) => { event.stopPropagation(); setLightboxIdx((lightboxIdx + 1) % allImages.length) }}
+                aria-label="Next image"
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="h-5 w-5" />
               </button>
             </>
           )}
           <img
             src={allImages[lightboxIdx]}
             alt={`${project.title} - ${lightboxIdx + 1}`}
-            className="max-w-full max-h-[85vh] object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
+            className="max-h-[85vh] max-w-full object-contain rounded-[20px_4px_20px_4px]"
+            onClick={(event) => event.stopPropagation()}
           />
-          <p className="absolute bottom-4 text-white/60 text-sm">
+          <p className="absolute bottom-4 text-sm text-white/60">
             {lightboxIdx + 1} / {allImages.length}
           </p>
         </div>

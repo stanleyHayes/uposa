@@ -117,7 +117,7 @@ export default function NewsPage() {
 
       <PageStats
         stats={[
-          { label: 'Total Articles', value: stats.total, icon: Newspaper, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' },
+          { label: 'Total Articles', value: stats.total, icon: Newspaper, color: 'text-brand-600', bg: 'bg-brand-50', border: 'border-brand-100' },
           { label: 'Published', value: stats.published, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100' },
           { label: 'Drafts', value: stats.drafts, icon: FileEdit, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
           { label: 'Featured', value: stats.featured, icon: Archive, color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' },
@@ -135,10 +135,20 @@ export default function NewsPage() {
         <ViewToggle view={viewMode} onChange={(v) => { setViewMode(v); setCurrentPage(1) }} />
       </div>
 
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden">
+      <div className="admin-card-surface overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-600 border-t-transparent" />
+          <div className="space-y-3 p-5">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="grid gap-3 border-b border-brand-950/10 pb-3 last:border-b-0 md:grid-cols-[1.4fr_0.8fr_0.7fr_0.6fr]">
+                <div className="space-y-2">
+                  <div className="h-4 w-56 animate-pulse bg-brand-950/10 dark:bg-dark-hover" />
+                  <div className="h-3 w-72 max-w-full animate-pulse bg-brand-950/5 dark:bg-dark-hover" />
+                </div>
+                <div className="h-4 w-28 animate-pulse bg-brand-950/10 dark:bg-dark-hover" />
+                <div className="h-4 w-20 animate-pulse bg-brand-950/10 dark:bg-dark-hover" />
+                <div className="h-4 w-16 animate-pulse bg-brand-950/10 dark:bg-dark-hover" />
+              </div>
+            ))}
           </div>
         ) : filteredArticles.length === 0 ? (
           <EmptyState
@@ -216,7 +226,7 @@ export default function NewsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
             {filteredArticles.slice((currentPage - 1) * 9, currentPage * 9).map((article) => (
-              <div key={article.id} className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group" onClick={() => navigate(`/news/${article.id}`)}>
+              <div key={article.id} className="admin-card-surface overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group" onClick={() => navigate(`/news/${article.id}`)}>
                 {article.imageUrl ? (
                   <img src={article.imageUrl} alt={article.title} className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
                 ) : (

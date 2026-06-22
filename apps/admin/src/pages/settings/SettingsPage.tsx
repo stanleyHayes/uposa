@@ -167,7 +167,7 @@ export default function SettingsPage() {
     ...(currentUser?.role === 'super_admin' ? [{ key: 'danger' as TabKey, label: 'Danger Zone', icon: Shield }] : []),
   ]
 
-  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name ?? 'User')}&background=4f46e5&color=fff&size=128`
+  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name ?? 'User')}&background=001B50&color=FFF8DC&bold=true&size=128`
 
   return (
     <div className="page-enter">
@@ -210,7 +210,7 @@ export default function SettingsPage() {
         {activeTab === 'profile' && (
           <div className="space-y-6">
             {/* Avatar & Role */}
-            <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+            <div className="admin-card-surface border border-gray-200 dark:border-dark-border shadow-sm p-6">
               <div className="flex items-center gap-4 mb-6">
                 <img src={avatarUrl} alt={currentUser?.name} className="w-16 h-16 rounded-full ring-2 ring-brand-100" />
                 <div>
@@ -240,7 +240,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Change Password */}
-            <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+            <div className="admin-card-surface border border-gray-200 dark:border-dark-border shadow-sm p-6">
               <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4 pl-3 border-l-2 border-brand-500 flex items-center gap-2">
                 <KeyRound size={14} />
                 Change Password
@@ -279,7 +279,7 @@ export default function SettingsPage() {
 
         {/* Organization Tab */}
         {activeTab === 'organization' && (
-          <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6 space-y-6">
+          <div className="admin-card-surface border border-gray-200 dark:border-dark-border shadow-sm p-6 space-y-6">
             <div className="flex items-center gap-4">
               <img src="/logo.png" alt="UPOSA" className="w-14 h-14 rounded-xl shrink-0" />
               <div>
@@ -319,7 +319,7 @@ export default function SettingsPage() {
 
         {/* Notifications Tab */}
         {activeTab === 'notifications' && (
-          <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+          <div className="admin-card-surface border border-gray-200 dark:border-dark-border shadow-sm p-6">
             <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4 pl-3 border-l-2 border-brand-500">Notification Preferences</h4>
             <div className="divide-y divide-gray-50 dark:divide-gray-800">
               <ToggleSwitch
@@ -354,7 +354,7 @@ export default function SettingsPage() {
         {/* Danger Zone Tab */}
         {activeTab === 'danger' && currentUser?.role === 'super_admin' && (
           <div className="space-y-4">
-            <div className="bg-white dark:bg-dark-card rounded-xl border border-red-200 dark:border-red-900/50 shadow-sm p-6">
+            <div className="admin-card-surface border border-red-200 dark:border-red-900/50 shadow-sm p-6">
               <div className="flex items-start gap-3 mb-5">
                 <div className="rounded-full bg-red-100 dark:bg-red-900/30 p-2 shrink-0">
                   <AlertTriangle size={20} className="text-red-600 dark:text-red-400" />

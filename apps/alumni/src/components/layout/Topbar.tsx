@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   Bell,
+  BookOpen,
   CheckCircle2,
   ChevronDown,
   Command,
+  HelpCircle,
   LogOut,
+  Map,
   Menu,
   Moon,
   PanelLeftClose,
@@ -22,6 +25,7 @@ import { useUIStore } from '../../stores/ui.store'
 import { useTheme } from '../../hooks/useTheme'
 import Avatar from '../ui/Avatar'
 import { cn } from '../../utils/cn'
+import { openAlumniPageHelp, replayAlumniTour } from '../help/helpEvents'
 
 export default function Topbar() {
   const { user, logout } = useAuthStore()
@@ -54,7 +58,7 @@ export default function Topbar() {
   const firstName = user?.fullName?.split(' ')[0] || 'Member'
 
   return (
-    <header className="sticky top-0 z-20 border-b border-primary/10 bg-base-100/90 shadow-[0_1px_0_rgba(0,27,80,0.03)] backdrop-blur-xl">
+    <header data-tour="topbar" className="sticky top-0 z-20 border-b border-primary/10 bg-base-100/90 shadow-[0_1px_0_rgba(0,27,80,0.03)] backdrop-blur-xl">
       <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-secondary/45 to-transparent" />
       <div className="flex h-[72px] items-center justify-between gap-4 px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-3">
@@ -92,6 +96,7 @@ export default function Topbar() {
         </div>
 
         <button
+          data-tour="search"
           type="button"
           className="hidden min-w-[260px] max-w-md flex-1 items-center justify-between gap-4 border border-primary/10 bg-base-200/45 px-4 py-2.5 text-sm text-base-content/45 transition-all hover:border-primary/20 hover:bg-base-200/70 hover:text-base-content/65 lg:flex rounded-[18px_3px_18px_3px]"
           title="Search"
@@ -117,6 +122,7 @@ export default function Topbar() {
           </button>
 
           <button
+            data-tour="notifications"
             type="button"
             className="relative grid h-10 w-10 place-items-center border border-primary/10 bg-base-200/55 text-base-content/65 transition-colors hover:border-primary/20 hover:bg-base-200 hover:text-primary rounded-[14px_3px_14px_3px]"
             aria-label="Notifications"
@@ -129,6 +135,7 @@ export default function Topbar() {
 
           <div className="relative" ref={menuRef}>
             <button
+              data-tour="user-menu"
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
               className={cn(
@@ -156,7 +163,7 @@ export default function Topbar() {
             <AnimatePresence>
               {menuOpen && (
                 <motion.div
-                  className="absolute right-0 top-full z-50 mt-3 w-[min(19rem,calc(100vw-2rem))] overflow-hidden border border-primary/10 bg-base-100 shadow-[0_24px_70px_rgba(0,27,80,0.18)] rounded-[20px_4px_20px_4px]"
+                  className="absolute right-0 top-full z-50 mt-3 w-[min(22rem,calc(100vw-2rem))] overflow-hidden border border-primary/10 bg-base-100 shadow-[0_24px_70px_rgba(0,27,80,0.18)] rounded-[20px_4px_20px_4px]"
                   initial={{ opacity: 0, y: 8, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.98 }}
@@ -180,19 +187,68 @@ export default function Topbar() {
                   <div className="p-2">
                     <button
                       type="button"
-                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-semibold text-base-content/70 transition-colors hover:bg-base-200 hover:text-primary rounded-[14px_3px_14px_3px]"
+                      className="flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-base-200 rounded-[14px_3px_14px_3px]"
                       onClick={() => { setMenuOpen(false); navigate('/profile') }}
                     >
-                      <User className="h-4 w-4 text-base-content/40" />
-                      My Profile
+                      <span className="grid h-9 w-9 shrink-0 place-items-center border border-primary/10 bg-base-200 text-base-content/55">
+                        <User className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-bold text-base-content">My Profile</span>
+                        <span className="mt-0.5 block text-[11px] leading-4 text-base-content/50">Update identity, class, and public details.</span>
+                      </span>
                     </button>
                     <button
                       type="button"
-                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-semibold text-base-content/70 transition-colors hover:bg-base-200 hover:text-primary rounded-[14px_3px_14px_3px]"
+                      className="flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-base-200 rounded-[14px_3px_14px_3px]"
                       onClick={() => { setMenuOpen(false); navigate('/settings') }}
                     >
-                      <Settings className="h-4 w-4 text-base-content/40" />
-                      Settings
+                      <span className="grid h-9 w-9 shrink-0 place-items-center border border-primary/10 bg-base-200 text-base-content/55">
+                        <Settings className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-bold text-base-content">Settings</span>
+                        <span className="mt-0.5 block text-[11px] leading-4 text-base-content/50">Adjust account, theme, and notifications.</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-base-200 rounded-[14px_3px_14px_3px]"
+                      onClick={() => { setMenuOpen(false); openAlumniPageHelp() }}
+                    >
+                      <span className="grid h-9 w-9 shrink-0 place-items-center border border-primary/10 bg-base-200 text-base-content/55">
+                        <HelpCircle className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-bold text-base-content">Page Help</span>
+                        <span className="mt-0.5 block text-[11px] leading-4 text-base-content/50">Explain the current portal page.</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-base-200 rounded-[14px_3px_14px_3px]"
+                      onClick={() => { setMenuOpen(false); replayAlumniTour() }}
+                    >
+                      <span className="grid h-9 w-9 shrink-0 place-items-center border border-primary/10 bg-base-200 text-base-content/55">
+                        <Map className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-bold text-base-content">Replay Tour</span>
+                        <span className="mt-0.5 block text-[11px] leading-4 text-base-content/50">Restart the member walkthrough.</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-base-200 rounded-[14px_3px_14px_3px]"
+                      onClick={() => { setMenuOpen(false); navigate('/help') }}
+                    >
+                      <span className="grid h-9 w-9 shrink-0 place-items-center border border-primary/10 bg-base-200 text-base-content/55">
+                        <BookOpen className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-bold text-base-content">Help Library</span>
+                        <span className="mt-0.5 block text-[11px] leading-4 text-base-content/50">Browse every member page guide.</span>
+                      </span>
                     </button>
                   </div>
 
@@ -200,10 +256,15 @@ export default function Topbar() {
                     <button
                       type="button"
                       onClick={() => { setMenuOpen(false); handleLogout() }}
-                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-semibold text-error transition-colors hover:bg-error/10 rounded-[14px_3px_14px_3px]"
+                      className="flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-error/10 rounded-[14px_3px_14px_3px]"
                     >
-                      <LogOut className="h-4 w-4" />
-                      Logout
+                      <span className="grid h-9 w-9 shrink-0 place-items-center border border-error/20 bg-error/10 text-error">
+                        <LogOut className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-bold text-error">Logout</span>
+                        <span className="mt-0.5 block text-[11px] leading-4 text-error/70">End this portal session.</span>
+                      </span>
                     </button>
                   </div>
                 </motion.div>

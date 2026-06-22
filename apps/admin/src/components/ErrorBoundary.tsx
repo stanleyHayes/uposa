@@ -37,7 +37,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
           <div className="max-w-lg w-full relative z-10">
             {/* Card */}
-            <div className="bg-white dark:bg-dark-card rounded-2xl shadow-xl border border-gray-200/80 dark:border-dark-border overflow-hidden">
+            <div className="admin-card-surface overflow-hidden">
               {/* Top accent */}
               <div className="h-1.5 bg-gradient-to-r from-red-500 via-red-400 to-amber-400" />
 

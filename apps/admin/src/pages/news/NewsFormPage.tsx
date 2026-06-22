@@ -9,6 +9,7 @@ import PageHeader from '../../components/layout/PageHeader'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
+import Textarea from '../../components/ui/Textarea'
 import MarkdownEditor from '../../components/ui/MarkdownEditor'
 import { adminNewsApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
@@ -144,8 +145,16 @@ export default function NewsFormPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-600 border-t-transparent" />
+      <div className="page-enter space-y-4">
+        <div className="h-5 w-36 animate-pulse bg-brand-950/10 dark:bg-dark-hover" />
+        <div className="admin-card-surface space-y-4 p-6">
+          <div className="h-10 w-full animate-pulse bg-brand-950/10 dark:bg-dark-hover" />
+          <div className="h-28 w-full animate-pulse bg-brand-950/5 dark:bg-dark-hover" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="h-10 animate-pulse bg-brand-950/10 dark:bg-dark-hover" />
+            <div className="h-10 animate-pulse bg-brand-950/10 dark:bg-dark-hover" />
+          </div>
+        </div>
       </div>
     )
   }
@@ -167,14 +176,14 @@ export default function NewsFormPage() {
         description={isEditing ? `Editing "${article?.title}"` : 'Create a new news article'}
       />
 
-      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm p-6">
+      <div className="admin-card-surface p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <Input label="Title" error={errors.title?.message} {...register('title')} />
             <Input label="Author Name" error={errors.authorName?.message} {...register('authorName')} />
           </div>
 
-          <Input label="Excerpt" helperText="A short summary shown in listings" error={errors.excerpt?.message} {...register('excerpt')} />
+          <Textarea label="Excerpt" rows={3} helperText="A short summary shown in listings" error={errors.excerpt?.message} {...register('excerpt')} />
 
           <Controller
             name="content"
