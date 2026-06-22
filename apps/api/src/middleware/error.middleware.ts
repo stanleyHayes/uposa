@@ -1,14 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { env } from '../config/env';
+import { logger } from '../config/logger';
 
 export function errorMiddleware(
   err: Error,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ): void {
-  console.error('[Error]', err);
+  const status = (err as Error & { statusCode?: number }).statusCode;
+  // 5xx (and unknown) are real problems; 4xx are expected client errors.
+  if (!status || status >= 500) {
+    logger.error({ err, method: req.method, url: req.originalUrl }, 'Request error');
+  } else {
+    logger.warn({ err: err.message, method: req.method, url: req.originalUrl }, 'Request rejected');
+  }
 
   // Zod validation error
   if (err instanceof ZodError) {
@@ -46,6 +53,15 @@ export function errorMiddleware(
     res.status(401).json({
       success: false,
       message: 'Token expired',
+    });
+    return;
+  }
+
+  // Malformed ObjectId / invalid query cast (e.g. a bad id in the URL) → 400, not 500
+  if (err.name === 'CastError' || err.name === 'BSONError') {
+    res.status(400).json({
+      success: false,
+      message: 'Invalid identifier',
     });
     return;
   }

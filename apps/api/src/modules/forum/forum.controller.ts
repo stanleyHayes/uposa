@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Response } from 'express';
 import { RouteRequest } from '../../types/request.types';
 import { createPostSchema, updatePostSchema, createCommentSchema } from './forum.validation';

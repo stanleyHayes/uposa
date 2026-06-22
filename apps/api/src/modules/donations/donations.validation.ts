@@ -2,22 +2,22 @@ import { z } from 'zod';
 
 export const createDonationSchema = z.object({
   body: z.object({
-    donorName: z.string().min(2, 'Donor name is required'),
-    donorEmail: z.string().email('Invalid email'),
-    amount: z.coerce.number().positive('Amount must be positive'),
-    currency: z.string().optional(),
+    donorName: z.string().min(2, 'Donor name is required').max(120),
+    donorEmail: z.string().email('Invalid email').max(254),
+    amount: z.coerce.number().positive('Amount must be positive').max(100_000_000),
+    currency: z.string().max(10).optional(),
     channel: z.enum(['MOMO', 'BANK', 'PAYPAL', 'PAYSTACK', 'STRIPE', 'CRYPTO', 'CASH', 'OTHER']).optional(),
-    purpose: z.string().optional(),
-    transactionRef: z.string().optional(),
-    projectId: z.string().optional(),
-    notes: z.string().optional(),
+    purpose: z.string().max(200).optional(),
+    transactionRef: z.string().max(200).optional(),
+    projectId: z.string().max(64).optional(),
+    notes: z.string().max(2000).optional(),
   }),
 });
 
 export const confirmDonationSchema = z.object({
   body: z.object({
-    transactionRef: z.string().optional(),
-    notes: z.string().optional(),
+    transactionRef: z.string().max(200).optional(),
+    notes: z.string().max(2000).optional(),
   }),
 });
 

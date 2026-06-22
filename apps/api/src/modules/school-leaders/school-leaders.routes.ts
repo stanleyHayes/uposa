@@ -9,6 +9,7 @@ import {
 } from './school-leaders.controller';
 import { adminMiddleware } from '../../middleware/admin.middleware';
 import { uploadSingle } from '../../middleware/upload.middleware';
+import { uploadLimiter } from '../../middleware/ratelimit.middleware';
 
 const router = Router();
 
@@ -23,6 +24,6 @@ export const adminSchoolLeadersRouter = Router();
 adminSchoolLeadersRouter.use(adminMiddleware);
 adminSchoolLeadersRouter.get('/', adminListSchoolLeadersHandler);
 adminSchoolLeadersRouter.get('/:id', adminGetSchoolLeaderHandler);
-adminSchoolLeadersRouter.post('/', uploadSingle('photo'), adminCreateSchoolLeaderHandler);
-adminSchoolLeadersRouter.put('/:id', uploadSingle('photo'), adminUpdateSchoolLeaderHandler);
+adminSchoolLeadersRouter.post('/', uploadLimiter, uploadSingle('photo'), adminCreateSchoolLeaderHandler);
+adminSchoolLeadersRouter.put('/:id', uploadLimiter, uploadSingle('photo'), adminUpdateSchoolLeaderHandler);
 adminSchoolLeadersRouter.delete('/:id', adminDeleteSchoolLeaderHandler);

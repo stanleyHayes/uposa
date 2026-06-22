@@ -13,6 +13,7 @@ import {
 import { authMiddleware } from '../../middleware/auth.middleware';
 import { adminMiddleware } from '../../middleware/admin.middleware';
 import { uploadSingle } from '../../middleware/upload.middleware';
+import { uploadLimiter } from '../../middleware/ratelimit.middleware';
 
 const router = Router();
 
@@ -24,8 +25,8 @@ router.get('/:slug', getEventBySlugHandler);
 router.post('/:id/rsvp', rsvpToEventHandler); // public RSVP (memberId optional)
 
 // Admin routes
-router.post('/admin', adminMiddleware, uploadSingle('image'), createEventHandler);
-router.put('/admin/:id', adminMiddleware, uploadSingle('image'), updateEventHandler);
+router.post('/admin', adminMiddleware, uploadLimiter, uploadSingle('image'), createEventHandler);
+router.put('/admin/:id', adminMiddleware, uploadLimiter, uploadSingle('image'), updateEventHandler);
 router.delete('/admin/:id', adminMiddleware, deleteEventHandler);
 router.get('/admin/:id/rsvps', adminMiddleware, getEventRsvpsHandler);
 

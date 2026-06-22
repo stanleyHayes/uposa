@@ -36,8 +36,12 @@ export async function getMemberDirectoryHandler(req: RouteRequest, res: Response
 }
 
 export async function getMemberByIdHandler(req: RouteRequest, res: Response): Promise<void> {
+  if (!req.user) {
+    errorResponse(res, 'Unauthorized', 401);
+    return;
+  }
   const { id } = req.params;
-  const member = await getMemberById(id);
+  const member = await getMemberById(id, req.user.id);
   successResponse(res, 'Member retrieved', member);
 }
 

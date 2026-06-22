@@ -1,3 +1,5 @@
+import { escapeRegex } from '../../utils/search.utils';
+import mongoose from 'mongoose';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { generateUniqueSlug } from '../../utils/response.utils';
@@ -15,8 +17,8 @@ async function attachCreatedByMany(docs: Record<string, any>[]) {
   if (adminIds.length === 0) return docs.map(d => ({ ...d, createdBy: null }));
   const repos = getRepos();
   const adminDocs = await repos.admins.findMany({ _id: { $in: adminIds } }, { projection: 'fullName' });
-  const adminMap = new Map(adminDocs.map(a => [a.id, { id: a.id, fullName: a.fullName }]));
-  return docs.map(d => ({ ...d, createdBy: adminMap.get(d.createdById) || null }));
+  const adminMap = new Map(adminDocs.map(a => [String(a.id), { id: a.id, fullName: a.fullName }]));
+  return docs.map(d => ({ ...d, createdBy: adminMap.get(String(d.createdById)) || null }));
 }
 
 export async function listEvents(query: Record<string, string | undefined>) {
@@ -28,8 +30,8 @@ export async function listEvents(query: Record<string, string | undefined>) {
   if (status) where.status = status.toUpperCase();
   if (search) {
     where.$or = [
-      { title: { $regex: search, $options: 'i' } },
-      { description: { $regex: search, $options: 'i' } },
+      { title: { $regex: escapeRegex(search), $options: 'i' } },
+      { description: { $regex: escapeRegex(search), $options: 'i' } },
     ];
   }
 
@@ -151,7 +153,7 @@ export async function getEventRsvps(eventId: string, query: Record<string, strin
   if (!event) throw Object.assign(new Error('Event not found'), { statusCode: 404 });
 
   const pipeline = [
-    { $match: { eventId } },
+    { $match: { eventId: new mongoose.Types.ObjectId(eventId) } },
     { $sort: { createdAt: -1 as const } },
     { $skip: skip },
     { $limit: limit },
@@ -160,7 +162,7 @@ export async function getEventRsvps(eventId: string, query: Record<string, strin
         from: 'members',
         let: { mid: '$memberId' },
         pipeline: [
-          { $match: { $expr: { $eq: [{ $toString: '$_id' }, '$$mid'] } } },
+          { $match: { $expr: { $eq: [{ $toString: '$_id' }, { $toString: '$$mid' }] } } },
           { $project: { _id: 0, id: { $toString: '$_id' }, fullName: 1, photoUrl: 1 } },
         ],
         as: '_member',

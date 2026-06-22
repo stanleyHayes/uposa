@@ -49,3 +49,41 @@ export const paymentLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
 });
+
+/**
+ * Limiter for the admin surface (`/api/admin/*`). Admin endpoints are already
+ * behind adminMiddleware; this is defense-in-depth against a compromised token
+ * being used to hammer mutations or scrape data.
+ *
+ * 120 requests per minute per IP (generous for normal dashboard use).
+ */
+export const adminLimiter = rateLimit({
+  ...baseOptions,
+  windowMs: 60 * 1000,
+  max: 120,
+});
+
+/**
+ * Limiter for file-upload endpoints — uploads are expensive (memory + Cloudinary)
+ * and a natural abuse target.
+ *
+ * 30 uploads per 15 minutes per IP.
+ */
+export const uploadLimiter = rateLimit({
+  ...baseOptions,
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+});
+
+/**
+ * Limiter for unauthenticated public write endpoints (contact form, transcript
+ * requests, newsletter signup, guest donations). These accept anonymous POSTs
+ * and are the prime targets for spam and storage-bloat abuse.
+ *
+ * 10 submissions per 15 minutes per IP.
+ */
+export const publicWriteLimiter = rateLimit({
+  ...baseOptions,
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+});

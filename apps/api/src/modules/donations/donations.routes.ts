@@ -7,13 +7,14 @@ import {
   getDonationSummaryHandler,
   getDonationByIdHandler,
 } from './donations.controller';
-import { authMiddleware } from '../../middleware/auth.middleware';
+import { authMiddleware, optionalAuthMiddleware } from '../../middleware/auth.middleware';
 import { adminMiddleware } from '../../middleware/admin.middleware';
+import { publicWriteLimiter } from '../../middleware/ratelimit.middleware';
 
 const router = Router();
 
 // Public / optional auth
-router.post('/', submitDonationHandler);
+router.post('/', publicWriteLimiter, optionalAuthMiddleware, submitDonationHandler);
 
 // Auth required
 router.get('/my', authMiddleware, getMyDonationsHandler);

@@ -1,3 +1,5 @@
+import { escapeRegex } from '../../utils/search.utils';
+import mongoose from 'mongoose';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { CreateJobInput, UpdateJobInput, ApplyToJobInput, UpdateApplicationStatusInput } from './jobs.validation';
@@ -14,8 +16,8 @@ async function attachPostedByMany(docs: Record<string, any>[]) {
   if (ids.length === 0) return docs.map(d => ({ ...d, postedBy: null }));
   const repos = getRepos();
   const mDocs = await repos.members.findMany({ _id: { $in: ids } }, { projection: 'fullName email' });
-  const mMap = new Map(mDocs.map((m: any) => [m.id, { id: m.id, fullName: m.fullName, email: m.email }]));
-  return docs.map(d => ({ ...d, postedBy: d.postedById ? mMap.get(d.postedById) || null : null }));
+  const mMap = new Map(mDocs.map((m: any) => [String(m.id), { id: m.id, fullName: m.fullName, email: m.email }]));
+  return docs.map(d => ({ ...d, postedBy: d.postedById ? mMap.get(String(d.postedById)) || null : null }));
 }
 
 async function attachAppCount(docs: Record<string, any>[]) {
@@ -25,8 +27,8 @@ async function attachAppCount(docs: Record<string, any>[]) {
     { $match: { jobId: { $in: jobIds } } },
     { $group: { _id: '$jobId', count: { $sum: 1 } } },
   ]);
-  const countMap = new Map(counts.map((c: any) => [c._id, c.count]));
-  return docs.map(d => ({ ...d, _count: { applications: countMap.get(d.id) || 0 } }));
+  const countMap = new Map(counts.map((c: any) => [String(c._id), c.count]));
+  return docs.map(d => ({ ...d, _count: { applications: countMap.get(String(d.id)) || 0 } }));
 }
 
 export async function listJobs(query: Record<string, string | undefined>) {
@@ -43,9 +45,9 @@ export async function listJobs(query: Record<string, string | undefined>) {
   if (search) {
     where.$and = [{
       $or: [
-        { title: { $regex: search, $options: 'i' } },
-        { company: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
+        { title: { $regex: escapeRegex(search), $options: 'i' } },
+        { company: { $regex: escapeRegex(search), $options: 'i' } },
+        { description: { $regex: escapeRegex(search), $options: 'i' } },
       ],
     }];
   }
@@ -165,7 +167,7 @@ export async function getMyApplications(applicantId: string, query: Record<strin
   const repos = getRepos();
 
   const pipeline = [
-    { $match: { applicantId } },
+    { $match: { applicantId: new mongoose.Types.ObjectId(applicantId) } },
     { $sort: { createdAt: -1 as const } },
     { $skip: skip },
     { $limit: limit },
@@ -174,7 +176,7 @@ export async function getMyApplications(applicantId: string, query: Record<strin
         from: 'jobs',
         let: { jid: '$jobId' },
         pipeline: [
-          { $match: { $expr: { $eq: [{ $toString: '$_id' }, '$$jid'] } } },
+          { $match: { $expr: { $eq: [{ $toString: '$_id' }, { $toString: '$$jid' }] } } },
           { $project: { _id: 0, id: { $toString: '$_id' }, title: 1, company: 1, location: 1, jobType: 1 } },
         ],
         as: '_job',
@@ -204,7 +206,7 @@ export async function getJobApplications(jobId: string, memberId: string, query:
   const { page, limit, skip } = getPaginationParams(query);
 
   const pipeline = [
-    { $match: { jobId } },
+    { $match: { jobId: new mongoose.Types.ObjectId(jobId) } },
     { $sort: { createdAt: -1 as const } },
     { $skip: skip },
     { $limit: limit },
@@ -213,7 +215,7 @@ export async function getJobApplications(jobId: string, memberId: string, query:
         from: 'members',
         let: { aid: '$applicantId' },
         pipeline: [
-          { $match: { $expr: { $eq: [{ $toString: '$_id' }, '$$aid'] } } },
+          { $match: { $expr: { $eq: [{ $toString: '$_id' }, { $toString: '$$aid' }] } } },
           { $project: { _id: 0, id: { $toString: '$_id' }, fullName: 1, email: 1, photoUrl: 1, occupation: 1, areaOfExpertise: 1 } },
         ],
         as: '_applicant',
@@ -266,8 +268,8 @@ export async function adminListAllJobs(query: Record<string, string | undefined>
   else if (status === 'approved') where.isApproved = true;
   if (search) {
     where.$or = [
-      { title: { $regex: search, $options: 'i' } },
-      { company: { $regex: search, $options: 'i' } },
+      { title: { $regex: escapeRegex(search), $options: 'i' } },
+      { company: { $regex: escapeRegex(search), $options: 'i' } },
     ];
   }
 
@@ -323,7 +325,7 @@ export async function adminGetJobApplications(jobId: string, query: Record<strin
   const { page, limit, skip } = getPaginationParams(query);
 
   const pipeline = [
-    { $match: { jobId } },
+    { $match: { jobId: new mongoose.Types.ObjectId(jobId) } },
     { $sort: { createdAt: -1 as const } },
     { $skip: skip },
     { $limit: limit },
@@ -332,7 +334,7 @@ export async function adminGetJobApplications(jobId: string, query: Record<strin
         from: 'members',
         let: { aid: '$applicantId' },
         pipeline: [
-          { $match: { $expr: { $eq: [{ $toString: '$_id' }, '$$aid'] } } },
+          { $match: { $expr: { $eq: [{ $toString: '$_id' }, { $toString: '$$aid' }] } } },
           { $project: { _id: 0, id: { $toString: '$_id' }, fullName: 1, email: 1, photoUrl: 1, occupation: 1 } },
         ],
         as: '_applicant',

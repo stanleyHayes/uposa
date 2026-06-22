@@ -1,3 +1,4 @@
+import { escapeRegex } from '../../utils/search.utils';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { sendEmail } from '../../utils/email.utils';
@@ -47,9 +48,9 @@ export async function adminListMessages(query: Record<string, string | undefined
   if (isRead !== undefined) where.isRead = isRead === 'true';
   if (search) {
     where.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
-      { subject: { $regex: search, $options: 'i' } },
+      { name: { $regex: escapeRegex(search), $options: 'i' } },
+      { email: { $regex: escapeRegex(search), $options: 'i' } },
+      { subject: { $regex: escapeRegex(search), $options: 'i' } },
     ];
   }
 

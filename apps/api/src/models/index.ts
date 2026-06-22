@@ -363,11 +363,12 @@ export interface IPaymentMethod { id: string;
   displayName: string;
   description?: string;
   isEnabled: boolean;
-  supportedCurrencies: string[];
-  countries: string[];
-  config?: unknown;
-  createdAt: Date;
-  updatedAt: Date;
+	  supportedCurrencies: string[];
+	  countries: string[];
+	  credentials?: Record<string, string> | null;
+	  config?: unknown;
+	  createdAt: Date;
+	  updatedAt: Date;
 }
 
 export interface IPayment { id: string;
@@ -829,10 +830,11 @@ const PaymentMethodSchema = new Schema<IPaymentMethod>(
     displayName: { type: String, required: true },
     description: { type: String },
     isEnabled: { type: Boolean, default: false },
-    supportedCurrencies: { type: [String], default: [] },
-    countries: { type: [String], default: [] },
-    config: { type: Schema.Types.Mixed },
-  },
+	    supportedCurrencies: { type: [String], default: [] },
+	    countries: { type: [String], default: [] },
+	    credentials: { type: Schema.Types.Mixed },
+	    config: { type: Schema.Types.Mixed },
+	  },
   { timestamps: true, collection: 'payment_methods', toJSON: toJSONOptions },
 );
 
