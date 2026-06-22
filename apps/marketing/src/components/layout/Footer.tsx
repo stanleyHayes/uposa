@@ -31,6 +31,7 @@ import { useSiteData } from "../../context/SiteDataContext.tsx";
 import { ScrollReveal } from "../common/ScrollReveal.tsx";
 import { subscribeNewsletter } from "../../api/client.ts";
 import { BouncingDots } from "../common/BouncingDots.tsx";
+import { Parallax } from "../common/Parallax.tsx";
 
 const fadeUp = {
     hidden: { opacity: 0, y: 18 },
@@ -129,18 +130,20 @@ export const Footer = () => {
         <footer className="relative overflow-hidden bg-primary text-primary-content">
             <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
             <div
-                className="pointer-events-none absolute inset-0 opacity-[0.06]"
+                className="pointer-events-none absolute inset-0 opacity-[0.02]"
                 style={{
                     backgroundImage: "linear-gradient(90deg, var(--uposa-nav-grid) 1px, transparent 1px), linear-gradient(var(--uposa-nav-grid) 1px, transparent 1px)",
                     backgroundSize: "42px 42px",
                 }}
             />
-            <img
-                src="/logo.png"
-                alt=""
-                aria-hidden="true"
-                className="pointer-events-none absolute -right-24 top-10 h-[460px] w-[460px] object-contain opacity-[0.05] md:h-[620px] md:w-[620px]"
-            />
+            <Parallax offset={130} className="pointer-events-none absolute -right-24 top-10">
+                <img
+                    src="/logo.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="h-[460px] w-[460px] object-contain opacity-[0.06] md:h-[620px] md:w-[620px]"
+                />
+            </Parallax>
 
             <div className="relative mx-auto max-w-7xl px-4">
                 <ScrollReveal>

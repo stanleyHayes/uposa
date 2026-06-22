@@ -1,3 +1,4 @@
+import { ParallaxImg } from "../components/common/Parallax.tsx";
 import { Link } from "react-router";
 import {
     ArrowRight,
@@ -72,13 +73,13 @@ const About = () => {
             <section className="relative overflow-hidden bg-base-100 text-primary">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
                 <div
-                    className="absolute inset-0 opacity-[0.05]"
+                    className="pointer-events-none absolute inset-0 opacity-[0.02]"
                     style={{
                         backgroundImage: "linear-gradient(90deg, var(--uposa-hero-grid) 1px, transparent 1px), linear-gradient(var(--uposa-hero-grid) 1px, transparent 1px)",
                         backgroundSize: "44px 44px",
                     }}
                 />
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"
@@ -217,7 +218,7 @@ const About = () => {
             </section>
 
             <section className="relative overflow-hidden bg-base-200 py-16 md:py-24">
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"
@@ -368,13 +369,13 @@ const About = () => {
 
             <section id="constitution" className="relative overflow-hidden bg-primary py-16 text-primary-content md:py-24">
                 <div
-                    className="absolute inset-0 opacity-[0.06]"
+                    className="pointer-events-none absolute inset-0 opacity-[0.02]"
                     style={{
                         backgroundImage: "linear-gradient(90deg, currentColor 1px, transparent 1px), linear-gradient(currentColor 1px, transparent 1px)",
                         backgroundSize: "42px 42px",
                     }}
                 />
-                <img src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -bottom-36 -right-16 h-[420px] w-[420px] object-contain opacity-[0.1]" />
+                <ParallaxImg src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -bottom-36 -right-16 h-[420px] w-[420px] object-contain opacity-[0.1]" />
                 <div className="relative mx-auto grid max-w-7xl gap-8 px-4 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
                     <ScrollReveal direction="right">
                         <div>

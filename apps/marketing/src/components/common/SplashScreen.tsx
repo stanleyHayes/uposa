@@ -1,69 +1,33 @@
+/**
+ * Full-screen branded splash shown while a route's chunk and its initial data
+ * load (Suspense fallback + per-page loading gate). Replaces the old skeleton
+ * mock, which felt slow/broken on API cold-start. Visually matches the static
+ * splash in index.html for a seamless hand-off from first paint.
+ */
 export default function SplashScreen() {
   return (
-    <div className="min-h-screen bg-base-100">
-      {/* Navbar skeleton */}
-      <div className="h-16 bg-primary/90">
-        <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-white/10 animate-pulse" />
-            <div className="w-20 h-4 rounded bg-white/10 animate-pulse hidden sm:block" />
-          </div>
-          <div className="hidden lg:flex items-center gap-4">
-            {[56, 48, 64, 40, 52].map((w, i) => (
-              <div key={i} className="h-3 rounded bg-white/10 animate-pulse" style={{ width: w, animationDelay: `${i * 80}ms` }} />
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-white/10 animate-pulse" />
-            <div className="w-20 h-9 rounded-lg bg-white/10 animate-pulse hidden sm:block" />
-          </div>
+    <div className="flex min-h-screen w-full flex-col items-center justify-center gap-7 bg-[#0a1633] text-center">
+      <img
+        src="/logo.png"
+        alt="UPOSA"
+        className="h-24 w-24 object-contain animate-pulse drop-shadow-[0_12px_34px_rgba(0,0,0,0.5)]"
+      />
+      <div>
+        <div
+          className="text-[40px] font-bold leading-none tracking-[2px] text-[#faf7ef]"
+          style={{ fontFamily: "Fraunces, Georgia, serif" }}
+        >
+          UPOSA
+        </div>
+        <div className="mt-2 text-[11px] font-bold uppercase tracking-[0.32em] text-[#e3b341]">
+          The Legit Elites
         </div>
       </div>
-
-      {/* Hero skeleton */}
-      <div className="bg-gradient-to-br from-primary via-primary/95 to-accent py-20">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="w-44 h-8 rounded-full bg-white/8 animate-pulse mb-6" />
-          <div className="w-[70%] max-w-lg h-10 rounded-lg bg-white/10 animate-pulse mb-3" />
-          <div className="w-[45%] max-w-sm h-10 rounded-lg bg-white/8 animate-pulse mb-5" />
-          <div className="w-[60%] max-w-md h-5 rounded bg-white/5 animate-pulse mb-8" />
-          <div className="flex gap-3">
-            <div className="w-28 h-11 rounded-xl bg-white/10 animate-pulse" />
-            <div className="w-28 h-11 rounded-xl bg-white/7 animate-pulse" style={{ animationDelay: '100ms' }} />
-          </div>
-        </div>
-      </div>
-
-      {/* Content skeleton */}
-      <div className="max-w-7xl mx-auto px-4 py-14">
-        {/* Section header */}
-        <div className="flex flex-col items-center mb-12">
-          <div className="w-36 h-7 rounded-full bg-base-300/70 animate-pulse mb-4" />
-          <div className="w-56 h-7 rounded-lg bg-base-300 animate-pulse mb-2" />
-          <div className="w-44 h-4 rounded bg-base-300/50 animate-pulse" />
-        </div>
-
-        {/* Cards grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <div
-              key={i}
-              className="rounded-2xl border border-base-300/60 overflow-hidden"
-              style={{ animationDelay: `${i * 100}ms` }}
-            >
-              <div className="h-44 bg-base-300/40 animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
-              <div className="p-5 space-y-3">
-                <div className="w-20 h-5 rounded-full bg-base-300/50 animate-pulse" style={{ animationDelay: `${i * 100 + 50}ms` }} />
-                <div className="w-3/4 h-5 rounded bg-base-300/60 animate-pulse" style={{ animationDelay: `${i * 100 + 100}ms` }} />
-                <div className="space-y-2">
-                  <div className="w-full h-3 rounded bg-base-300/40 animate-pulse" style={{ animationDelay: `${i * 100 + 150}ms` }} />
-                  <div className="w-2/3 h-3 rounded bg-base-300/30 animate-pulse" style={{ animationDelay: `${i * 100 + 200}ms` }} />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <span className="mt-1 inline-flex items-center gap-2" role="status" aria-label="Loading">
+        <span className="h-2.5 w-2.5 rounded-full bg-[#e3b341] animate-bounce [animation-delay:-0.3s]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#e3b341] animate-bounce [animation-delay:-0.15s]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#e3b341] animate-bounce" />
+      </span>
     </div>
   );
 }

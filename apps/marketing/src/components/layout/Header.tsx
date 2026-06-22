@@ -185,7 +185,7 @@ export const Header = () => {
         <header className="sticky top-0 z-50 border-b border-primary-content/10 bg-primary text-primary-content shadow-[0_12px_40px_rgba(0,27,80,0.22)]">
             <div className="absolute inset-x-0 top-0 h-1 bg-secondary" />
             <div
-                className="pointer-events-none absolute inset-0 opacity-[0.06]"
+                className="pointer-events-none absolute inset-0 opacity-[0.02]"
                 style={{
                     backgroundImage: "linear-gradient(90deg, var(--uposa-nav-grid) 1px, transparent 1px), linear-gradient(var(--uposa-nav-grid) 1px, transparent 1px)",
                     backgroundSize: "40px 40px",

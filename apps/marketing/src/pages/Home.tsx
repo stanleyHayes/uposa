@@ -37,6 +37,8 @@ import EmptyState from "../components/common/EmptyState.tsx";
 import { useSiteData } from "../context/SiteDataContext.tsx";
 import { subscribeNewsletter } from "../api/client.ts";
 import SplashScreen from "../components/common/SplashScreen.tsx";
+import { Reveal3D } from "../components/common/Reveal3D.tsx";
+import { Parallax, ParallaxImg } from "../components/common/Parallax.tsx";
 import { BouncingDots } from "../components/common/BouncingDots.tsx";
 import { Card, CardAccent, CardBody } from "../components/ui/Card.tsx";
 
@@ -127,18 +129,20 @@ const Home = () => {
             <section className="relative overflow-hidden bg-base-100 text-primary">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
                 <div
-                    className="absolute inset-0 opacity-[0.05]"
+                    className="pointer-events-none absolute inset-0 opacity-[0.02]"
                     style={{
                         backgroundImage: "linear-gradient(90deg, var(--uposa-hero-grid) 1px, transparent 1px), linear-gradient(var(--uposa-hero-grid) 1px, transparent 1px)",
                         backgroundSize: "44px 44px",
                     }}
                 />
-                <img
-                    src="/logo.png"
-                    alt=""
-                    aria-hidden="true"
-                    className="pointer-events-none absolute -right-28 top-8 h-[520px] w-[520px] object-contain opacity-[0.08] md:top-4 md:h-[680px] md:w-[680px]"
-                />
+                <Parallax offset={150} className="pointer-events-none absolute -right-28 top-8 md:top-4">
+                    <img
+                        src="/logo.png"
+                        alt=""
+                        aria-hidden="true"
+                        className="h-[520px] w-[520px] object-contain opacity-[0.1] md:h-[680px] md:w-[680px]"
+                    />
+                </Parallax>
 
                 <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl gap-10 px-4 py-14 lg:grid-cols-[1fr_430px] lg:items-center lg:py-20">
                     <HeroReveal>
@@ -245,7 +249,7 @@ const Home = () => {
                 <div className="mx-auto max-w-7xl px-4">
                     <div className="grid overflow-hidden border border-primary/15 bg-primary text-primary-content lg:grid-cols-[1fr_auto]">
                         <div className="relative p-6 md:p-8">
-                            <img src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -right-10 top-1/2 h-56 w-56 -translate-y-1/2 object-contain opacity-[0.06]" />
+                            <ParallaxImg src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -right-10 top-1/2 h-56 w-56 -translate-y-1/2 object-contain opacity-[0.06]" />
                             <div className="relative max-w-3xl">
                                 <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Choose a lane this week</p>
                                 <h2 className="text-3xl font-bold leading-tight md:text-4xl">A longer homepage is useful only if it keeps sending people somewhere practical.</h2>
@@ -269,8 +273,9 @@ const Home = () => {
                 </div>
             </section>
 
+            <Reveal3D>
             <section className="relative overflow-hidden bg-base-200 py-16 md:py-24">
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"
@@ -330,10 +335,11 @@ const Home = () => {
                     </StaggerChildren>
                 </div>
             </section>
+            </Reveal3D>
 
             <section className="relative overflow-hidden bg-base-100 py-16 md:py-24">
                 <div className="absolute left-0 top-0 h-full w-2 bg-secondary" />
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"
@@ -386,7 +392,7 @@ const Home = () => {
             </section>
 
             <section className="relative overflow-hidden bg-primary text-primary-content">
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"
@@ -633,7 +639,7 @@ const Home = () => {
 
             <section className="relative overflow-hidden bg-base-200 py-16 md:py-24">
                 <div className="absolute inset-x-0 top-0 h-px bg-base-300" />
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"
@@ -679,7 +685,7 @@ const Home = () => {
             </section>
 
             <section className="relative overflow-hidden bg-base-100 py-16 md:py-24">
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"
@@ -743,7 +749,7 @@ const Home = () => {
             </section>
 
             <section className="relative overflow-hidden bg-base-200 py-16 md:py-24">
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"
@@ -815,13 +821,13 @@ const Home = () => {
 
             <section className="relative overflow-hidden bg-primary py-16 text-primary-content md:py-24">
                 <div
-                    className="absolute inset-0 opacity-[0.06]"
+                    className="pointer-events-none absolute inset-0 opacity-[0.02]"
                     style={{
                         backgroundImage: "linear-gradient(90deg, currentColor 1px, transparent 1px), linear-gradient(currentColor 1px, transparent 1px)",
                         backgroundSize: "42px 42px",
                     }}
                 />
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"

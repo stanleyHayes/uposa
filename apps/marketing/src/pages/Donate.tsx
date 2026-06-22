@@ -1,3 +1,4 @@
+import { ParallaxImg } from "../components/common/Parallax.tsx";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -332,13 +333,13 @@ const Donate = () => {
             <section className="relative overflow-hidden bg-base-100 text-primary">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
                 <div
-                    className="absolute inset-0 opacity-[0.05]"
+                    className="pointer-events-none absolute inset-0 opacity-[0.02]"
                     style={{
                         backgroundImage: "linear-gradient(90deg, var(--uposa-hero-grid) 1px, transparent 1px), linear-gradient(var(--uposa-hero-grid) 1px, transparent 1px)",
                         backgroundSize: "44px 44px",
                     }}
                 />
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"
@@ -480,7 +481,7 @@ const Donate = () => {
             </section>
 
             <section className="relative overflow-hidden bg-base-100 py-16 md:py-24">
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"
@@ -586,7 +587,7 @@ const Donate = () => {
             </section>
 
             <section className="relative overflow-hidden bg-base-200 py-16 md:py-24">
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"
@@ -654,7 +655,7 @@ const Donate = () => {
             </section>
 
             <section className="relative overflow-hidden bg-primary text-primary-content">
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"

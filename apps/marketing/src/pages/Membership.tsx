@@ -1,3 +1,4 @@
+import { ParallaxImg } from "../components/common/Parallax.tsx";
 import { useRef, useState } from "react";
 import { Link } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
@@ -138,13 +139,13 @@ const Membership = () => {
             <section className="relative overflow-hidden bg-base-100 text-primary">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
                 <div
-                    className="absolute inset-0 opacity-[0.05]"
+                    className="pointer-events-none absolute inset-0 opacity-[0.02]"
                     style={{
                         backgroundImage: "linear-gradient(90deg, var(--uposa-hero-grid) 1px, transparent 1px), linear-gradient(var(--uposa-hero-grid) 1px, transparent 1px)",
                         backgroundSize: "44px 44px",
                     }}
                 />
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"

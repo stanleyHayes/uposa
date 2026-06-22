@@ -1,3 +1,4 @@
+import { ParallaxImg } from "../components/common/Parallax.tsx";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
@@ -152,13 +153,13 @@ const OurSchool = () => {
             <section className="relative overflow-hidden bg-base-100 text-primary">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
                 <div
-                    className="absolute inset-0 opacity-[0.05]"
+                    className="pointer-events-none absolute inset-0 opacity-[0.02]"
                     style={{
                         backgroundImage: "linear-gradient(90deg, var(--uposa-hero-grid) 1px, transparent 1px), linear-gradient(var(--uposa-hero-grid) 1px, transparent 1px)",
                         backgroundSize: "44px 44px",
                     }}
                 />
-                <img
+                <ParallaxImg
                     src="/logo.png"
                     alt=""
                     aria-hidden="true"
@@ -541,13 +542,13 @@ const OurSchool = () => {
 
             <section className="relative overflow-hidden bg-primary py-16 text-primary-content md:py-24">
                 <div
-                    className="absolute inset-0 opacity-[0.06]"
+                    className="pointer-events-none absolute inset-0 opacity-[0.02]"
                     style={{
                         backgroundImage: "linear-gradient(90deg, currentColor 1px, transparent 1px), linear-gradient(currentColor 1px, transparent 1px)",
                         backgroundSize: "42px 42px",
                     }}
                 />
-                <img src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -bottom-36 -right-16 h-[420px] w-[420px] object-contain opacity-[0.1]" />
+                <ParallaxImg src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -bottom-36 -right-16 h-[420px] w-[420px] object-contain opacity-[0.1]" />
                 <ScrollReveal>
                     <div className="relative mx-auto max-w-4xl px-4 text-center">
                         <div className="mb-6 inline-flex items-center gap-2 border border-primary-content/12 bg-primary-content/10 px-4 py-2">

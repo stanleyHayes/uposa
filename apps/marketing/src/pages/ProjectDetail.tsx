@@ -1,3 +1,4 @@
+import { ParallaxImg } from "../components/common/Parallax.tsx";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import {
@@ -285,13 +286,13 @@ const ProjectDetail = () => {
       <section className="relative overflow-hidden bg-primary text-primary-content">
         <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
         <div
-          className="absolute inset-0 opacity-[0.08]"
+          className="pointer-events-none absolute inset-0 opacity-[0.02]"
           style={{
             backgroundImage: "linear-gradient(90deg, rgba(255,255,255,0.55) 1px, transparent 1px), linear-gradient(rgba(255,255,255,0.55) 1px, transparent 1px)",
             backgroundSize: "44px 44px",
           }}
         />
-        <img
+        <ParallaxImg
           src="/logo.png"
           alt=""
           aria-hidden="true"

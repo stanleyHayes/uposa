@@ -1,4 +1,4 @@
-import { motion, useInView } from "framer-motion";
+import { motion, useInView, useReducedMotion } from "framer-motion";
 import { useRef } from "react";
 import * as React from "react";
 
@@ -19,6 +19,8 @@ export const StaggerChildren: React.FC<StaggerChildrenProps> = ({
 }) => {
     const ref = useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once, margin: "-40px 0px" });
+    const reduce = useReducedMotion();
+    const tilt = reduce ? 0 : 12;
 
     return (
         <motion.div
@@ -26,6 +28,7 @@ export const StaggerChildren: React.FC<StaggerChildrenProps> = ({
             className={className}
             initial="hidden"
             animate={isInView ? "visible" : "hidden"}
+            style={{ perspective: 1000 }}
             variants={{
                 hidden: {},
                 visible: { transition: { staggerChildren: staggerDelay } },
@@ -34,9 +37,10 @@ export const StaggerChildren: React.FC<StaggerChildrenProps> = ({
             {React.Children.map(children, (child) => (
                 <motion.div
                     className="h-full"
+                    style={{ transformStyle: "preserve-3d", transformOrigin: "center bottom" }}
                     variants={{
-                        hidden: { opacity: 0, y: 24, scale: 0.97 },
-                        visible: { opacity: 1, y: 0, scale: 1 },
+                        hidden: { opacity: 0, y: 26, scale: 0.96, rotateX: tilt },
+                        visible: { opacity: 1, y: 0, scale: 1, rotateX: 0 },
                     }}
                     transition={{ duration, ease: "easeOut" }}
                 >
