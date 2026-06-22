@@ -64,13 +64,12 @@ export function ParallaxImg({
   const y = useTransform(scrollYProgress, [0, 1], [-offset, offset]);
 
   if (reduce) {
-    // eslint-disable-next-line jsx-a11y/alt-text
     return <img ref={ref} style={style} {...props} />;
   }
 
   // motion.img's prop types differ from raw <img> event handlers; the runtime
   // attrs are valid, so cast the passthrough props.
-  // eslint-disable-next-line jsx-a11y/alt-text, @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return <motion.img ref={ref} style={{ ...style, y, willChange: "transform" }} {...(props as any)} />;
 }
 
