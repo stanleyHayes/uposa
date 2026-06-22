@@ -1,7 +1,16 @@
 import { Resend } from 'resend';
 import { env } from '../config/env';
 
-const resend = new Resend(env.RESEND_API_KEY);
+// Construct the Resend client lazily so importing this module never throws when
+// RESEND_API_KEY is absent (e.g. CI test/e2e environments that don't send mail).
+// The key is only required when an email is actually sent.
+let resendClient: Resend | null = null;
+function getResend(): Resend {
+  if (!resendClient) {
+    resendClient = new Resend(env.RESEND_API_KEY);
+  }
+  return resendClient;
+}
 
 interface EmailOptions {
   to: string;
@@ -10,7 +19,7 @@ interface EmailOptions {
 }
 
 export async function sendEmail(options: EmailOptions): Promise<void> {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: env.FROM_EMAIL,
     to: options.to,
     subject: options.subject,
