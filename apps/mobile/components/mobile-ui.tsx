@@ -165,7 +165,7 @@ export function IconTile({
   size?: number;
 }) {
   const backgroundColor =
-    tone === 'navy' ? Brand.navy : tone === 'gold' ? Brand.gold : tone === 'plain' ? 'transparent' : palette.surfaceMuted;
+    tone === 'navy' ? palette.tint : tone === 'gold' ? Brand.gold : tone === 'plain' ? 'transparent' : palette.surfaceMuted;
   const color = tone === 'gold' ? Brand.navy : tone === 'navy' ? Brand.cream : palette.text;
   return (
     <View style={[styles.iconTile, { backgroundColor, borderColor: tone === 'plain' ? 'transparent' : palette.border }]}>
@@ -187,7 +187,7 @@ export function Pill({
   tone?: 'muted' | 'gold' | 'navy';
   style?: StyleProp<ViewStyle>;
 }) {
-  const backgroundColor = active || tone === 'gold' ? Brand.gold : tone === 'navy' ? Brand.navy : palette.surfaceMuted;
+  const backgroundColor = active || tone === 'gold' ? Brand.gold : tone === 'navy' ? palette.tint : palette.surfaceMuted;
   const color = active || tone === 'gold' ? Brand.navy : tone === 'navy' ? Brand.cream : palette.textMuted;
   return (
     <View style={[styles.pill, { backgroundColor, borderColor: active ? Brand.gold : palette.border }, style]}>
@@ -330,7 +330,7 @@ export function PrimaryButton({
           ? 'transparent'
           : tone === 'cream'
             ? Brand.cream
-            : Brand.navy;
+            : palette.tint;
   const borderColor = tone === 'outline' ? palette.tint : tone === 'cream' ? Brand.creamSoft : backgroundColor;
   const color = tone === 'outline' ? palette.text : tone === 'gold' || tone === 'cream' ? Brand.navy : Brand.cream;
   return (
