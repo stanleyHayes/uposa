@@ -1,5 +1,3 @@
-import { Platform } from 'react-native';
-
 export const Brand = {
   navy: '#001B50',
   navyDeep: '#000F30',
@@ -64,23 +62,56 @@ export const Colors: { light: Palette; dark: Palette } = {
   },
 };
 
-export const Fonts = Platform.select({
-  ios: {
-    sans: 'system-ui',
-    serif: 'ui-serif',
-    rounded: 'ui-rounded',
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});
+/**
+ * Font family tokens. React Native does not synthesize weights of custom
+ * families (especially on Android), so each weight is its own family and
+ * styles must set `fontFamily` WITHOUT a `fontWeight` property.
+ *
+ * - display/displayHeavy: Fraunces — page titles, hero titles, big numbers
+ * - body…bodyBold: Euclid Circular A — all body text
+ * - status/statusBold: Outfit — eyebrows, uppercase labels, pills, buttons
+ */
+export const Fonts = {
+  display: 'Fraunces_700Bold',
+  displayHeavy: 'Fraunces_900Black',
+  body: 'EuclidCircularA-Regular',
+  bodyItalic: 'EuclidCircularA-Italic',
+  bodyMedium: 'EuclidCircularA-Medium',
+  bodySemiBold: 'EuclidCircularA-SemiBold',
+  bodyBold: 'EuclidCircularA-Bold',
+  status: 'Outfit_600SemiBold',
+  statusBold: 'Outfit_800ExtraBold',
+} as const;
+
+export type BodyFontWeight = '400' | '500' | '600' | '700' | '800' | '900';
+
+/** Maps a numeric font weight to the matching Euclid Circular A family. */
+export function fontForWeight(weight: BodyFontWeight): string {
+  switch (weight) {
+    case '400':
+      return Fonts.body;
+    case '500':
+      return Fonts.bodyMedium;
+    case '600':
+      return Fonts.bodySemiBold;
+    case '700':
+    case '800':
+    case '900':
+      return Fonts.bodyBold;
+  }
+}
+
+// Web apps are square-cornered — keep all radii at 0 to match.
+const zero = {
+  borderTopLeftRadius: 0,
+  borderTopRightRadius: 0,
+  borderBottomRightRadius: 0,
+  borderBottomLeftRadius: 0,
+} as const;
+
+export const Radii = {
+  card: zero,
+  hero: zero,
+  button: zero,
+  tile: zero,
+} as const;

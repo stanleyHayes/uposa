@@ -1,6 +1,6 @@
 import { BouncingDots } from "../../components/ui/BouncingDots";
 import { useRef, useState, type ReactNode } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
@@ -25,11 +25,14 @@ import {
 import { motion } from 'framer-motion'
 import PageTransition from '../../components/common/PageTransition'
 import Avatar from '../../components/ui/Avatar'
+import DatePicker from '../../components/ui/DatePicker'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { useAuthStore } from '../../stores/auth.store'
 import { membersApi } from '../../api/services'
 import { useToast } from '../../hooks/useToast'
 import { formatDate, formatEnum } from '../../utils/formatters'
+import { cityOptions, countryOptions, stateOptions } from '../../lib/locations'
 
 const schema = z.object({
   fullName: z.string().min(2),
@@ -57,8 +60,6 @@ const schema = z.object({
   nextOfKinRelationship: z.string().optional(),
 })
 
-const regions = ['Ahafo', 'Ashanti', 'Bono', 'Bono East', 'Central', 'Eastern', 'Greater Accra', 'North East', 'Northern', 'Oti', 'Savannah', 'Upper East', 'Upper West', 'Volta', 'Western', 'Western North']
-const cities = ['Accra', 'Kumasi', 'Cape Coast', 'Takoradi', 'Tamale', 'Sunyani', 'Ho', 'Koforidua', 'Bolgatanga', 'Wa', 'Techiman', 'Obuasi', 'Tema', 'Winneba', 'Other']
 const programmes = ['GENERAL_ARTS', 'BUSINESS', 'HOME_ECONOMICS', 'VISUAL_ARTS', 'SCIENCE']
 const houses = ['ACKAH', 'DENSU', 'TANO', 'NKRUMAH', 'PRA', 'VOLTA']
 const employmentTypes = ['RETIRED', 'STUDENT', 'UNEMPLOYED', 'SELF_EMPLOYED', 'GOVERNMENT_WORKER', 'PRIVATE_WORKER']
@@ -137,7 +138,7 @@ export default function ProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null)
   const toast = useToast()
 
-  const { register, handleSubmit, formState: { errors, isDirty } } = useForm({
+  const { register, handleSubmit, control, setValue, watch, reset, formState: { errors, isDirty } } = useForm({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(schema) as any,
     defaultValues: {
@@ -167,6 +168,9 @@ export default function ProfilePage() {
     },
   })
 
+  const watchCountry = watch('country') as string | undefined
+  const watchRegion = watch('region') as string | undefined
+
   const profileChecks = [
     { label: 'Identity', complete: Boolean(user?.fullName && user?.email) },
     { label: 'Contact', complete: Boolean(user?.mobileNumber && user?.city) },
@@ -188,6 +192,7 @@ export default function ProfilePage() {
       )
       const res = await membersApi.updateProfile(cleaned)
       if (res.data.data) updateUser(res.data.data)
+      reset(data)
       toast.success('Profile updated!')
     } catch {
       toast.error('Failed to update profile')
@@ -382,7 +387,13 @@ export default function ProfilePage() {
                         </select>
                       </Field>
                       <Field label="Date of birth">
-                        <input type="date" className={inputCls} {...register('dateOfBirth')} />
+                        <Controller
+                          name="dateOfBirth"
+                          control={control}
+                          render={({ field }) => (
+                            <DatePicker label="Date of birth" value={field.value ?? ''} onChange={field.onChange} />
+                          )}
+                        />
                       </Field>
                       <Field label="Marital status">
                         <select className={selectCls} {...register('maritalStatus')}>
@@ -403,24 +414,56 @@ export default function ProfilePage() {
                       <input type="text" className={inputCls} {...register('residentialAddress')} />
                     </Field>
                     <div className="grid gap-4 sm:grid-cols-3">
+                      <Field label="Country">
+                        <Controller
+                          name="country"
+                          control={control}
+                          render={({ field }) => (
+                            <SearchableSelect
+                              value={field.value ?? ''}
+                              options={countryOptions}
+                              placeholder="Select country"
+                              onChange={(v) => {
+                                field.onChange(v)
+                                setValue('region', '')
+                                setValue('city', '')
+                              }}
+                            />
+                          )}
+                        />
+                      </Field>
                       <Field label="Region">
-                        <select className={selectCls} {...register('region')}>
-                          <option value="">Select region</option>
-                          {regions.map((region) => (
-                            <option key={region}>{region}</option>
-                          ))}
-                        </select>
+                        <Controller
+                          name="region"
+                          control={control}
+                          render={({ field }) => (
+                            <SearchableSelect
+                              value={field.value ?? ''}
+                              options={watchCountry ? stateOptions(watchCountry) : []}
+                              placeholder="Select region"
+                              disabled={!watchCountry}
+                              onChange={(v) => {
+                                field.onChange(v)
+                                setValue('city', '')
+                              }}
+                            />
+                          )}
+                        />
                       </Field>
                       <Field label="City">
-                        <select className={selectCls} {...register('city')}>
-                          <option value="">Select city</option>
-                          {cities.map((city) => (
-                            <option key={city}>{city}</option>
-                          ))}
-                        </select>
-                      </Field>
-                      <Field label="Country">
-                        <input type="text" className={inputCls} {...register('country')} />
+                        <Controller
+                          name="city"
+                          control={control}
+                          render={({ field }) => (
+                            <SearchableSelect
+                              value={field.value ?? ''}
+                              options={watchCountry && watchRegion ? cityOptions(watchCountry, watchRegion) : []}
+                              placeholder="Select city"
+                              disabled={!watchRegion}
+                              onChange={field.onChange}
+                            />
+                          )}
+                        />
                       </Field>
                     </div>
                   </motion.div>

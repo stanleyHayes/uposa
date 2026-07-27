@@ -1,11 +1,20 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, FlatList, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
-import { Brand, Colors, type Palette } from '@/constants/theme';
+import { Brand, Colors, Fonts, type Palette } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { pollsApi } from '@/lib/api';
 import type { Poll } from '@/lib/types';
 import { EmptyState, LoadingState, Pill, ProgressBar, ScreenHeader, Surface } from '@/components/mobile-ui';
+import { FadeInUp } from '@/components/motion';
+
+type PollFilter = 'ALL' | 'ACTIVE' | 'CLOSED';
+
+const FILTER_OPTIONS: { value: PollFilter; label: string }[] = [
+  { value: 'ALL', label: 'All' },
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'CLOSED', label: 'Closed' },
+];
 
 export default function PollsScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -14,6 +23,7 @@ export default function PollsScreen() {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<PollFilter>('ALL');
 
   const load = useCallback(async () => {
     try {
@@ -47,29 +57,55 @@ export default function PollsScreen() {
     }
   };
 
+  const filtered = useMemo(() => {
+    if (filter === 'ALL') return polls;
+    return polls.filter((poll) => poll.status === filter);
+  }, [polls, filter]);
+
   if (loading) return <LoadingState palette={palette} title="Polls" />;
 
   return (
     <FlatList
       style={{ backgroundColor: palette.background }}
       contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-      data={polls}
+      data={filtered}
       keyExtractor={(item) => item.id}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.tint} />}
       ListHeaderComponent={
-        <ScreenHeader
-          palette={palette}
-          eyebrow="Decisions"
-          title="Polls"
-          description="Quick community signals and association decisions open to members."
-          icon="bar-chart-outline"
-        />
+        <View>
+          <ScreenHeader
+            palette={palette}
+            eyebrow="Decisions"
+            title="Polls"
+            description="Quick community signals and association decisions open to members."
+            icon="bar-chart-outline"
+          />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ flexDirection: 'row', gap: 8, paddingBottom: 12 }}
+          >
+            {FILTER_OPTIONS.map((option) => (
+              <Pressable key={option.value} onPress={() => setFilter(option.value)} style={({ pressed }) => ({ opacity: pressed ? 0.78 : 1 })}>
+                <Pill palette={palette} active={filter === option.value}>{option.label}</Pill>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
       }
       ListEmptyComponent={
-        <EmptyState palette={palette} icon="bar-chart-outline" title="No active polls" description="Open member polls will appear here." />
+        <EmptyState palette={palette} icon="bar-chart-outline" title="No polls found" description="Open member polls will appear here." />
       }
       ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-      renderItem={({ item }) => <PollCard poll={item} palette={palette} onVote={onVote} />}
+      renderItem={({ item, index }) =>
+        index < 8 ? (
+          <FadeInUp delay={Math.min(index, 7) * 40} distance={10}>
+            <PollCard poll={item} palette={palette} onVote={onVote} />
+          </FadeInUp>
+        ) : (
+          <PollCard poll={item} palette={palette} onVote={onVote} />
+        )
+      }
     />
   );
 }
@@ -82,10 +118,10 @@ function PollCard({ poll, palette, onVote }: { poll: Poll; palette: Palette; onV
   return (
     <Surface palette={palette} style={{ padding: 16, gap: 10 }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-        <Text style={{ flex: 1, color: palette.text, fontSize: 17, fontWeight: '900', lineHeight: 23 }}>{poll.question}</Text>
+        <Text style={{ flex: 1, color: palette.text, fontSize: 17, fontFamily: Fonts.bodyBold, lineHeight: 23 }}>{poll.question}</Text>
         <Pill palette={palette} tone={closed ? 'muted' : 'gold'}>{closed ? 'Closed' : 'Open'}</Pill>
       </View>
-      {poll.description ? <Text style={{ color: palette.textMuted, fontSize: 13, lineHeight: 19 }}>{poll.description}</Text> : null}
+      {poll.description ? <Text style={{ color: palette.textMuted, fontSize: 13, fontFamily: Fonts.body, lineHeight: 19 }}>{poll.description}</Text> : null}
 
       <View style={{ gap: 9 }}>
         {poll.options.map((option) => {
@@ -100,8 +136,8 @@ function PollCard({ poll, palette, onVote }: { poll: Poll; palette: Palette; onV
             >
               <Surface palette={palette} tone={myVoted ? 'gold' : 'default'} style={{ padding: 12, gap: 8 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
-                  <Text style={{ flex: 1, color: myVoted ? Brand.navy : palette.text, fontSize: 14, fontWeight: '900' }}>{option.text}</Text>
-                  {showResults ? <Text style={{ color: myVoted ? Brand.navy : palette.textMuted, fontSize: 12, fontWeight: '900' }}>{pct}%</Text> : null}
+                  <Text style={{ flex: 1, color: myVoted ? Brand.navy : palette.text, fontSize: 14, fontFamily: Fonts.bodySemiBold }}>{option.text}</Text>
+                  {showResults ? <Text style={{ color: myVoted ? Brand.navy : palette.textMuted, fontSize: 12, fontFamily: Fonts.bodyBold }}>{pct}%</Text> : null}
                 </View>
                 {showResults ? <ProgressBar palette={palette} percent={pct} /> : null}
               </Surface>
@@ -110,7 +146,7 @@ function PollCard({ poll, palette, onVote }: { poll: Poll; palette: Palette; onV
         })}
       </View>
 
-      <Text style={{ color: palette.textMuted, fontSize: 11, fontWeight: '700' }}>
+      <Text style={{ color: palette.textMuted, fontSize: 11, fontFamily: Fonts.bodyMedium }}>
         {totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}{poll.hasVoted ? ' · You voted' : ''}
       </Text>
     </Surface>

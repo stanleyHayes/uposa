@@ -7,7 +7,7 @@ import type {
   Member, Event, EventRsvp, News, Due, Project, Donation,
   Job, JobApplication, MentorshipRequest,
   ForumPost, ForumComment, Poll, Election, ContactMessage,
-  PaymentMethod,
+  PaymentMethod, GalleryItem, GalleryCategory, SiteConfig,
 } from './types';
 
 const TOKEN_KEY = 'uposa_alumni_token';
@@ -16,7 +16,7 @@ const REFRESH_TOKEN_KEY = 'uposa_alumni_refresh_token';
 const apiUrl =
   process.env.EXPO_PUBLIC_API_URL ||
   (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl ||
-  'http://localhost:5000/api';
+  'http://localhost:5001/api';
 
 export const client = axios.create({
   baseURL: apiUrl,
@@ -34,7 +34,7 @@ client.interceptors.request.use(async (config) => {
 
 // Refresh queue: only one refresh in flight; queue concurrent 401s.
 let isRefreshing = false;
-let pendingQueue: Array<(token: string | null) => void> = [];
+let pendingQueue: ((token: string | null) => void)[] = [];
 
 function flushQueue(token: string | null) {
   pendingQueue.forEach((cb) => cb(token));
@@ -132,6 +132,10 @@ client.interceptors.response.use(
 export const authApi = {
   login: (data: LoginCredentials) =>
     client.post<AuthResponse>('/auth/login', data),
+  register: (formData: FormData) =>
+    client.post<ApiResponse<Member>>('/auth/register', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   me: () =>
     client.get<ApiResponse<Member>>('/auth/me'),
   forgotPassword: (email: string) =>
@@ -152,8 +156,14 @@ export const membersApi = {
     client.get<ApiResponse<Member>>(`/members/${id}`),
   updateProfile: (data: Partial<Member>) =>
     client.put<ApiResponse<Member>>('/members/profile', data),
+  uploadPhoto: (formData: FormData) =>
+    client.post<ApiResponse<Member>>('/members/profile/photo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   myDues: () =>
     client.get<ApiResponse<Due[]>>('/members/my/dues'),
+  myDonations: () =>
+    client.get<ApiResponse<Donation[]>>('/members/my/donations'),
 };
 
 // -------- Events --------
@@ -162,6 +172,8 @@ export const eventsApi = {
     client.get<PaginatedResponse<Event>>('/events', { params }),
   upcoming: () =>
     client.get<ApiResponse<Event[]>>('/events/upcoming'),
+  past: () =>
+    client.get<ApiResponse<Event[]>>('/events/past'),
   getBySlug: (slug: string) =>
     client.get<ApiResponse<Event>>(`/events/${slug}`),
   rsvp: (id: string, data: Partial<EventRsvp>) =>
@@ -187,6 +199,8 @@ export const duesApi = {
       totalPending: number;
       totalOverdue: number;
     }>>('/dues/my/summary'),
+  pay: (id: string, data: { transactionRef: string; channel?: string; notes?: string }) =>
+    client.post<ApiResponse<Due>>(`/dues/my/${id}/pay`, data),
 };
 
 // -------- Forum --------
@@ -239,6 +253,14 @@ export const mentorshipApi = {
     client.post<ApiResponse<MentorshipRequest>>('/mentorship/request', data),
   myRequests: () =>
     client.get<ApiResponse<MentorshipRequest[]>>('/mentorship/my/requests'),
+  myMentees: () =>
+    client.get<ApiResponse<MentorshipRequest[]>>('/mentorship/my/mentees'),
+  respond: (id: string, data: { status: 'ACCEPTED' | 'DECLINED'; mentorResponse?: string }) =>
+    client.put<ApiResponse<MentorshipRequest>>(`/mentorship/requests/${id}/respond`, data),
+  myProfile: () =>
+    client.get<ApiResponse<Member>>('/mentorship/my/profile'),
+  setAvailability: (data: { isAvailableAsMentor: boolean; mentorBio?: string }) =>
+    client.put<ApiResponse<Member>>('/mentorship/my/availability', data),
 };
 
 // -------- Donations --------
@@ -255,6 +277,8 @@ export const projectsApi = {
     client.get<PaginatedResponse<Project>>('/projects', { params }),
   ongoing: () =>
     client.get<ApiResponse<Project[]>>('/projects/ongoing'),
+  completed: () =>
+    client.get<ApiResponse<Project[]>>('/projects/completed'),
   getBySlug: (slug: string) =>
     client.get<ApiResponse<Project>>(`/projects/${slug}`),
 };
@@ -263,6 +287,26 @@ export const projectsApi = {
 export const contactApi = {
   send: (data: ContactMessage) =>
     client.post<ApiResponse>('/contact', data),
+};
+
+// -------- Transcripts --------
+export const transcriptsApi = {
+  request: (data: { fullName: string; email: string; phone?: string; yearGroup: string; notes?: string }) =>
+    client.post<ApiResponse>('/transcripts', data),
+};
+
+// -------- Gallery --------
+export const galleryApi = {
+  list: (params?: Record<string, string | number>) =>
+    client.get<ApiResponse<GalleryItem[]>>('/gallery', { params }),
+  categories: () =>
+    client.get<ApiResponse<GalleryCategory[]>>('/gallery/categories'),
+};
+
+// -------- Public / Site config --------
+export const publicApi = {
+  siteData: () =>
+    client.get<ApiResponse<{ config: SiteConfig }>>('/public/site-data'),
 };
 
 // -------- Payment Methods --------

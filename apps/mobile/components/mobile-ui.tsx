@@ -1,5 +1,6 @@
-import type { ReactElement, ReactNode } from 'react';
+import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import {
+  Animated,
   Image,
   Pressable,
   ScrollView,
@@ -14,7 +15,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Brand, type Palette } from '@/constants/theme';
+import { Brand, Fonts, Radii, type Palette } from '@/constants/theme';
+import { FadeInUp, Motion, PressableScale, useReducedMotion } from './motion';
 
 export function formatMoney(value?: number, currency = 'GHS') {
   return `${currency} ${(value ?? 0).toLocaleString()}`;
@@ -90,14 +92,16 @@ export function ScreenHeader({
   right?: ReactNode;
 }) {
   return (
-    <View style={styles.header}>
-      <View style={styles.headerText}>
-        {eyebrow ? <Text style={[styles.eyebrow, { color: palette.accent }]}>{eyebrow}</Text> : null}
-        <Text style={[styles.pageTitle, { color: palette.text }]}>{title}</Text>
-        {description ? <Text style={[styles.pageDescription, { color: palette.textMuted }]}>{description}</Text> : null}
+    <FadeInUp delay={0} distance={12}>
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          {eyebrow ? <Text style={[styles.eyebrow, { color: palette.accent }]}>{eyebrow}</Text> : null}
+          <Text style={[styles.pageTitle, { color: palette.text }]}>{title}</Text>
+          {description ? <Text style={[styles.pageDescription, { color: palette.textMuted }]}>{description}</Text> : null}
+        </View>
+        {right ?? (icon ? <IconTile icon={icon} palette={palette} tone="gold" /> : null)}
       </View>
-      {right ?? (icon ? <IconTile icon={icon} palette={palette} tone="gold" /> : null)}
-    </View>
+    </FadeInUp>
   );
 }
 
@@ -106,16 +110,20 @@ export function Surface({
   children,
   tone = 'default',
   style,
+  enterDelay,
 }: {
   palette: Palette;
   children: ReactNode;
   tone?: 'default' | 'muted' | 'navy' | 'gold';
   style?: StyleProp<ViewStyle>;
+  enterDelay?: number;
 }) {
   const backgroundColor =
     tone === 'navy' ? Brand.navy : tone === 'gold' ? Brand.gold : tone === 'muted' ? palette.surfaceMuted : palette.surface;
   const borderColor = tone === 'navy' ? 'rgba(255,248,220,0.18)' : tone === 'gold' ? 'rgba(0,27,80,0.16)' : palette.border;
-  return <View style={[styles.surface, { backgroundColor, borderColor }, style]}>{children}</View>;
+  const surface = <View style={[styles.surface, { backgroundColor, borderColor }, style]}>{children}</View>;
+  if (enterDelay === undefined) return surface;
+  return <FadeInUp delay={enterDelay}>{surface}</FadeInUp>;
 }
 
 export function HeroPanel({
@@ -123,7 +131,6 @@ export function HeroPanel({
   eyebrow,
   title,
   body,
-  icon = 'sparkles-outline',
   children,
 }: {
   palette: Palette;
@@ -134,16 +141,15 @@ export function HeroPanel({
   children?: ReactNode;
 }) {
   return (
-    <Surface palette={palette} tone="navy" style={styles.hero}>
-      <View style={styles.heroMark}>
+    <FadeInUp delay={60} distance={14}>
+      <Surface palette={palette} tone="navy" style={styles.hero}>
         <Text style={styles.heroWatermark}>UPOSA</Text>
-        <IconTile icon={icon} palette={palette} tone="gold" />
-      </View>
-      {eyebrow ? <Text style={styles.heroEyebrow}>{eyebrow}</Text> : null}
-      <Text style={styles.heroTitle}>{title}</Text>
-      {body ? <Text style={styles.heroBody}>{body}</Text> : null}
-      {children ? <View style={styles.heroChildren}>{children}</View> : null}
-    </Surface>
+        {eyebrow ? <Text style={styles.heroEyebrow}>{eyebrow}</Text> : null}
+        <Text style={styles.heroTitle}>{title}</Text>
+        {body ? <Text style={styles.heroBody}>{body}</Text> : null}
+        {children ? <View style={styles.heroChildren}>{children}</View> : null}
+      </Surface>
+    </FadeInUp>
   );
 }
 
@@ -229,19 +235,23 @@ export function StatTile({
   value,
   icon,
   tone = 'muted',
+  index = 0,
 }: {
   palette: Palette;
   label: string;
   value: string;
   icon: keyof typeof Ionicons.glyphMap;
   tone?: 'muted' | 'gold' | 'navy';
+  index?: number;
 }) {
   return (
-    <Surface palette={palette} style={styles.statTile}>
-      <IconTile icon={icon} palette={palette} tone={tone === 'muted' ? 'muted' : tone} size={18} />
-      <Text style={[styles.statValue, { color: palette.text }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: palette.textMuted }]}>{label}</Text>
-    </Surface>
+    <FadeInUp delay={120 + index * Motion.duration.stagger} distance={10} style={styles.statTileWrap}>
+      <Surface palette={palette} style={styles.statTile}>
+        <IconTile icon={icon} palette={palette} tone={tone === 'muted' ? 'muted' : tone} size={18} />
+        <Text style={[styles.statValue, { color: palette.text }]}>{value}</Text>
+        <Text style={[styles.statLabel, { color: palette.textMuted }]}>{label}</Text>
+      </Surface>
+    </FadeInUp>
   );
 }
 
@@ -286,11 +296,11 @@ export function ActionRow({
   }
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.pressable, { opacity: pressed ? 0.78 : 1 }]}>
+    <PressableScale onPress={onPress} scale={0.98} style={styles.pressable}>
       <Surface palette={palette} style={styles.actionRow}>
         {content}
       </Surface>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -309,25 +319,33 @@ export function PrimaryButton({
   disabled?: boolean;
   loading?: boolean;
   icon?: keyof typeof Ionicons.glyphMap;
-  tone?: 'navy' | 'gold' | 'danger' | 'outline';
+  tone?: 'navy' | 'gold' | 'danger' | 'outline' | 'cream';
 }) {
   const backgroundColor =
-    tone === 'gold' ? Brand.gold : tone === 'danger' ? palette.danger : tone === 'outline' ? 'transparent' : Brand.navy;
-  const borderColor = tone === 'outline' ? palette.border : backgroundColor;
-  const color = tone === 'gold' || tone === 'outline' ? Brand.navy : Brand.cream;
+    tone === 'gold'
+      ? Brand.gold
+      : tone === 'danger'
+        ? palette.danger
+        : tone === 'outline'
+          ? 'transparent'
+          : tone === 'cream'
+            ? Brand.cream
+            : Brand.navy;
+  const borderColor = tone === 'outline' ? palette.tint : tone === 'cream' ? Brand.creamSoft : backgroundColor;
+  const color = tone === 'outline' ? palette.text : tone === 'gold' || tone === 'cream' ? Brand.navy : Brand.cream;
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       disabled={disabled || loading}
-      style={({ pressed }) => [
-        styles.button,
-        { backgroundColor, borderColor, opacity: disabled || loading ? 0.48 : pressed ? 0.82 : 1 },
-      ]}
+      scale={0.97}
+      style={{ opacity: disabled || loading ? 0.48 : 1 }}
     >
-      {loading ? <SkeletonBar palette={palette} width={94} height={14} dark={tone === 'navy' || tone === 'danger'} /> : null}
-      {!loading && icon ? <Ionicons name={icon} size={17} color={color} /> : null}
-      {!loading ? <Text style={[styles.buttonText, { color }]}>{label}</Text> : null}
-    </Pressable>
+      <View style={[styles.button, { backgroundColor, borderColor }]}>
+        {loading ? <SkeletonBar palette={palette} width={94} height={14} dark={tone === 'navy' || tone === 'danger'} /> : null}
+        {!loading && icon ? <Ionicons name={icon} size={17} color={color} /> : null}
+        {!loading ? <Text style={[styles.buttonText, { color }]}>{label}</Text> : null}
+      </View>
+    </PressableScale>
   );
 }
 
@@ -454,8 +472,36 @@ export function SkeletonBar({
   dark?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
+  const reduced = useReducedMotion();
+  const [opacity] = useState(() => new Animated.Value(1));
+
+  useEffect(() => {
+    if (reduced) {
+      opacity.setValue(1);
+      return;
+    }
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 0.45,
+          duration: 900,
+          easing: Motion.easeInOut,
+          useNativeDriver: false,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 900,
+          easing: Motion.easeInOut,
+          useNativeDriver: false,
+        }),
+      ]),
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [opacity, reduced]);
+
   return (
-    <View
+    <Animated.View
       style={[
         styles.skeleton,
         {
@@ -465,6 +511,7 @@ export function SkeletonBar({
           borderColor: dark ? 'rgba(255,248,220,0.1)' : palette.border,
         },
         style,
+        reduced ? null : { opacity },
       ]}
     />
   );
@@ -504,9 +551,28 @@ export function ProgressBar({
   percent: number;
   style?: StyleProp<ViewStyle>;
 }) {
+  const reduced = useReducedMotion();
+  const [progress] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    const target = Math.max(0, Math.min(100, percent)) / 100;
+    if (reduced) {
+      progress.setValue(target);
+      return;
+    }
+    Animated.timing(progress, {
+      toValue: target,
+      duration: Motion.duration.entrance,
+      easing: Motion.easeOut,
+      useNativeDriver: false,
+    }).start();
+  }, [progress, percent, reduced]);
+
+  const width = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+
   return (
     <View style={[styles.progressTrack, { backgroundColor: palette.surfaceMuted, borderColor: palette.border }, style]}>
-      <View style={[styles.progressFill, { width: `${Math.max(0, Math.min(100, percent))}%` }]} />
+      <Animated.View style={[styles.progressFill, { width }]} />
     </View>
   );
 }
@@ -550,44 +616,44 @@ const styles = StyleSheet.create({
   screenPadding: { padding: 16, paddingBottom: 40 },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, marginBottom: 16 },
   headerText: { flex: 1 },
-  eyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 6 },
-  pageTitle: { fontSize: 28, fontWeight: '900', lineHeight: 32 },
-  pageDescription: { fontSize: 14, lineHeight: 20, marginTop: 6 },
-  surface: { borderWidth: 1, borderRadius: 0, overflow: 'hidden' },
-  hero: { padding: 18, gap: 8, marginBottom: 18, position: 'relative' },
-  heroMark: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroWatermark: { color: 'rgba(255,248,220,0.09)', fontSize: 42, fontWeight: '900', letterSpacing: -1 },
-  heroEyebrow: { color: Brand.gold, fontSize: 11, fontWeight: '900', letterSpacing: 1.8, textTransform: 'uppercase' },
-  heroTitle: { color: Brand.cream, fontSize: 24, fontWeight: '900', lineHeight: 29 },
-  heroBody: { color: 'rgba(255,248,220,0.72)', fontSize: 14, lineHeight: 20 },
+  eyebrow: { fontSize: 11, fontFamily: Fonts.statusBold, letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 6 },
+  pageTitle: { fontSize: 28, fontFamily: Fonts.displayHeavy, lineHeight: 32 },
+  pageDescription: { fontSize: 14, fontFamily: Fonts.body, lineHeight: 20, marginTop: 6 },
+  surface: { borderWidth: 1, ...Radii.card, overflow: 'hidden' },
+  hero: { padding: 18, gap: 8, marginBottom: 18, position: 'relative', ...Radii.hero },
+  heroWatermark: { color: Brand.gold, fontSize: 42, fontFamily: Fonts.displayHeavy, letterSpacing: -1 },
+  heroEyebrow: { color: Brand.gold, fontSize: 11, fontFamily: Fonts.statusBold, letterSpacing: 1.8, textTransform: 'uppercase' },
+  heroTitle: { color: Brand.cream, fontSize: 24, fontFamily: Fonts.display, lineHeight: 29 },
+  heroBody: { color: 'rgba(255,248,220,0.72)', fontSize: 14, fontFamily: Fonts.body, lineHeight: 20 },
   heroChildren: { marginTop: 10 },
-  iconTile: { width: 44, height: 44, borderWidth: 1, borderRadius: 0, alignItems: 'center', justifyContent: 'center' },
+  iconTile: { width: 44, height: 44, borderWidth: 1, ...Radii.tile, alignItems: 'center', justifyContent: 'center' },
   pill: { alignSelf: 'flex-start', minHeight: 24, paddingHorizontal: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  pillText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase' },
+  pillText: { fontSize: 10, fontFamily: Fonts.statusBold, letterSpacing: 0.8, textTransform: 'uppercase' },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 18, marginBottom: 10 },
-  sectionTitle: { fontSize: 16, fontWeight: '900' },
-  actionText: { fontSize: 12, fontWeight: '800' },
+  sectionTitle: { fontSize: 16, fontFamily: Fonts.display },
+  actionText: { fontSize: 12, fontFamily: Fonts.statusBold },
+  statTileWrap: { flex: 1 },
   statTile: { flex: 1, minHeight: 118, padding: 12, gap: 8, justifyContent: 'space-between' },
-  statValue: { fontSize: 21, fontWeight: '900' },
-  statLabel: { fontSize: 11, fontWeight: '700', lineHeight: 15 },
+  statValue: { fontSize: 21, fontFamily: Fonts.displayHeavy },
+  statLabel: { fontSize: 11, fontFamily: Fonts.bodyMedium, lineHeight: 15 },
   pressable: { marginBottom: 10 },
   actionRow: { minHeight: 78, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
   actionContent: { flex: 1, minWidth: 0 },
-  actionTitle: { fontSize: 15, fontWeight: '900' },
-  actionDescription: { fontSize: 12, lineHeight: 17, marginTop: 3 },
-  button: { height: 48, borderWidth: 1, borderRadius: 0, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
-  buttonText: { fontSize: 15, fontWeight: '900' },
+  actionTitle: { fontSize: 15, fontFamily: Fonts.bodyBold },
+  actionDescription: { fontSize: 12, fontFamily: Fonts.body, lineHeight: 17, marginTop: 3 },
+  button: { height: 48, borderWidth: 1, ...Radii.button, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  buttonText: { fontSize: 15, fontFamily: Fonts.statusBold },
   field: { marginBottom: 12 },
-  fieldLabel: { fontSize: 12, fontWeight: '800', marginBottom: 7 },
+  fieldLabel: { fontSize: 12, fontFamily: Fonts.bodySemiBold, marginBottom: 7 },
   inputWrap: { minHeight: 46, borderWidth: 1, borderRadius: 0, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   inputWrapMultiline: { alignItems: 'flex-start', paddingVertical: 10 },
-  input: { flex: 1, minHeight: 42, fontSize: 15 },
+  input: { flex: 1, minHeight: 42, fontSize: 15, fontFamily: Fonts.body },
   inputMultiline: { minHeight: 104, textAlignVertical: 'top' },
   avatar: { borderRadius: 0, borderWidth: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  avatarText: { fontWeight: '900', includeFontPadding: false, textAlign: 'center', textAlignVertical: 'center' },
+  avatarText: { fontFamily: Fonts.bodyBold, includeFontPadding: false, textAlign: 'center', textAlignVertical: 'center' },
   empty: { minHeight: 190, padding: 22, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  emptyTitle: { fontSize: 16, fontWeight: '900', textAlign: 'center' },
-  emptyDescription: { fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  emptyTitle: { fontSize: 16, fontFamily: Fonts.display, textAlign: 'center' },
+  emptyDescription: { fontSize: 13, fontFamily: Fonts.body, lineHeight: 19, textAlign: 'center' },
   skeleton: { borderRadius: 0, borderWidth: 1 },
   loadingStack: { gap: 10 },
   skeletonCard: { minHeight: 96, padding: 14, gap: 12 },

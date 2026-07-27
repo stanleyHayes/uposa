@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { Colors } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { jobsApi } from '@/lib/api';
 import type { Job } from '@/lib/types';
@@ -94,7 +94,7 @@ export default function JobDetailScreen() {
       </HeroPanel>
 
       <Surface palette={palette} style={{ padding: 16 }}>
-        <Text style={{ color: palette.text, fontSize: 15, lineHeight: 24 }}>{job.description}</Text>
+        <Text style={{ color: palette.text, fontSize: 15, fontFamily: Fonts.body, lineHeight: 24 }}>{job.description}</Text>
       </Surface>
 
       <View style={{ gap: 10, marginTop: 16 }}>
@@ -106,7 +106,7 @@ export default function JobDetailScreen() {
       </View>
 
       <Surface palette={palette} style={{ padding: 16, marginTop: 18 }}>
-        <Text style={{ color: palette.text, fontSize: 18, fontWeight: '900', marginBottom: 8 }}>Apply</Text>
+        <Text style={{ color: palette.text, fontSize: 18, fontFamily: Fonts.display, marginBottom: 8 }}>Apply</Text>
         <Field
           palette={palette}
           label="Cover letter"

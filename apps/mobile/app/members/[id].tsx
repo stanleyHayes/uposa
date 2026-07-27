@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Linking, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { Brand, Colors } from '@/constants/theme';
+import { Brand, Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { membersApi } from '@/lib/api';
 import type { Member } from '@/lib/types';
@@ -107,12 +107,12 @@ export default function MemberDetailScreen() {
       <SectionTitle palette={palette} title="School details" />
       <Surface palette={palette} style={{ padding: 14, gap: 12 }}>
         <View>
-          <Text style={{ color: Brand.gold, fontSize: 11, fontWeight: '900', letterSpacing: 1.4 }}>PROGRAMME</Text>
-          <Text style={{ color: palette.text, fontSize: 16, fontWeight: '900', marginTop: 5 }}>{member.programme ?? 'Not set'}</Text>
+          <Text style={{ color: Brand.gold, fontSize: 11, fontFamily: Fonts.statusBold, letterSpacing: 1.4 }}>PROGRAMME</Text>
+          <Text style={{ color: palette.text, fontSize: 16, fontFamily: Fonts.bodyBold, marginTop: 5 }}>{member.programme ?? 'Not set'}</Text>
         </View>
         <View>
-          <Text style={{ color: Brand.gold, fontSize: 11, fontWeight: '900', letterSpacing: 1.4 }}>MEMBERSHIP</Text>
-          <Text style={{ color: palette.text, fontSize: 16, fontWeight: '900', marginTop: 5 }}>{member.membershipStatus}</Text>
+          <Text style={{ color: Brand.gold, fontSize: 11, fontFamily: Fonts.statusBold, letterSpacing: 1.4 }}>MEMBERSHIP</Text>
+          <Text style={{ color: palette.text, fontSize: 16, fontFamily: Fonts.bodyBold, marginTop: 5 }}>{member.membershipStatus}</Text>
         </View>
       </Surface>
     </ScreenScroll>

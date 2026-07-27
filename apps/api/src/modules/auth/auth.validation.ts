@@ -1,5 +1,27 @@
 import { z } from 'zod';
 
+// Multipart form posts (web + mobile register) encode arrays as JSON strings
+// and booleans as 'true'/'false' — coerce them before validation.
+const stringArrayField = z.preprocess(
+  (val) => {
+    if (typeof val === 'string') {
+      try {
+        return JSON.parse(val);
+      } catch {
+        return val.length ? val.split(',').map((entry) => entry.trim()) : [];
+      }
+    }
+    return val;
+  },
+  z.array(z.string()).optional()
+);
+
+const booleanField = z.preprocess((val) => {
+  if (val === 'true') return true;
+  if (val === 'false') return false;
+  return val;
+}, z.boolean().optional());
+
 export const registerSchema = z.object({
   body: z.object({
     fullName: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -20,18 +42,22 @@ export const registerSchema = z.object({
     employmentType: z.enum(['RETIRED', 'STUDENT', 'UNEMPLOYED', 'SELF_EMPLOYED', 'GOVERNMENT_WORKER', 'PRIVATE_WORKER']).optional(),
     occupation: z.string().optional(),
     organization: z.string().optional(),
-    areaOfExpertise: z.array(z.string()).optional(),
+    areaOfExpertise: stringArrayField,
     emergencyContactNumber: z.string().optional(),
     emergencyRelationship: z.string().optional(),
     nextOfKinName: z.string().optional(),
     nextOfKinContact: z.string().optional(),
     nextOfKinRelationship: z.string().optional(),
-    isWhatsAppMember: z.boolean().optional(),
+    isWhatsAppMember: booleanField,
     willingToVolunteer: z.enum(['YES', 'NO', 'MAYBE']).optional(),
-    preferredContributions: z.array(z.string()).optional(),
-    consentGiven: z.boolean().refine((val) => val === true, {
+    preferredContributions: stringArrayField,
+    consentGiven: z.preprocess((val) => {
+      if (val === 'true') return true;
+      if (val === 'false') return false;
+      return val;
+    }, z.boolean().refine((val) => val === true, {
       message: 'Consent is required',
-    }),
+    })),
   }),
 });
 

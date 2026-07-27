@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Image, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { Colors } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { eventsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
@@ -19,6 +19,7 @@ import {
   Surface,
   formatDateTime,
 } from '@/components/mobile-ui';
+import { MarkdownBody } from '@/components/markdown';
 
 export default function EventDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -92,7 +93,6 @@ export default function EventDetailScreen() {
           palette={palette}
           eyebrow={event.status}
           title={event.title}
-          body={event.description}
           icon="calendar-outline"
         >
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -101,7 +101,13 @@ export default function EventDetailScreen() {
           </View>
         </HeroPanel>
 
-        <View style={{ gap: 10 }}>
+        {event.description ? (
+          <Surface palette={palette} style={{ padding: 16 }}>
+            <MarkdownBody palette={palette}>{event.description}</MarkdownBody>
+          </Surface>
+        ) : null}
+
+        <View style={{ gap: 10, marginTop: event.description ? 14 : 0 }}>
           <DetailRow palette={palette} icon="calendar-outline" label="When" value={formatDateTime(event.date)} />
           {event.location ? <DetailRow palette={palette} icon="location-outline" label="Where" value={event.location} /> : null}
           <DetailRow palette={palette} icon="information-circle-outline" label="Status" value={event.status} />
@@ -109,7 +115,7 @@ export default function EventDetailScreen() {
 
         {!isPast ? (
           <Surface palette={palette} style={{ padding: 16, gap: 2, marginTop: 18 }}>
-            <Text style={{ color: palette.text, fontSize: 18, fontWeight: '900', marginBottom: 8 }}>RSVP</Text>
+            <Text style={{ color: palette.text, fontSize: 18, fontFamily: Fonts.display, marginBottom: 8 }}>RSVP</Text>
             <Field palette={palette} label="Name" value={name} onChangeText={setName} icon="person-outline" />
             <Field palette={palette} label="Email" value={email} onChangeText={setEmail} icon="mail-outline" keyboardType="email-address" />
             <Field palette={palette} label="Phone" value={phone} onChangeText={setPhone} icon="call-outline" keyboardType="phone-pad" />
@@ -117,7 +123,7 @@ export default function EventDetailScreen() {
           </Surface>
         ) : (
           <Surface palette={palette} tone="muted" style={{ padding: 14, marginTop: 18 }}>
-            <Text style={{ color: palette.textMuted, fontSize: 14, lineHeight: 20 }}>This event has already passed.</Text>
+            <Text style={{ color: palette.textMuted, fontSize: 14, fontFamily: Fonts.body, lineHeight: 20 }}>This event has already passed.</Text>
           </Surface>
         )}
       </View>

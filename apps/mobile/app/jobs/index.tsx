@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Colors } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { jobsApi } from '@/lib/api';
 import type { Job } from '@/lib/types';
 import { EmptyState, LoadingState, Pill, ScreenHeader, Surface, formatShortDate } from '@/components/mobile-ui';
+import { FadeInUp } from '@/components/motion';
 
 const TYPE_LABEL: Record<Job['jobType'], string> = {
   FULL_TIME: 'Full-time',
@@ -68,23 +69,30 @@ export default function JobsScreen() {
         <EmptyState palette={palette} icon="briefcase-outline" title="No jobs posted" description="Approved opportunities will appear here once shared." />
       }
       ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-      renderItem={({ item }) => (
-        <Pressable onPress={() => router.push(`/jobs/${item.id}`)} style={({ pressed }) => ({ opacity: pressed ? 0.78 : 1 })}>
-          <Surface palette={palette} style={{ padding: 14, gap: 8 }}>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              <Pill palette={palette} tone="gold">{TYPE_LABEL[item.jobType]}</Pill>
-              {item.location ? <Pill palette={palette}>{item.location}</Pill> : null}
-            </View>
-            <Text style={{ color: palette.text, fontSize: 17, fontWeight: '900', lineHeight: 23 }} numberOfLines={2}>
-              {item.title}
-            </Text>
-            <Text style={{ color: palette.textMuted, fontSize: 13, fontWeight: '800' }}>{item.company}</Text>
-            <Text style={{ color: palette.textMuted, fontSize: 11 }}>
-              Posted {formatShortDate(item.createdAt)}{item.expiresAt ? ` · Expires ${formatShortDate(item.expiresAt)}` : ''}
-            </Text>
-          </Surface>
-        </Pressable>
-      )}
+      renderItem={({ item, index }) => {
+        const row = (
+          <Pressable onPress={() => router.push(`/jobs/${item.id}`)} style={({ pressed }) => ({ opacity: pressed ? 0.78 : 1 })}>
+            <Surface palette={palette} style={{ padding: 14, gap: 8 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                <Pill palette={palette} tone="gold">{TYPE_LABEL[item.jobType]}</Pill>
+                {item.location ? <Pill palette={palette}>{item.location}</Pill> : null}
+              </View>
+              <Text style={{ color: palette.text, fontSize: 17, fontFamily: Fonts.bodyBold, lineHeight: 23 }} numberOfLines={2}>
+                {item.title}
+              </Text>
+              <Text style={{ color: palette.textMuted, fontSize: 13, fontFamily: Fonts.bodySemiBold }}>{item.company}</Text>
+              <Text style={{ color: palette.textMuted, fontSize: 11, fontFamily: Fonts.body }}>
+                Posted {formatShortDate(item.createdAt)}{item.expiresAt ? ` · Expires ${formatShortDate(item.expiresAt)}` : ''}
+              </Text>
+            </Surface>
+          </Pressable>
+        );
+        return index < 8 ? (
+          <FadeInUp delay={Math.min(index, 7) * 40} distance={10}>{row}</FadeInUp>
+        ) : (
+          row
+        );
+      }}
     />
   );
 }

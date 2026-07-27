@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Brand } from '@/constants/theme';
+import { Brand, Fonts, Radii } from '@/constants/theme';
 
 interface Props {
   children: React.ReactNode;
@@ -78,13 +78,14 @@ const styles = StyleSheet.create({
   title: {
     color: Brand.navy,
     fontSize: 22,
-    fontWeight: '800',
+    fontFamily: Fonts.display,
     marginBottom: 6,
     textAlign: 'center',
   },
   message: {
     color: '#5A6478',
     fontSize: 14,
+    fontFamily: Fonts.body,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
@@ -96,11 +97,11 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.gold,
     paddingHorizontal: 22,
     height: 46,
-    borderRadius: 0,
+    ...Radii.button,
   },
   buttonText: {
     color: Brand.navy,
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: Fonts.statusBold,
   },
 });

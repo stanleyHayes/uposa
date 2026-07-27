@@ -1,7 +1,7 @@
 import { BouncingDots } from "../../components/ui/BouncingDots";
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
@@ -29,6 +29,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { authApi } from '../../api/services'
 import { useToast } from '../../hooks/useToast'
 import SEO from '../../components/common/SEO'
+import DatePicker from '../../components/ui/DatePicker'
+import SearchableSelect from '../../components/ui/SearchableSelect'
+import { cityOptions, countryOptions, stateOptions } from '../../lib/locations'
 
 const EXPERTISE_OPTIONS = [
   'Education & Teaching', 'Healthcare & Medical Services', 'Engineering & Technical Fields',
@@ -122,7 +125,7 @@ export default function RegisterPage() {
   const navigate = useNavigate()
   const toast = useToast()
 
-  const { register, handleSubmit, formState: { errors }, trigger, watch, setValue, getValues } = useForm<FormData>({
+  const { register, handleSubmit, control, formState: { errors }, trigger, watch, setValue, getValues } = useForm<FormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(schema) as any,
     defaultValues: {
@@ -178,6 +181,8 @@ export default function RegisterPage() {
 
   const watchExpertise = watch('areaOfExpertise') || []
   const watchContributions = watch('preferredContributions') || []
+  const watchCountry = watch('country') || ''
+  const watchRegion = watch('region') || ''
 
   const slideVariants = {
     enter: (direction: number) => ({ x: direction > 0 ? 60 : -60, opacity: 0 }),
@@ -429,7 +434,13 @@ export default function RegisterPage() {
                       </div>
                       <div className="form-control">
                         <label className="label pb-1"><span className="label-text font-medium text-sm">Date of Birth</span></label>
-                        <input type="date" className={inputCls()} {...register('dateOfBirth')} />
+                        <Controller
+                          name="dateOfBirth"
+                          control={control}
+                          render={({ field }) => (
+                            <DatePicker label="Date of Birth" value={field.value ?? ''} onChange={field.onChange} className={inputCls()} />
+                          )}
+                        />
                       </div>
                     </div>
                     <div className="form-control">
@@ -506,29 +517,61 @@ export default function RegisterPage() {
                     </div>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <div className="form-control">
+                        <label className="label pb-1"><span className="label-text font-medium text-sm">Country</span></label>
+                        <Controller
+                          name="country"
+                          control={control}
+                          render={({ field }) => (
+                            <SearchableSelect
+                              value={field.value ?? ''}
+                              options={countryOptions}
+                              placeholder="Select"
+                              className={selectCls}
+                              onChange={(v) => {
+                                field.onChange(v)
+                                setValue('region', '')
+                                setValue('city', '')
+                              }}
+                            />
+                          )}
+                        />
+                      </div>
+                      <div className="form-control">
                         <label className="label pb-1"><span className="label-text font-medium text-sm">Region</span></label>
-                        <select className={selectCls} {...register('region')}>
-                          <option value="">Select</option>
-                          <option>Ahafo</option><option>Ashanti</option><option>Bono</option><option>Bono East</option>
-                          <option>Central</option><option>Eastern</option><option>Greater Accra</option>
-                          <option>North East</option><option>Northern</option><option>Oti</option>
-                          <option>Savannah</option><option>Upper East</option><option>Upper West</option>
-                          <option>Volta</option><option>Western</option><option>Western North</option>
-                        </select>
+                        <Controller
+                          name="region"
+                          control={control}
+                          render={({ field }) => (
+                            <SearchableSelect
+                              value={field.value ?? ''}
+                              options={watchCountry ? stateOptions(watchCountry) : []}
+                              placeholder="Select"
+                              disabled={!watchCountry}
+                              className={selectCls}
+                              onChange={(v) => {
+                                field.onChange(v)
+                                setValue('city', '')
+                              }}
+                            />
+                          )}
+                        />
                       </div>
                       <div className="form-control">
                         <label className="label pb-1"><span className="label-text font-medium text-sm">City</span></label>
-                        <select className={selectCls} {...register('city')}>
-                          <option value="">Select</option>
-                          <option>Accra</option><option>Kumasi</option><option>Cape Coast</option><option>Takoradi</option>
-                          <option>Tamale</option><option>Sunyani</option><option>Ho</option><option>Koforidua</option>
-                          <option>Bolgatanga</option><option>Wa</option><option>Techiman</option><option>Obuasi</option>
-                          <option>Tema</option><option>Tarkwa</option><option>Winneba</option><option>Other</option>
-                        </select>
-                      </div>
-                      <div className="form-control">
-                        <label className="label pb-1"><span className="label-text font-medium text-sm">Country</span></label>
-                        <input type="text" className={inputCls()} defaultValue="Ghana" {...register('country')} />
+                        <Controller
+                          name="city"
+                          control={control}
+                          render={({ field }) => (
+                            <SearchableSelect
+                              value={field.value ?? ''}
+                              options={watchCountry && watchRegion ? cityOptions(watchCountry, watchRegion) : []}
+                              placeholder="Select"
+                              disabled={!watchRegion}
+                              className={selectCls}
+                              onChange={field.onChange}
+                            />
+                          )}
+                        />
                       </div>
                     </div>
                   </motion.div>

@@ -47,8 +47,8 @@
       "reactCompiler": true
     },
     "extra": {
-      "apiUrl": "http://localhost:5000/api",
-      "webUrl": "https://uposa.org",
+      "apiUrl": "http://localhost:5001/api",
+      "webUrl": "https://www.uposa.org",
       "_apiUrlNote": "Override this in production builds via EAS secrets or CI env vars"
     }
   }

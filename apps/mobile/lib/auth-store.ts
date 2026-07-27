@@ -38,7 +38,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         authApi
           .me()
           .then((res) => {
-            const fresh = res.data.data;
+            // /auth/me wraps the member in { type, data } — unwrap either shape.
+            const payload = res.data.data as Member | { data: Member } | undefined;
+            const fresh = payload && 'data' in payload ? (payload as { data: Member }).data : payload;
             if (fresh) {
               AsyncStorage.setItem(USER_KEY, JSON.stringify(fresh));
               set({ user: fresh });
@@ -74,6 +76,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    // Best-effort server sign-out; never block local sign-out on it.
+    try {
+      await authApi.logout();
+    } catch {}
     await Promise.all([
       AsyncStorage.removeItem(TOKEN_KEY),
       AsyncStorage.removeItem(REFRESH_TOKEN_KEY),

@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 
-import { Brand, Colors, type Palette } from '@/constants/theme';
+import { Brand, Colors, Fonts, type Palette } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   donationsApi,
@@ -20,6 +20,7 @@ import {
   projectsApi,
 } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
+import { useDrawerStore } from '@/lib/drawer-store';
 import type {
   Donation,
   Due,
@@ -171,10 +172,10 @@ function ActionTile({
       <Surface palette={palette} tone={active ? 'gold' : navy ? 'navy' : 'default'} style={{ minHeight: 118, padding: 12, justifyContent: 'space-between' }}>
         <Ionicons name={icon} size={22} color={active ? Brand.navy : navy ? Brand.gold : palette.text} />
         <View>
-          <Text style={{ color: active ? Brand.navy : navy ? Brand.cream : palette.text, fontSize: 13, fontWeight: '900' }} numberOfLines={1}>
+          <Text style={{ color: active ? Brand.navy : navy ? Brand.cream : palette.text, fontSize: 13, fontFamily: Fonts.bodyBold }} numberOfLines={1}>
             {label}
           </Text>
-          <Text style={{ color: active ? Brand.navy : navy ? 'rgba(255,248,220,0.68)' : palette.textMuted, fontSize: 11, lineHeight: 15, marginTop: 3 }} numberOfLines={2}>
+          <Text style={{ color: active ? Brand.navy : navy ? 'rgba(255,248,220,0.68)' : palette.textMuted, fontSize: 11, fontFamily: Fonts.body, lineHeight: 15, marginTop: 3 }} numberOfLines={2}>
             {detail}
           </Text>
         </View>
@@ -210,7 +211,7 @@ function TrendPanel({ palette, trend }: { palette: Palette; trend: TrendPoint[] 
                 />
               ))}
             </View>
-            <Text style={{ color: palette.textMuted, fontSize: 10, fontWeight: '900' }}>{point.label}</Text>
+            <Text style={{ color: palette.textMuted, fontSize: 10, fontFamily: Fonts.statusBold }}>{point.label}</Text>
           </View>
         ))}
       </View>
@@ -228,7 +229,7 @@ function Legend({ palette, color, label }: { palette: Palette; color: string; la
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
       <View style={{ width: 14, height: 6, backgroundColor: color }} />
-      <Text style={{ color: palette.textMuted, fontSize: 10, fontWeight: '800' }}>{label}</Text>
+      <Text style={{ color: palette.textMuted, fontSize: 10, fontFamily: Fonts.status }}>{label}</Text>
     </View>
   );
 }
@@ -255,7 +256,7 @@ function QueueRow({
       title={title}
       description={description}
       onPress={onPress}
-      trailing={<Text style={{ color: Brand.gold, fontSize: 14, fontWeight: '900' }}>{value}</Text>}
+      trailing={<Text style={{ color: Brand.gold, fontSize: 14, fontFamily: Fonts.bodyBold }}>{value}</Text>}
     />
   );
 }
@@ -389,12 +390,12 @@ export default function HomeScreen() {
         <View style={uiStyles.row}>
           <Pressable onPress={() => router.push(openBalance > 0 ? '/dues' : '/donations')} style={{ flex: 1 }}>
             <Surface palette={palette} tone="gold" style={{ padding: 12 }}>
-              <Text style={{ color: Brand.navy, fontSize: 12, fontWeight: '900' }}>{openBalance > 0 ? 'Settle dues' : 'Give now'}</Text>
+              <Text style={{ color: Brand.navy, fontSize: 12, fontFamily: Fonts.statusBold }}>{openBalance > 0 ? 'Settle dues' : 'Give now'}</Text>
             </Surface>
           </Pressable>
           <Pressable onPress={() => router.push('/(tabs)/profile')} style={{ flex: 1, marginLeft: 10 }}>
             <Surface palette={palette} style={{ padding: 12, backgroundColor: 'rgba(255,248,220,0.08)' }}>
-              <Text style={{ color: Brand.cream, fontSize: 12, fontWeight: '900' }}>Review profile</Text>
+              <Text style={{ color: Brand.cream, fontSize: 12, fontFamily: Fonts.statusBold }}>Review profile</Text>
             </Surface>
           </Pressable>
         </View>
@@ -415,7 +416,7 @@ export default function HomeScreen() {
       <SectionTitle
         palette={palette}
         title="Action board"
-        action={<ActionText label="More" palette={palette} onPress={() => router.push('/(tabs)/more')} />}
+        action={<ActionText label="More" palette={palette} onPress={() => useDrawerStore.getState().open()} />}
       />
       <View style={{ gap: 10 }}>
         <View style={[uiStyles.row, { gap: 10 }]}>
@@ -474,12 +475,12 @@ export default function HomeScreen() {
             action={<ActionText label="Projects" palette={palette} onPress={() => router.push('/projects')} />}
           />
           <Surface palette={palette} style={{ padding: 14, gap: 10 }}>
-            <Text style={{ color: palette.text, fontSize: 16, fontWeight: '900' }}>{primaryProject.title}</Text>
-            <Text style={{ color: palette.textMuted, fontSize: 13, lineHeight: 19 }} numberOfLines={2}>
+            <Text style={{ color: palette.text, fontSize: 16, fontFamily: Fonts.display }}>{primaryProject.title}</Text>
+            <Text style={{ color: palette.textMuted, fontSize: 13, fontFamily: Fonts.body, lineHeight: 19 }} numberOfLines={2}>
               {primaryProject.description}
             </Text>
             <ProgressBar palette={palette} percent={projectPct} />
-            <Text style={{ color: palette.textMuted, fontSize: 12, fontWeight: '700' }}>
+            <Text style={{ color: palette.textMuted, fontSize: 12, fontFamily: Fonts.bodyMedium }}>
               {formatMoney(primaryProject.raisedAmount)} of {formatMoney(primaryProject.goalAmount)} raised
             </Text>
           </Surface>
@@ -558,8 +559,8 @@ export default function HomeScreen() {
       <Surface palette={palette} style={{ padding: 14, gap: 12, marginBottom: 4 }}>
         <View style={[uiStyles.between, { alignItems: 'flex-start' }]}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: palette.text, fontSize: 16, fontWeight: '900' }}>{user?.fullName ?? 'UPOSA member'}</Text>
-            <Text style={{ color: palette.textMuted, fontSize: 12, marginTop: 4 }}>
+            <Text style={{ color: palette.text, fontSize: 16, fontFamily: Fonts.display }}>{user?.fullName ?? 'UPOSA member'}</Text>
+            <Text style={{ color: palette.textMuted, fontSize: 12, fontFamily: Fonts.body, marginTop: 4 }}>
               {user?.yearGroup ? `Year group ${user.yearGroup}` : 'Year group pending'} · {user?.house ? `${user.house} House` : 'House pending'}
             </Text>
           </View>
@@ -567,12 +568,12 @@ export default function HomeScreen() {
         </View>
         <View style={[uiStyles.row, { gap: 10 }]}>
           <Surface palette={palette} tone="muted" style={{ flex: 1, padding: 10 }}>
-            <Text style={{ color: palette.textMuted, fontSize: 10, fontWeight: '900' }}>PAID DUES</Text>
-            <Text style={{ color: palette.text, fontSize: 14, fontWeight: '900', marginTop: 5 }}>{formatMoney(paid)}</Text>
+            <Text style={{ color: palette.textMuted, fontSize: 10, fontFamily: Fonts.statusBold }}>PAID DUES</Text>
+            <Text style={{ color: palette.text, fontSize: 14, fontFamily: Fonts.bodyBold, marginTop: 5 }}>{formatMoney(paid)}</Text>
           </Surface>
           <Surface palette={palette} tone="muted" style={{ flex: 1, padding: 10 }}>
-            <Text style={{ color: palette.textMuted, fontSize: 10, fontWeight: '900' }}>STATUS</Text>
-            <Text style={{ color: palette.text, fontSize: 14, fontWeight: '900', marginTop: 5 }}>{user?.membershipStatus ?? 'PENDING'}</Text>
+            <Text style={{ color: palette.textMuted, fontSize: 10, fontFamily: Fonts.statusBold }}>STATUS</Text>
+            <Text style={{ color: palette.text, fontSize: 14, fontFamily: Fonts.bodyBold, marginTop: 5 }}>{user?.membershipStatus ?? 'PENDING'}</Text>
           </Surface>
         </View>
       </Surface>

@@ -1,50 +1,46 @@
-# Welcome to your Expo app 👋
+# UPOSA Alumni — Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+The UPOSA Alumni mobile app, built with **Expo SDK 56** (React Native 0.86) and **expo-router** file-based routing. It mirrors the feature set of the alumni web app (`apps/alumni`) in the same monorepo.
 
-## Get started
+## Stack
 
-1. Install dependencies
+- Expo SDK 56 + expo-router (typed, file-based routes under `app/`)
+- React Native 0.86, plain `StyleSheet` (no CSS framework)
+- Zustand auth store (`lib/auth-store.ts`)
+- Centralised API client (`lib/api.ts`) + typed models (`lib/types.ts`)
+- Shared design system: `components/mobile-ui.tsx`, theme tokens in `constants/theme.ts` (Fraunces / Euclid Circular A / Outfit, light + dark palettes)
 
-   ```bash
-   npm install
-   ```
+## Develop
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+From the repo root:
 
 ```bash
-npm run reset-project
+npm run dev:mobile
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Or from this directory:
 
-## Learn more
+```bash
+npx expo start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+The API base URL is configured via the `EXPO_PUBLIC_API_URL` environment variable (see the repo-root `production.env` / Render config for deployed values).
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Features
 
-## Join the community
+- Auth: sign in / register, profile management, photo upload
+- Members directory
+- Events (upcoming/past) with RSVP
+- News articles with markdown content
+- Dues & payments (pay dues, payment methods, history)
+- Forum discussions, polls, and elections
+- Jobs board and mentorship (requests, mentees, availability)
+- Donations and projects (funding progress, milestones, markdown content)
+- Transcripts, gallery, and contact
+- Site content driven by the public `siteData` endpoint
 
-Join our community of developers creating universal apps.
+## Conventions
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Screens follow the shared idioms: `ScreenScroll`/`FlatList` + `RefreshControl`, `LoadingState` on first load, `EmptyState`, `Alert.alert` with the server error `message`.
+- Palette comes from `useColorScheme()` + `Colors[scheme]`; every screen supports light and dark. Never hardcode hex colors outside `Brand` constants.
+- Long-form content is rendered with `react-native-markdown-display` via `components/markdown.tsx`.

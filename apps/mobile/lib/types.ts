@@ -1,4 +1,7 @@
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
+export type MaritalStatus = 'SINGLE' | 'MARRIED' | 'SEPARATED' | 'DIVORCED' | 'WIDOWED';
+export type EmploymentType = 'RETIRED' | 'STUDENT' | 'UNEMPLOYED' | 'SELF_EMPLOYED' | 'GOVERNMENT_WORKER' | 'PRIVATE_WORKER';
+export type WillingnessToVolunteer = 'YES' | 'NO' | 'MAYBE';
 export type Programme = 'GENERAL_ARTS' | 'BUSINESS' | 'HOME_ECONOMICS' | 'VISUAL_ARTS' | 'SCIENCE';
 export type House = 'ACKAH' | 'DENSU' | 'TANO' | 'NKRUMAH' | 'PRA' | 'VOLTA';
 export type MembershipStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
@@ -19,23 +22,38 @@ export type DonationStatus = 'PENDING' | 'CONFIRMED' | 'FAILED';
 export interface Member {
   id: string;
   fullName: string;
-  email: string;
+  gender?: Gender;
+  dateOfBirth?: string;
+  maritalStatus?: MaritalStatus;
   photoUrl?: string;
+  email: string;
   mobileNumber?: string;
+  altPhoneNumber?: string;
+  residentialAddress?: string;
   city?: string;
   region?: string;
   country?: string;
   yearGroup?: number;
   programme?: Programme;
   house?: House;
+  employmentType?: EmploymentType;
   occupation?: string;
   organization?: string;
   areaOfExpertise?: string[];
+  emergencyContactNumber?: string;
+  emergencyRelationship?: string;
+  nextOfKinName?: string;
+  nextOfKinContact?: string;
+  nextOfKinRelationship?: string;
   isAvailableAsMentor?: boolean;
   mentorBio?: string;
+  isWhatsAppMember?: boolean;
+  willingToVolunteer?: WillingnessToVolunteer;
+  preferredContributions?: string[];
   membershipStatus: MembershipStatus;
   isVerified?: boolean;
   isApproved?: boolean;
+  consentGiven?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -263,6 +281,37 @@ export interface PaymentMethod {
   config?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface GalleryCategory {
+  id: string;
+  name: string;
+  description?: string | null;
+  coverImageUrl?: string | null;
+  order?: number;
+  imageCount?: number;
+}
+
+export interface GalleryItem {
+  id: string;
+  title: string;
+  caption?: string | null;
+  description?: string | null;
+  imageUrl: string;
+  category?: string | null;
+  categoryId?: string | null;
+  createdAt: string;
+}
+
+export interface SiteConfig {
+  contact?: { phones: string[]; emails: Record<string, string>; address: string; officeHours: string };
+  social?: { facebook: string; instagram: string; whatsapp: string };
+  payment?: {
+    momo: { number: string; payId: string; accountName: string };
+    bank: { bank: string; accountNo: string; accountName: string; branch: string };
+  };
+  dues?: { annual: number; lifetime: number; currency: string };
+  donationAllocation?: { title: string; percentage: number; description: string }[];
 }
 
 export interface ApiResponse<T = unknown> {

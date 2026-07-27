@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { Colors } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { forumApi } from '@/lib/api';
 import type { ForumComment, ForumPost } from '@/lib/types';
@@ -95,7 +95,7 @@ export default function ForumDetailScreen() {
       </HeroPanel>
 
       <Surface palette={palette} style={{ padding: 16 }}>
-        <Text style={{ color: palette.text, fontSize: 15, lineHeight: 24 }}>{post.content}</Text>
+        <Text style={{ color: palette.text, fontSize: 15, fontFamily: Fonts.body, lineHeight: 24 }}>{post.content}</Text>
       </Surface>
 
       <SectionTitle palette={palette} title={`Replies (${comments.length})`} />
@@ -112,9 +112,9 @@ export default function ForumDetailScreen() {
             <Surface key={item.id} palette={palette} style={{ padding: 12, flexDirection: 'row', gap: 12 }}>
               <AvatarMark palette={palette} name={item.author?.fullName ?? 'Anonymous'} photoUrl={item.author?.photoUrl} size={42} />
               <View style={{ flex: 1, gap: 4 }}>
-                <Text style={{ color: palette.text, fontSize: 14, fontWeight: '900' }}>{item.author?.fullName ?? 'Anonymous'}</Text>
-                <Text style={{ color: palette.text, fontSize: 14, lineHeight: 20 }}>{item.content}</Text>
-                <Text style={{ color: palette.textMuted, fontSize: 11 }}>{formatShortDate(item.createdAt)}</Text>
+                <Text style={{ color: palette.text, fontSize: 14, fontFamily: Fonts.bodyBold }}>{item.author?.fullName ?? 'Anonymous'}</Text>
+                <Text style={{ color: palette.text, fontSize: 14, fontFamily: Fonts.body, lineHeight: 20 }}>{item.content}</Text>
+                <Text style={{ color: palette.textMuted, fontSize: 11, fontFamily: Fonts.body }}>{formatShortDate(item.createdAt)}</Text>
               </View>
             </Surface>
           ))}
@@ -123,7 +123,7 @@ export default function ForumDetailScreen() {
 
       {!post.isLocked ? (
         <Surface palette={palette} style={{ padding: 16, marginTop: 18 }}>
-          <Text style={{ color: palette.text, fontSize: 17, fontWeight: '900', marginBottom: 8 }}>Add reply</Text>
+          <Text style={{ color: palette.text, fontSize: 17, fontFamily: Fonts.display, marginBottom: 8 }}>Add reply</Text>
           <Field
             palette={palette}
             label="Your comment"

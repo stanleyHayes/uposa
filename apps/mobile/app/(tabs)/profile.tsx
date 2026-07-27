@@ -1,6 +1,7 @@
-import { Alert, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
-import { Brand, Colors } from '@/constants/theme';
+import { Brand, Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/lib/auth-store';
 import {
@@ -15,17 +16,19 @@ import {
   Surface,
 } from '@/components/mobile-ui';
 
-export default function ProfileScreen() {
-  const scheme = useColorScheme() ?? 'light';
+function formatStatus(status?: string) {
+  if (!status) return 'Pending';
+  return status.charAt(0) + status.slice(1).toLowerCase();
+}
+
+export default function ProfileScreen() {  const scheme = useColorScheme() ?? 'light';
   const palette = Colors[scheme];
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
   const onLogout = () => {
-    Alert.alert('Sign out?', 'You will need to sign in again to access your account.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: () => logout() },
-    ]);
+    logout();
   };
 
   if (!user) return null;
@@ -54,14 +57,24 @@ export default function ProfileScreen() {
         </View>
       </HeroPanel>
 
+      <View style={{ marginBottom: 4 }}>
+        <PrimaryButton
+          label="Edit profile"
+          palette={palette}
+          onPress={() => router.push('/profile/edit')}
+          icon="create-outline"
+          tone="gold"
+        />
+      </View>
+
       <SectionTitle palette={palette} title="Profile snapshot" />
       <View style={{ gap: 10 }}>
         <Surface palette={palette} style={{ padding: 14 }}>
-          <Text style={{ color: Brand.gold, fontSize: 11, fontWeight: '900', letterSpacing: 1.4 }}>WORK</Text>
-          <Text style={{ color: palette.text, fontSize: 18, fontWeight: '900', marginTop: 8 }}>
+          <Text style={{ color: Brand.gold, fontSize: 11, fontFamily: Fonts.statusBold, letterSpacing: 1.4 }}>WORK</Text>
+          <Text style={{ color: palette.text, fontSize: 18, fontFamily: Fonts.display, marginTop: 8 }}>
             {user.occupation || 'Occupation not set'}
           </Text>
-          <Text style={{ color: palette.textMuted, fontSize: 13, marginTop: 3 }}>
+          <Text style={{ color: palette.textMuted, fontSize: 13, fontFamily: Fonts.body, marginTop: 3 }}>
             {user.organization || 'Organization not set'}
           </Text>
         </Surface>
@@ -77,20 +90,20 @@ export default function ProfileScreen() {
       </View>
 
       <SectionTitle palette={palette} title="Membership" />
-      <Surface palette={palette} style={{ padding: 14, gap: 10 }}>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: palette.textMuted, fontSize: 11, fontWeight: '800' }}>STATUS</Text>
-            <Text style={{ color: palette.text, fontSize: 16, fontWeight: '900', marginTop: 4 }}>{user.membershipStatus}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: palette.textMuted, fontSize: 11, fontWeight: '800' }}>VERIFICATION</Text>
-            <Text style={{ color: palette.text, fontSize: 16, fontWeight: '900', marginTop: 4 }}>
-              {user.isVerified ? 'Verified' : 'Pending'}
-            </Text>
-          </View>
-        </View>
-      </Surface>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <Surface palette={palette} style={{ flex: 1, padding: 14 }}>
+          <Text style={{ color: Brand.gold, fontSize: 11, fontFamily: Fonts.statusBold, letterSpacing: 1.4 }}>STATUS</Text>
+          <Text style={{ color: palette.text, fontSize: 18, fontFamily: Fonts.display, marginTop: 8 }}>
+            {formatStatus(user.membershipStatus)}
+          </Text>
+        </Surface>
+        <Surface palette={palette} style={{ flex: 1, padding: 14 }}>
+          <Text style={{ color: Brand.gold, fontSize: 11, fontFamily: Fonts.statusBold, letterSpacing: 1.4 }}>VERIFICATION</Text>
+          <Text style={{ color: palette.text, fontSize: 18, fontFamily: Fonts.display, marginTop: 8 }}>
+            {user.isVerified ? 'Verified' : 'Pending'}
+          </Text>
+        </Surface>
+      </View>
 
       <View style={{ marginTop: 22 }}>
         <PrimaryButton label="Sign out" palette={palette} onPress={onLogout} icon="log-out-outline" tone="danger" />

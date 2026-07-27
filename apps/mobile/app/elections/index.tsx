@@ -1,11 +1,21 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, FlatList, RefreshControl, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, FlatList, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
-import { Brand, Colors, type Palette } from '@/constants/theme';
+import { Brand, Colors, Fonts, type Palette } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { electionsApi } from '@/lib/api';
 import type { Election, ElectionCandidate } from '@/lib/types';
 import { AvatarMark, EmptyState, LoadingState, Pill, PrimaryButton, ScreenHeader, Surface, formatShortDate } from '@/components/mobile-ui';
+import { FadeInUp } from '@/components/motion';
+
+type ElectionFilter = 'ALL' | 'ACTIVE' | 'UPCOMING' | 'COMPLETED';
+
+const FILTER_OPTIONS: { value: ElectionFilter; label: string }[] = [
+  { value: 'ALL', label: 'All' },
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'UPCOMING', label: 'Upcoming' },
+  { value: 'COMPLETED', label: 'Completed' },
+];
 
 export default function ElectionsScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -14,6 +24,7 @@ export default function ElectionsScreen() {
   const [elections, setElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<ElectionFilter>('ALL');
 
   const load = useCallback(async () => {
     try {
@@ -47,29 +58,55 @@ export default function ElectionsScreen() {
     }
   };
 
+  const filtered = useMemo(() => {
+    if (filter === 'ALL') return elections;
+    return elections.filter((election) => election.status === filter);
+  }, [elections, filter]);
+
   if (loading) return <LoadingState palette={palette} title="Elections" />;
 
   return (
     <FlatList
       style={{ backgroundColor: palette.background }}
       contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-      data={elections}
+      data={filtered}
       keyExtractor={(item) => item.id}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.tint} />}
       ListHeaderComponent={
-        <ScreenHeader
-          palette={palette}
-          eyebrow="Governance"
-          title="Elections"
-          description="Verified member voting for association roles and decisions."
-          icon="ribbon-outline"
-        />
+        <View>
+          <ScreenHeader
+            palette={palette}
+            eyebrow="Governance"
+            title="Elections"
+            description="Verified member voting for association roles and decisions."
+            icon="ribbon-outline"
+          />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ flexDirection: 'row', gap: 8, paddingBottom: 12 }}
+          >
+            {FILTER_OPTIONS.map((option) => (
+              <Pressable key={option.value} onPress={() => setFilter(option.value)} style={({ pressed }) => ({ opacity: pressed ? 0.78 : 1 })}>
+                <Pill palette={palette} active={filter === option.value}>{option.label}</Pill>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
       }
       ListEmptyComponent={
-        <EmptyState palette={palette} icon="ribbon-outline" title="No elections open" description="Upcoming and active elections will appear here." />
+        <EmptyState palette={palette} icon="ribbon-outline" title="No elections found" description="Upcoming and active elections will appear here." />
       }
       ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-      renderItem={({ item }) => <ElectionCard election={item} palette={palette} onVote={onVote} />}
+      renderItem={({ item, index }) =>
+        index < 8 ? (
+          <FadeInUp delay={Math.min(index, 7) * 40} distance={10}>
+            <ElectionCard election={item} palette={palette} onVote={onVote} />
+          </FadeInUp>
+        ) : (
+          <ElectionCard election={item} palette={palette} onVote={onVote} />
+        )
+      }
     />
   );
 }
@@ -89,12 +126,12 @@ function ElectionCard({
     <Surface palette={palette} style={{ padding: 16, gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: palette.text, fontSize: 17, fontWeight: '900' }}>{election.title}</Text>
-          <Text style={{ color: palette.textMuted, fontSize: 12, marginTop: 3 }}>{election.position}</Text>
+          <Text style={{ color: palette.text, fontSize: 17, fontFamily: Fonts.bodyBold }}>{election.title}</Text>
+          <Text style={{ color: palette.textMuted, fontSize: 12, fontFamily: Fonts.body, marginTop: 3 }}>{election.position}</Text>
         </View>
         <Pill palette={palette} tone={isActive ? 'gold' : 'muted'}>{election.status}</Pill>
       </View>
-      {election.description ? <Text style={{ color: palette.textMuted, fontSize: 13, lineHeight: 19 }}>{election.description}</Text> : null}
+      {election.description ? <Text style={{ color: palette.textMuted, fontSize: 13, fontFamily: Fonts.body, lineHeight: 19 }}>{election.description}</Text> : null}
 
       <View style={{ gap: 10 }}>
         {election.candidates.map((candidate) => (
@@ -109,7 +146,7 @@ function ElectionCard({
         ))}
       </View>
 
-      <Text style={{ color: palette.textMuted, fontSize: 11, fontWeight: '700' }}>
+      <Text style={{ color: palette.textMuted, fontSize: 11, fontFamily: Fonts.bodyMedium }}>
         {formatShortDate(election.startDate)} to {formatShortDate(election.endDate)}
         {election.hasVoted ? ' · You voted' : ''}
       </Text>
@@ -135,14 +172,14 @@ function CandidateRow({
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <AvatarMark palette={palette} name={candidate.name} photoUrl={candidate.photoUrl} />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ color: isMyVote ? Brand.navy : palette.text, fontSize: 15, fontWeight: '900' }}>{candidate.name}</Text>
+          <Text style={{ color: isMyVote ? Brand.navy : palette.text, fontSize: 15, fontFamily: Fonts.bodyBold }}>{candidate.name}</Text>
           {candidate.manifesto ? (
-            <Text style={{ color: isMyVote ? Brand.navy : palette.textMuted, fontSize: 12, lineHeight: 18, marginTop: 4 }} numberOfLines={3}>
+            <Text style={{ color: isMyVote ? Brand.navy : palette.textMuted, fontSize: 12, fontFamily: Fonts.body, lineHeight: 18, marginTop: 4 }} numberOfLines={3}>
               {candidate.manifesto}
             </Text>
           ) : null}
           {typeof candidate.votes === 'number' ? (
-            <Text style={{ color: isMyVote ? Brand.navy : palette.textMuted, fontSize: 11, marginTop: 5 }}>
+            <Text style={{ color: isMyVote ? Brand.navy : palette.textMuted, fontSize: 11, fontFamily: Fonts.body, marginTop: 5 }}>
               {candidate.votes} {candidate.votes === 1 ? 'vote' : 'votes'}
             </Text>
           ) : null}

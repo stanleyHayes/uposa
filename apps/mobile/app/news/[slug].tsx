@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Image, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { Colors } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { newsApi } from '@/lib/api';
 import type { News } from '@/lib/types';
 import { EmptyState, HeroPanel, LoadingState, Pill, ScreenScroll, Surface, formatShortDate } from '@/components/mobile-ui';
+import { MarkdownBody } from '@/components/markdown';
 
 const CATEGORY_LABEL: Record<News['category'], string> = {
   ANNOUNCEMENT: 'Announcement',
@@ -64,7 +65,7 @@ export default function NewsDetailScreen() {
         />
         {item.excerpt ? (
           <Surface palette={palette} tone="muted" style={{ padding: 16 }}>
-            <Text style={{ color: palette.text, fontSize: 17, lineHeight: 25, fontWeight: '800' }}>{item.excerpt}</Text>
+            <Text style={{ color: palette.text, fontSize: 17, lineHeight: 25, fontFamily: Fonts.bodySemiBold }}>{item.excerpt}</Text>
           </Surface>
         ) : null}
         <Surface palette={palette} style={{ padding: 16, gap: 12 }}>
@@ -72,7 +73,7 @@ export default function NewsDetailScreen() {
             <Pill palette={palette} tone="gold">{CATEGORY_LABEL[item.category]}</Pill>
             <Pill palette={palette}>{date}</Pill>
           </View>
-          <Text style={{ color: palette.text, fontSize: 15, lineHeight: 24 }}>{item.content}</Text>
+          <MarkdownBody palette={palette}>{item.content}</MarkdownBody>
         </Surface>
       </View>
     </ScreenScroll>

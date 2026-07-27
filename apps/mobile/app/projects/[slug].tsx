@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Image, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { Colors } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { projectsApi } from '@/lib/api';
 import type { Project } from '@/lib/types';
@@ -18,6 +18,7 @@ import {
   formatMoney,
   formatShortDate,
 } from '@/components/mobile-ui';
+import { MarkdownBody } from '@/components/markdown';
 
 export default function ProjectDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -63,7 +64,6 @@ export default function ProjectDetailScreen() {
           palette={palette}
           eyebrow={project.status}
           title={project.title}
-          body={project.description}
           icon="construct-outline"
         >
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -74,15 +74,21 @@ export default function ProjectDetailScreen() {
 
         <Surface palette={palette} style={{ padding: 16, gap: 10 }}>
           <ProgressBar palette={palette} percent={pct} />
-          <Text style={{ color: palette.text, fontSize: 22, fontWeight: '900' }}>{formatMoney(project.raisedAmount)}</Text>
-          <Text style={{ color: palette.textMuted, fontSize: 13 }}>
+          <Text style={{ color: palette.text, fontSize: 22, fontFamily: Fonts.displayHeavy }}>{formatMoney(project.raisedAmount)}</Text>
+          <Text style={{ color: palette.textMuted, fontSize: 13, fontFamily: Fonts.body }}>
             of {formatMoney(project.goalAmount)} target
           </Text>
         </Surface>
 
+        {project.description ? (
+          <Surface palette={palette} style={{ padding: 16, marginTop: 14 }}>
+            <MarkdownBody palette={palette}>{project.description}</MarkdownBody>
+          </Surface>
+        ) : null}
+
         {project.content ? (
           <Surface palette={palette} style={{ padding: 16, marginTop: 14 }}>
-            <Text style={{ color: palette.text, fontSize: 15, lineHeight: 24 }}>{project.content}</Text>
+            <MarkdownBody palette={palette}>{project.content}</MarkdownBody>
           </Surface>
         ) : null}
 
@@ -94,12 +100,12 @@ export default function ProjectDetailScreen() {
                 <Surface key={`${milestone.title}-${index}`} palette={palette} style={{ padding: 12, flexDirection: 'row', gap: 12 }}>
                   <Pill palette={palette} tone={milestone.completed ? 'gold' : 'muted'}>{milestone.completed ? 'Done' : 'Open'}</Pill>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: palette.text, fontSize: 14, fontWeight: '900' }}>{milestone.title}</Text>
+                    <Text style={{ color: palette.text, fontSize: 14, fontFamily: Fonts.bodyBold }}>{milestone.title}</Text>
                     {milestone.description ? (
-                      <Text style={{ color: palette.textMuted, fontSize: 12, lineHeight: 18, marginTop: 3 }}>{milestone.description}</Text>
+                      <Text style={{ color: palette.textMuted, fontSize: 12, fontFamily: Fonts.body, lineHeight: 18, marginTop: 3 }}>{milestone.description}</Text>
                     ) : null}
                     {milestone.date ? (
-                      <Text style={{ color: palette.textMuted, fontSize: 11, marginTop: 5 }}>{formatShortDate(milestone.date)}</Text>
+                      <Text style={{ color: palette.textMuted, fontSize: 11, fontFamily: Fonts.body, marginTop: 5 }}>{formatShortDate(milestone.date)}</Text>
                     ) : null}
                   </View>
                 </Surface>

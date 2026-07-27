@@ -1,16 +1,18 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import { useFonts } from 'expo-font';
+import { Fraunces_600SemiBold, Fraunces_700Bold, Fraunces_900Black } from '@expo-google-fonts/fraunces';
+import { Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold, Outfit_800ExtraBold } from '@expo-google-fonts/outfit';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { View } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Brand, Colors } from '@/constants/theme';
+import { Brand, Colors, Fonts } from '@/constants/theme';
 import { useAuthStore } from '@/lib/auth-store';
 import { AppThemeProvider } from '@/lib/theme-context';
 import { ErrorBoundary } from '@/components/error-boundary';
-import { SkeletonBar } from '@/components/mobile-ui';
+import { SplashScreen } from '@/components/splash-screen';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -43,11 +45,7 @@ const darkNavTheme = {
 function AuthGate() {
   const router = useRouter();
   const segments = useSegments();
-  const { isAuthenticated, isHydrating, hydrate } = useAuthStore();
-
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
+  const { isAuthenticated, isHydrating } = useAuthStore();
 
   useEffect(() => {
     if (isHydrating) return;
@@ -65,25 +63,37 @@ function AuthGate() {
 function RootLayoutContent() {
   const colorScheme = useColorScheme();
   const isHydrating = useAuthStore((s) => s.isHydrating);
-  const palette = Colors[colorScheme ?? 'light'];
+  const hydrate = useAuthStore((s) => s.hydrate);
 
-  if (isHydrating) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', gap: 14, padding: 24, backgroundColor: palette.background }}>
-        <SkeletonBar palette={palette} width="46%" height={14} />
-        <SkeletonBar palette={palette} width="82%" height={32} />
-        <SkeletonBar palette={palette} width="64%" height={16} />
-        <View style={{ marginTop: 18, gap: 10 }}>
-          <SkeletonBar palette={palette} width="100%" height={82} />
-          <SkeletonBar palette={palette} width="100%" height={82} />
-        </View>
-      </View>
-    );
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+  const palette = Colors[colorScheme ?? 'light'];
+  const [fontsLoaded] = useFonts({
+    'EuclidCircularA-Regular': require('../assets/fonts/EuclidCircularARegular.ttf'),
+    'EuclidCircularA-Italic': require('../assets/fonts/EuclidCircularAItalic.ttf'),
+    'EuclidCircularA-Medium': require('../assets/fonts/EuclidCircularAMedium.ttf'),
+    'EuclidCircularA-MediumItalic': require('../assets/fonts/EuclidCircularAMediumItalic.ttf'),
+    'EuclidCircularA-SemiBold': require('../assets/fonts/EuclidCircularASemiBold.ttf'),
+    'EuclidCircularA-Bold': require('../assets/fonts/EuclidCircularABold.ttf'),
+    'EuclidCircularA-BoldItalic': require('../assets/fonts/EuclidCircularABoldItalic.ttf'),
+    'EuclidCircularA-Light': require('../assets/fonts/EuclidCircularALight.ttf'),
+    Fraunces_600SemiBold,
+    Fraunces_700Bold,
+    Fraunces_900Black,
+    Outfit_500Medium,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
+    Outfit_800ExtraBold,
+  });
+
+  if (isHydrating || !fontsLoaded) {
+    return <SplashScreen />;
   }
 
   const stackHeaderStyle = {
     headerStyle: { backgroundColor: palette.background },
-    headerTitleStyle: { color: palette.text, fontWeight: '900' as const },
+    headerTitleStyle: { color: palette.text, fontFamily: Fonts.displayHeavy },
     headerTintColor: palette.text,
     headerShadowVisible: false,
   };
@@ -92,7 +102,7 @@ function RootLayoutContent() {
     <ErrorBoundary>
       <ThemeProvider value={colorScheme === 'dark' ? darkNavTheme : lightNavTheme}>
         <AuthGate />
-        <Stack screenOptions={{ headerShown: false }}>
+        <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="events/[slug]" options={{ ...stackHeaderStyle, headerShown: true, title: 'Event' }} />
@@ -105,12 +115,16 @@ function RootLayoutContent() {
           <Stack.Screen name="jobs/index" options={{ ...stackHeaderStyle, headerShown: true, title: 'Jobs' }} />
           <Stack.Screen name="jobs/[id]" options={{ ...stackHeaderStyle, headerShown: true, title: 'Job' }} />
           <Stack.Screen name="mentorship/index" options={{ ...stackHeaderStyle, headerShown: true, title: 'Mentorship' }} />
-          <Stack.Screen name="dues/index" options={{ ...stackHeaderStyle, headerShown: true, title: 'My Dues' }} />
-          <Stack.Screen name="donations/index" options={{ ...stackHeaderStyle, headerShown: true, title: 'Donate' }} />
+          <Stack.Screen name="dues/index" options={{ ...stackHeaderStyle, headerShown: true, title: 'My Dues', animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="donations/index" options={{ ...stackHeaderStyle, headerShown: true, title: 'Donate', animation: 'slide_from_bottom' }} />
           <Stack.Screen name="projects/index" options={{ ...stackHeaderStyle, headerShown: true, title: 'Projects' }} />
           <Stack.Screen name="projects/[slug]" options={{ ...stackHeaderStyle, headerShown: true, title: 'Project' }} />
-          <Stack.Screen name="contact/index" options={{ ...stackHeaderStyle, headerShown: true, title: 'Contact' }} />
-          <Stack.Screen name="settings/index" options={{ ...stackHeaderStyle, headerShown: true, title: 'Settings' }} />
+          <Stack.Screen name="contact/index" options={{ ...stackHeaderStyle, headerShown: true, title: 'Contact', animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="settings/index" options={{ ...stackHeaderStyle, headerShown: true, title: 'Settings', animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="profile/edit" options={{ ...stackHeaderStyle, headerShown: true, title: 'Edit Profile', animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="gallery/index" options={{ ...stackHeaderStyle, headerShown: true, title: 'Gallery', animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="requests/index" options={{ ...stackHeaderStyle, headerShown: true, title: 'Requests', animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="help/index" options={{ ...stackHeaderStyle, headerShown: true, title: 'Help', animation: 'slide_from_bottom' }} />
         </Stack>
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       </ThemeProvider>
