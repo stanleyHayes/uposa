@@ -1,4 +1,22 @@
-import { City, Country, State } from 'country-state-city';
+import { useCallback, useEffect, useState } from 'react';
+// Deep imports keep the package's world city dataset (~8 MB) out of the static
+// graph: only the country + state datasets are evaluated with these screens.
+import Country from 'country-state-city/lib/country';
+import State from 'country-state-city/lib/state';
+
+type CityModule = typeof import('country-state-city/lib/city');
+
+let cityModule: Promise<CityModule> | null = null;
+
+// The city dataset is only evaluated (and on web, fetched as its own chunk) the
+// first time a city list is actually needed; the promise is shared.
+function loadCityModule(): Promise<CityModule> {
+  cityModule ??= import('country-state-city/lib/city').catch((error: unknown) => {
+    cityModule = null; // allow a retry after a failed load
+    throw error;
+  });
+  return cityModule;
+}
 
 export const countryOptions: string[] = Country.getAllCountries().map((country) => country.name);
 
@@ -12,12 +30,47 @@ export function stateOptions(countryName: string): string[] {
   return State.getStatesOfCountry(iso).map((state) => state.name);
 }
 
-export function cityOptions(countryName: string, stateName: string): string[] {
+export async function loadCityOptions(countryName: string, stateName: string): Promise<string[]> {
   const iso = countryIso(countryName);
   if (!iso) return [];
   const state = State.getStatesOfCountry(iso).find((entry) => entry.name === stateName);
   if (!state) return [];
+  const { default: City } = await loadCityModule();
   const cities = City.getCitiesOfState(iso, state.isoCode).map((city) => city.name);
   // The dataset is not exhaustive for smaller towns — always allow "Other".
   return [...cities, 'Other'];
+}
+
+/**
+ * City options for a country/state pair. Nothing is loaded until `load()` is
+ * called (e.g. when a region is picked or the city picker is opened); after
+ * that, the list follows the country/state pair.
+ */
+export function useCityOptions(countryName: string, stateName: string) {
+  const [requested, setRequested] = useState(false);
+  const [loaded, setLoaded] = useState<{ key: string; options: string[] }>({ key: '', options: [] });
+  const key = countryName && stateName ? `${countryName}\n${stateName}` : '';
+
+  useEffect(() => {
+    if (!requested || !key) return;
+    let active = true;
+    loadCityOptions(countryName, stateName)
+      // If the dataset cannot be loaded, still offer "Other".
+      .catch(() => ['Other'])
+      .then((options) => {
+        if (active) setLoaded({ key, options });
+      });
+    return () => {
+      active = false;
+    };
+  }, [requested, key, countryName, stateName]);
+
+  const load = useCallback(() => setRequested(true), []);
+  const ready = loaded.key === key;
+
+  return {
+    options: key && ready ? loaded.options : [],
+    loading: Boolean(key) && requested && !ready,
+    load,
+  };
 }

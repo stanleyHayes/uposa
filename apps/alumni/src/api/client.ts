@@ -128,7 +128,12 @@ client.interceptors.response.use(
       retryConfig.headers = mergedHeaders as unknown as AxiosRequestConfig['headers']
       return client(retryConfig)
     } catch (refreshErr) {
-      clearAuthAndRedirect()
+      // Only a rejected refresh token ends the session. A network failure, 429
+      // or 5xx during refresh is transient — keep the tokens so a later request
+      // can retry instead of logging the member out.
+      const transient = axios.isAxiosError(refreshErr)
+        && (!refreshErr.response || refreshErr.response.status === 429 || refreshErr.response.status >= 500)
+      if (!transient) clearAuthAndRedirect()
       return Promise.reject(refreshErr)
     }
   }

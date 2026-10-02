@@ -32,7 +32,7 @@ import { authApi } from '../../api/services'
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(6, 'New password must be at least 6 characters'),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters'),
   confirmPassword: z.string(),
 }).refine((d) => d.newPassword === d.confirmPassword, {
   message: 'Passwords do not match',
@@ -449,7 +449,7 @@ export default function SettingsPage() {
                       <PasswordInput
                         label="New password"
                         icon={KeyRound}
-                        placeholder="At least 6 characters"
+                        placeholder="At least 8 characters"
                         visible={showPasswords.new}
                         onToggle={() => setShowPasswords((prev) => ({ ...prev, new: !prev.new }))}
                         error={errors.newPassword?.message}
@@ -469,7 +469,7 @@ export default function SettingsPage() {
                       <div>
                         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-secondary">Password guide</p>
                         <ul className="mt-4 space-y-3 text-sm font-semibold leading-relaxed text-base-content/58">
-                          <li>Use at least 6 characters.</li>
+                          <li>Use at least 8 characters.</li>
                           <li>Avoid reusing old passwords.</li>
                           <li>Keep the new password private.</li>
                         </ul>

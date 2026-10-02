@@ -379,8 +379,9 @@ export default function ElectionsPage() {
       setElections((prev) => prev.map((election) => (
         election.id === electionId ? { ...election, hasVoted: true, myVote: candidateId } : election
       )))
-    } catch {
-      toast.error('Failed to cast vote')
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(message || 'Failed to cast vote')
     } finally {
       setVotingId(null)
     }

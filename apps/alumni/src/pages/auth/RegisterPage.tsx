@@ -31,7 +31,7 @@ import { useToast } from '../../hooks/useToast'
 import SEO from '../../components/common/SEO'
 import DatePicker from '../../components/ui/DatePicker'
 import SearchableSelect from '../../components/ui/SearchableSelect'
-import { cityOptions, countryOptions, stateOptions } from '../../lib/locations'
+import { countryOptions, stateOptions, useCityOptions } from '../../lib/locations'
 
 const EXPERTISE_OPTIONS = [
   'Education & Teaching', 'Healthcare & Medical Services', 'Engineering & Technical Fields',
@@ -54,7 +54,7 @@ const schema = z.object({
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
   dateOfBirth: z.string().optional(),
   maritalStatus: z.enum(['SINGLE', 'MARRIED', 'SEPARATED', 'DIVORCED', 'WIDOWED']).optional(),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
   mobileNumber: z.string().min(5, 'Mobile number is required'),
   altPhoneNumber: z.string().optional(),
@@ -183,6 +183,7 @@ export default function RegisterPage() {
   const watchContributions = watch('preferredContributions') || []
   const watchCountry = watch('country') || ''
   const watchRegion = watch('region') || ''
+  const cities = useCityOptions(watchCountry, watchRegion)
 
   const slideVariants = {
     enter: (direction: number) => ({ x: direction > 0 ? 60 : -60, opacity: 0 }),
@@ -551,6 +552,7 @@ export default function RegisterPage() {
                               onChange={(v) => {
                                 field.onChange(v)
                                 setValue('city', '')
+                                cities.load()
                               }}
                             />
                           )}
@@ -564,8 +566,10 @@ export default function RegisterPage() {
                           render={({ field }) => (
                             <SearchableSelect
                               value={field.value ?? ''}
-                              options={watchCountry && watchRegion ? cityOptions(watchCountry, watchRegion) : []}
-                              placeholder="Select"
+                              options={cities.options}
+                              loading={cities.loading}
+                              onOpen={cities.load}
+                              placeholder={cities.loading ? 'Loading cities…' : 'Select'}
                               disabled={!watchRegion}
                               className={selectCls}
                               onChange={field.onChange}
@@ -584,7 +588,7 @@ export default function RegisterPage() {
                       <label className="label pb-1"><span className="label-text font-medium text-sm">Year Group (Year of Completion)</span></label>
                       <select className={selectCls} {...register('yearGroup')}>
                         <option value="">Select year group</option>
-                        {Array.from({ length: 2026 - 1981 + 1 }, (_, i) => 2026 - i).map((year) => (
+                        {Array.from({ length: new Date().getFullYear() - 1981 + 1 }, (_, i) => new Date().getFullYear() - i).map((year) => (
                           <option key={year} value={String(year)}>{year}</option>
                         ))}
                       </select>

@@ -101,8 +101,9 @@ export default function EventDetailPage() {
       await eventsApi.rsvp(event.id, data)
       toast.success('RSVP submitted successfully!')
       setRsvpModal(false)
-    } catch {
-      toast.error('Failed to submit RSVP')
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(message || 'Failed to submit RSVP')
     } finally {
       setRsvpLoading(false)
     }

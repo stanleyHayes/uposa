@@ -1,7 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace('/api', '');
+// Strip only the trailing /api path — a plain replace('/api') would also hit an
+// "api." subdomain (https://api.example.org/api → https:/.example.org/api).
+const SOCKET_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
 
 let socket: Socket | null = null;
 

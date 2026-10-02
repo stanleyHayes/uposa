@@ -12,6 +12,7 @@ const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'))
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'))
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'))
 const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'))
+const PaymentCallbackPage = lazy(() => import('./pages/payments/PaymentCallbackPage'))
 
 // Dashboard pages
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'))
@@ -57,6 +58,7 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+            <Route path="/payment/callback" element={<PaymentCallbackPage />} />
           </Route>
 
           {/* Protected dashboard routes */}

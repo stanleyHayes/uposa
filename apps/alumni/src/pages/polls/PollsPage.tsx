@@ -311,8 +311,9 @@ export default function PollsPage() {
       setPolls((prev) => prev.map((poll) => (
         poll.id === pollId ? { ...poll, hasVoted: true, myVote: choices } : poll
       )))
-    } catch {
-      toast.error('Failed to vote')
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(message || 'Failed to vote')
     } finally {
       setVotingId(null)
     }

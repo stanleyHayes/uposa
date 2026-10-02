@@ -220,8 +220,19 @@ export default function DonationsPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  // Returning from checkout via the back button can restore this page from the
+  // bfcache with the submit button still locked for the redirect — unlock it.
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setSubmitting(false)
+    }
+    window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+  }, [])
+
   const onSubmit = async (data: FormData) => {
     setSubmitting(true)
+    let redirecting = false
     try {
       if (['PAYSTACK', 'STRIPE', 'CRYPTO'].includes(data.channel)) {
         const donationRes = await donationsApi.create({
@@ -249,6 +260,8 @@ export default function DonationsPage() {
         const paymentData = paymentRes.data.data
         if (paymentData?.authorizationUrl) {
           toast.success('Redirecting to payment...')
+          // Keep the button disabled until the browser leaves — a second click would create another donation + checkout.
+          redirecting = true
           window.location.href = paymentData.authorizationUrl
           return
         }
@@ -268,10 +281,11 @@ export default function DonationsPage() {
       reset()
       const res = await donationsApi.my()
       setDonations(res.data.data || [])
-    } catch {
-      toast.error('Failed to submit donation')
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(message || 'Failed to submit donation')
     } finally {
-      setSubmitting(false)
+      if (!redirecting) setSubmitting(false)
     }
   }
 

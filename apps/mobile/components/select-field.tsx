@@ -13,6 +13,8 @@ export function SelectField({
   onChange,
   placeholder = 'Select',
   disabled,
+  loading = false,
+  onOpen,
 }: {
   palette: Palette;
   label: string;
@@ -21,6 +23,8 @@ export function SelectField({
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  loading?: boolean;
+  onOpen?: () => void;
 }) {
   const scheme = useColorScheme() ?? 'light';
   const modalPalette = Colors[scheme];
@@ -44,7 +48,11 @@ export function SelectField({
     <View style={styles.field}>
       <Text style={[styles.fieldLabel, { color: palette.text }]}>{label}</Text>
       <Pressable
-        onPress={() => !disabled && setOpen(true)}
+        onPress={() => {
+          if (disabled) return;
+          onOpen?.();
+          setOpen(true);
+        }}
         style={[
           styles.inputWrap,
           {
@@ -87,8 +95,15 @@ export function SelectField({
             keyExtractor={(item) => item}
             keyboardShouldPersistTaps="handled"
             initialNumToRender={24}
+            ListHeaderComponent={
+              loading ? (
+                <Text style={[styles.emptyText, { color: modalPalette.textMuted }]}>Loading options…</Text>
+              ) : null
+            }
             ListEmptyComponent={
-              <Text style={[styles.emptyText, { color: modalPalette.textMuted }]}>No matches found.</Text>
+              loading ? null : (
+                <Text style={[styles.emptyText, { color: modalPalette.textMuted }]}>No matches found.</Text>
+              )
             }
             renderItem={({ item }) => {
               const active = item === value;

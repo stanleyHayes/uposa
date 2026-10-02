@@ -51,6 +51,11 @@ export default function RequestsScreen() {
   const yearGroup = user?.yearGroup?.toString() ?? '';
 
   const onTranscriptSubmit = async () => {
+    // The API requires a year group (min 4 chars); it comes from the profile here.
+    if (yearGroup.length < 4) {
+      Alert.alert('Year group required', 'Add your year group to your profile before requesting a transcript.');
+      return;
+    }
     if (purpose.trim().length < 5) {
       Alert.alert('Purpose required', 'Tell us what the transcript is for (e.g. university admission, job application).');
       return;

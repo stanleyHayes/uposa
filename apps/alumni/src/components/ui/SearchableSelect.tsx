@@ -12,6 +12,8 @@ export default function SearchableSelect({
   placeholder = 'Select',
   disabled = false,
   className,
+  loading = false,
+  onOpen,
 }: {
   value: string
   options: string[]
@@ -19,6 +21,8 @@ export default function SearchableSelect({
   placeholder?: string
   disabled?: boolean
   className?: string
+  loading?: boolean
+  onOpen?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -60,7 +64,10 @@ export default function SearchableSelect({
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => {
+          if (!open) onOpen?.()
+          setOpen(!open)
+        }}
         className={`${className ?? triggerCls} flex items-center justify-between gap-2 px-4 text-left disabled:cursor-not-allowed disabled:opacity-45`}
       >
         <span className={`min-w-0 flex-1 truncate ${value ? '' : 'text-base-content/35'}`}>
@@ -90,7 +97,10 @@ export default function SearchableSelect({
               />
             </div>
             <div className="max-h-64 overflow-y-auto py-1">
-              {filtered.length === 0 && (
+              {loading && (
+                <p className="px-4 py-6 text-center text-sm text-base-content/45">Loading options…</p>
+              )}
+              {!loading && filtered.length === 0 && (
                 <p className="px-4 py-6 text-center text-sm text-base-content/45">No matches found.</p>
               )}
               {filtered.map((option) => {

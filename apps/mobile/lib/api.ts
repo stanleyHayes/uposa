@@ -41,11 +41,21 @@ function flushQueue(token: string | null) {
   pendingQueue = [];
 }
 
+// Registered by the auth store (which imports this module) so a dead session
+// also resets in-memory auth state — otherwise AuthGate sees isAuthenticated
+// and bounces the login redirect straight back to the tabs.
+let onSessionExpired: (() => void) | null = null;
+
+export function setSessionExpiredHandler(handler: () => void) {
+  onSessionExpired = handler;
+}
+
 async function clearAuthAndRedirect() {
   await Promise.all([
     AsyncStorage.removeItem(TOKEN_KEY),
     AsyncStorage.removeItem(REFRESH_TOKEN_KEY),
   ]);
+  onSessionExpired?.();
   try {
     router.replace('/(auth)/login');
   } catch {
@@ -120,7 +130,12 @@ client.interceptors.response.use(
       return client(original);
     } catch (refreshErr) {
       flushQueue(null);
-      await clearAuthAndRedirect();
+      // Only a rejected refresh token ends the session. A network failure, 429
+      // or 5xx during refresh is transient — keep the tokens so a later request
+      // can retry instead of logging the member out.
+      const transient = axios.isAxiosError(refreshErr)
+        && (!refreshErr.response || refreshErr.response.status === 429 || refreshErr.response.status >= 500);
+      if (!transient) await clearAuthAndRedirect();
       return Promise.reject(refreshErr);
     } finally {
       isRefreshing = false;
@@ -159,6 +174,8 @@ export const membersApi = {
   uploadPhoto: (formData: FormData) =>
     client.post<ApiResponse<Member>>('/members/profile/photo', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      // A multi-MB photo on a slow mobile link easily exceeds the 15s default.
+      timeout: 120000,
     }),
   myDues: () =>
     client.get<ApiResponse<Due[]>>('/members/my/dues'),

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Member } from './types';
-import { TOKEN_KEY, REFRESH_TOKEN_KEY, authApi } from './api';
+import { TOKEN_KEY, REFRESH_TOKEN_KEY, authApi, setSessionExpiredHandler } from './api';
 
 const USER_KEY = 'uposa_alumni_user';
 
@@ -88,3 +88,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ token: null, refreshToken: null, user: null, isAuthenticated: false });
   },
 }));
+
+// Refresh failed in the API client: tokens are already gone, drop the cached
+// member and in-memory session so AuthGate routes to login.
+setSessionExpiredHandler(() => {
+  AsyncStorage.removeItem(USER_KEY);
+  useAuthStore.setState({ token: null, refreshToken: null, user: null, isAuthenticated: false });
+});

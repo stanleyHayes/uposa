@@ -321,8 +321,9 @@ export default function MentorshipPage() {
       setMessage('')
       const res = await mentorshipApi.myRequests()
       setMyRequests(res.data.data || [])
-    } catch {
-      toast.error('Failed to send request')
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(message || 'Failed to send request')
     } finally {
       setSubmitting(false)
     }

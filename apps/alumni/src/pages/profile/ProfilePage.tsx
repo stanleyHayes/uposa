@@ -29,10 +29,11 @@ import DatePicker from '../../components/ui/DatePicker'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { useAuthStore } from '../../stores/auth.store'
-import { membersApi } from '../../api/services'
+import { membersApi, mentorshipApi } from '../../api/services'
 import { useToast } from '../../hooks/useToast'
 import { formatDate, formatEnum } from '../../utils/formatters'
-import { cityOptions, countryOptions, stateOptions } from '../../lib/locations'
+import { countryOptions, stateOptions, useCityOptions } from '../../lib/locations'
+import { compressImage } from '../../lib/image'
 
 const schema = z.object({
   fullName: z.string().min(2),
@@ -170,6 +171,7 @@ export default function ProfilePage() {
 
   const watchCountry = watch('country') as string | undefined
   const watchRegion = watch('region') as string | undefined
+  const cities = useCityOptions(watchCountry ?? '', watchRegion ?? '')
 
   const profileChecks = [
     { label: 'Identity', complete: Boolean(user?.fullName && user?.email) },
@@ -187,38 +189,51 @@ export default function ProfilePage() {
   const onSubmit = async (data: Record<string, unknown>) => {
     setLoading(true)
     try {
+      // PUT /members/profile silently strips the mentor fields; they are saved
+      // through the mentorship availability endpoint instead.
+      const { isAvailableAsMentor, mentorBio, ...profile } = data
       const cleaned = Object.fromEntries(
-        Object.entries(data).filter(([, v]) => v !== '' && v !== undefined)
+        Object.entries(profile).filter(([, v]) => v !== '' && v !== undefined)
       )
       const res = await membersApi.updateProfile(cleaned)
       if (res.data.data) updateUser(res.data.data)
+      const mentor = { isAvailableAsMentor: Boolean(isAvailableAsMentor), mentorBio: typeof mentorBio === 'string' ? mentorBio : '' }
+      if (mentor.isAvailableAsMentor !== Boolean(user?.isAvailableAsMentor) || mentor.mentorBio !== (user?.mentorBio || '')) {
+        await mentorshipApi.toggleAvailability(mentor)
+        updateUser(mentor)
+      }
       reset(data)
       toast.success('Profile updated!')
-    } catch {
-      toast.error('Failed to update profile')
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(message || 'Failed to update profile')
     } finally {
       setLoading(false)
     }
   }
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be under 5MB')
-      return
-    }
+    const picked = e.target.files?.[0]
+    if (!picked) return
     setUploading(true)
-    const formData = new FormData()
-    formData.append('photo', file)
     try {
+      const file = await compressImage(picked)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Image must be under 10MB')
+        return
+      }
+      const formData = new FormData()
+      formData.append('photo', file)
       const res = await membersApi.uploadPhoto(formData)
       if (res.data.data?.photoUrl) {
         updateUser({ photoUrl: res.data.data.photoUrl })
         toast.success('Photo updated!')
+      } else {
+        toast.error('Photo uploaded but no image URL was returned')
       }
-    } catch {
-      toast.error('Failed to upload photo. Check that Cloudinary is configured.')
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(message || 'Failed to upload photo. Please try again.')
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -257,7 +272,7 @@ export default function ProfilePage() {
                   >
                     {uploading ? <BouncingDots /> : <Camera className="h-4 w-4" />}
                   </button>
-                  <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoUpload} />
+                  <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" className="hidden" onChange={handlePhotoUpload} />
                 </div>
 
                 <div className="min-w-0">
@@ -445,6 +460,7 @@ export default function ProfilePage() {
                               onChange={(v) => {
                                 field.onChange(v)
                                 setValue('city', '')
+                                cities.load()
                               }}
                             />
                           )}
@@ -457,8 +473,10 @@ export default function ProfilePage() {
                           render={({ field }) => (
                             <SearchableSelect
                               value={field.value ?? ''}
-                              options={watchCountry && watchRegion ? cityOptions(watchCountry, watchRegion) : []}
-                              placeholder="Select city"
+                              options={cities.options}
+                              loading={cities.loading}
+                              onOpen={cities.load}
+                              placeholder={cities.loading ? 'Loading cities…' : 'Select city'}
                               disabled={!watchRegion}
                               onChange={field.onChange}
                             />

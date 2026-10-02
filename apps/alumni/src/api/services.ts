@@ -40,7 +40,7 @@ export const membersApi = {
   updateProfile: (data: Partial<Member>) =>
     client.put<ApiResponse<Member>>('/members/profile', data),
   uploadPhoto: (file: FormData) =>
-    client.post<ApiResponse<{ photoUrl: string }>>('/members/profile/photo', file, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    client.post<ApiResponse<Member>>('/members/profile/photo', file, { headers: { 'Content-Type': 'multipart/form-data' } }),
   myDues: () =>
     client.get<ApiResponse<Due[]>>('/members/my/dues'),
   myDonations: () =>

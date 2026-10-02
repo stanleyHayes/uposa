@@ -10,7 +10,7 @@ import { useToast } from '../../hooks/useToast'
 import AuthSidePanel, { ShieldIllustration } from '../../components/auth/AuthGraphics'
 
 const schema = z.object({
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
 }).refine((d) => d.password === d.confirmPassword, {
   message: 'Passwords do not match',
@@ -37,8 +37,9 @@ export default function ResetPasswordPage() {
     try {
       await authApi.resetPassword({ token, password: data.password })
       setSuccess(true)
-    } catch {
-      toast.error('Failed to reset password. Link may have expired.')
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(message || 'Failed to reset password. Link may have expired.')
     } finally {
       setLoading(false)
     }
@@ -119,7 +120,7 @@ export default function ResetPasswordPage() {
                       <input
                         type={showPassword ? 'text' : 'password'}
                         className={`input input-bordered w-full pl-10 pr-10 ${errors.password ? 'input-error' : ''}`}
-                        placeholder="At least 6 characters"
+                        placeholder="At least 8 characters"
                         {...register('password')}
                       />
                       <button
@@ -161,7 +162,7 @@ export default function ResetPasswordPage() {
                   >
                     <p className="text-xs font-medium text-base-content/70 mb-2">Password tips:</p>
                     <ul className="text-xs text-base-content/50 space-y-1">
-                      <li className="flex items-center gap-2"><div className="w-1 h-1 rounded-full bg-base-content/30" />Use at least 6 characters</li>
+                      <li className="flex items-center gap-2"><div className="w-1 h-1 rounded-full bg-base-content/30" />Use at least 8 characters</li>
                       <li className="flex items-center gap-2"><div className="w-1 h-1 rounded-full bg-base-content/30" />Mix letters, numbers & symbols</li>
                       <li className="flex items-center gap-2"><div className="w-1 h-1 rounded-full bg-base-content/30" />Avoid common passwords</li>
                     </ul>

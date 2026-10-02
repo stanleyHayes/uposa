@@ -12,7 +12,7 @@ import { DateField } from '@/components/date-field';
 import { AuthLogo } from '@/components/auth-logo';
 import { AuthBrandPanel } from '@/components/auth-brand-panel';
 import { SelectField } from '@/components/select-field';
-import { cityOptions, countryOptions, stateOptions } from '@/lib/locations';
+import { countryOptions, stateOptions, useCityOptions } from '@/lib/locations';
 
 const EXPERTISE_OPTIONS = [
   'Education & Teaching', 'Healthcare & Medical Services', 'Engineering & Technical Fields',
@@ -260,8 +260,9 @@ function validateStep(step: number, form: RegisterForm): FormErrors {
   }
   if (step === 3 && form.yearGroup !== '') {
     const year = Number(form.yearGroup);
-    if (!/^\d{4}$/.test(form.yearGroup) || year < 1981 || year > 2026) {
-      errs.yearGroup = 'Enter a completion year between 1981 and 2026';
+    const currentYear = new Date().getFullYear();
+    if (!/^\d{4}$/.test(form.yearGroup) || year < 1981 || year > currentYear) {
+      errs.yearGroup = `Enter a completion year between 1981 and ${currentYear}`;
     }
   }
   if (step === 6) {
@@ -280,6 +281,7 @@ export default function RegisterScreen() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
+  const cities = useCityOptions(form.country, form.region);
 
   const set = <K extends keyof RegisterForm>(key: K) => (value: RegisterForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -540,6 +542,7 @@ export default function RegisterScreen() {
                 onChange={(region) => {
                   set('region')(region);
                   set('city')('');
+                  cities.load();
                 }}
                 placeholder={form.country ? 'Select region / state' : 'Select a country first'}
                 disabled={!form.country}
@@ -548,9 +551,11 @@ export default function RegisterScreen() {
                 palette={palette}
                 label="City"
                 value={form.city}
-                options={cityOptions(form.country, form.region)}
+                options={cities.options}
+                loading={cities.loading}
+                onOpen={cities.load}
                 onChange={set('city')}
-                placeholder={form.region ? 'Select city' : 'Select a region first'}
+                placeholder={!form.region ? 'Select a region first' : cities.loading ? 'Loading cities…' : 'Select city'}
                 disabled={!form.region}
               />
             </View>

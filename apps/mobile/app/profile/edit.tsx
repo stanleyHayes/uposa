@@ -4,7 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { Brand, Colors, Fonts, type Palette } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { membersApi } from '@/lib/api';
+import { membersApi, mentorshipApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import type { EmploymentType, Gender, House, MaritalStatus, Member, Programme } from '@/lib/types';
 import {
@@ -19,7 +19,7 @@ import {
 } from '@/components/mobile-ui';
 import { DateField } from '@/components/date-field';
 import { SelectField } from '@/components/select-field';
-import { cityOptions, countryOptions, stateOptions } from '@/lib/locations';
+import { countryOptions, stateOptions, useCityOptions } from '@/lib/locations';
 
 const genders: Gender[] = ['MALE', 'FEMALE', 'OTHER'];
 const maritalStatuses: MaritalStatus[] = ['SINGLE', 'MARRIED', 'SEPARATED', 'DIVORCED', 'WIDOWED'];
@@ -110,6 +110,7 @@ export default function EditProfileScreen() {
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const cities = useCityOptions(form.country, form.region);
 
   const set = (key: keyof typeof form) => (value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -131,7 +132,6 @@ export default function EditProfileScreen() {
         'country',
         'occupation',
         'organization',
-        'mentorBio',
         'emergencyContactNumber',
         'emergencyRelationship',
         'nextOfKinName',
@@ -156,6 +156,12 @@ export default function EditProfileScreen() {
 
       const res = await membersApi.updateProfile(payload);
       if (res.data.data) updateUser(res.data.data);
+      // PUT /members/profile strips mentorBio; it is saved via the mentorship availability endpoint.
+      const mentorBio = form.mentorBio.trim();
+      if (mentorBio !== (user?.mentorBio ?? '')) {
+        await mentorshipApi.setAvailability({ isAvailableAsMentor: user?.isAvailableAsMentor ?? false, mentorBio });
+        updateUser({ mentorBio });
+      }
       Alert.alert('Profile updated', 'Your alumni record has been saved.');
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Could not save your profile.';
@@ -174,6 +180,12 @@ export default function EditProfileScreen() {
     });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
+    // The picker re-encodes cropped photos (HEIC → JPEG at quality 0.8); PNGs stay
+    // lossless and can still be large, so catch oversize files before uploading.
+    if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
+      Alert.alert('Photo too large', 'Please choose an image under 10MB.');
+      return;
+    }
     setUploading(true);
     try {
       const formData = new FormData();
@@ -186,7 +198,7 @@ export default function EditProfileScreen() {
       if (res.data.data) updateUser(res.data.data);
       Alert.alert('Photo updated', 'Your profile photo has been saved.');
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Could not upload photo. Check that Cloudinary is configured.';
+      const msg = err?.response?.data?.message || 'Could not upload photo. Please try again.';
       Alert.alert('Upload failed', msg);
     } finally {
       setUploading(false);
@@ -243,6 +255,7 @@ export default function EditProfileScreen() {
           onChange={(region) => {
             set('region')(region);
             set('city')('');
+            cities.load();
           }}
           placeholder={form.country ? 'Select region / state' : 'Select a country first'}
           disabled={!form.country}
@@ -251,9 +264,11 @@ export default function EditProfileScreen() {
           palette={palette}
           label="City"
           value={form.city}
-          options={cityOptions(form.country, form.region)}
+          options={cities.options}
+          loading={cities.loading}
+          onOpen={cities.load}
           onChange={set('city')}
-          placeholder={form.region ? 'Select city' : 'Select a region first'}
+          placeholder={!form.region ? 'Select a region first' : cities.loading ? 'Loading cities…' : 'Select city'}
           disabled={!form.region}
         />
       </Surface>

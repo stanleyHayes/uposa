@@ -276,6 +276,16 @@ export default function DuesPage() {
     loadDues()
   }, [])
 
+  // Returning from checkout via the back button can restore this page from the
+  // bfcache with the submit button still locked for the redirect — unlock it.
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setSubmitting(false)
+    }
+    window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+  }, [])
+
   useEffect(() => {
     if (!selectedDue || payMethod === 'manual') {
       setFeePreview(null)
@@ -313,6 +323,7 @@ export default function DuesPage() {
   const handlePay = async () => {
     if (!selectedDue) return
     setSubmitting(true)
+    let redirecting = false
 
     try {
       if (payMethod !== 'manual') {
@@ -328,6 +339,8 @@ export default function DuesPage() {
         const data = res.data.data
         if (data?.authorizationUrl) {
           toast.success('Redirecting to payment...')
+          // Keep the button disabled until the browser leaves — a second click would start another checkout.
+          redirecting = true
           window.location.href = data.authorizationUrl
           return
         }
@@ -344,10 +357,11 @@ export default function DuesPage() {
       toast.success('Payment submitted successfully!')
       setPayModalOpen(false)
       await loadDues()
-    } catch {
-      toast.error('Payment failed. Please try again.')
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(message || 'Payment failed. Please try again.')
     } finally {
-      setSubmitting(false)
+      if (!redirecting) setSubmitting(false)
     }
   }
 
