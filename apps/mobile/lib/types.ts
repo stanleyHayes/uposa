@@ -345,3 +345,14 @@ export interface AuthResponse {
     member: Member;
   };
 }
+
+export type AnnouncementType = 'INFO' | 'WARNING' | 'URGENT' | 'SUCCESS';
+
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  type: AnnouncementType;
+  publishedAt?: string;
+  expiresAt?: string | null;
+}

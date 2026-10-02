@@ -19,7 +19,7 @@ import Avatar from '../../components/ui/Avatar'
 import { forumApi } from '../../api/services'
 import { useAuthStore } from '../../stores/auth.store'
 import { useToast } from '../../hooks/useToast'
-import { useSocketEvent } from '../../hooks/useSocket'
+import { useSocketEvent, useSocketRoom } from '../../hooks/useSocket'
 import { formatEnum, timeAgo } from '../../utils/formatters'
 import type { ForumCategory, ForumComment, ForumPost } from '../../types'
 
@@ -152,10 +152,19 @@ export default function ForumPostPage() {
     loadPost()
   }, [slug])
 
+  useSocketRoom(post ? `forum:${post.id}` : '')
   useSocketEvent('forum:newComment', (newComment: ForumComment) => {
     setPost((prev) => {
       if (!prev || newComment.postId !== prev.id) return prev
+      // Our own comment also comes back through the refetch after submit.
+      if (prev.comments?.some((item) => item.id === newComment.id)) return prev
       return { ...prev, comments: [...(prev.comments || []), newComment] }
+    })
+  })
+  useSocketEvent('forum:postUpdated', (updated: Partial<ForumPost> & { id?: string; postId?: string }) => {
+    setPost((prev) => {
+      if (!prev || (updated.id ?? updated.postId) !== prev.id) return prev
+      return { ...prev, ...updated, id: prev.id, author: updated.author ?? prev.author, comments: prev.comments }
     })
   })
 

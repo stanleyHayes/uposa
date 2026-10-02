@@ -15,7 +15,7 @@ import PageTransition from '../../components/common/PageTransition'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { pollsApi } from '../../api/services'
 import { useToast } from '../../hooks/useToast'
-import { useSocketEvent } from '../../hooks/useSocket'
+import { useSocketEvent, useSocketRooms } from '../../hooks/useSocket'
 import { formatDate } from '../../utils/formatters'
 import type { Poll } from '../../types'
 
@@ -276,9 +276,18 @@ export default function PollsPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  // The server only emits to poll rooms; follow every open poll on the page.
+  useSocketRooms('poll', polls.filter((poll) => poll.status === 'ACTIVE').map((poll) => poll.id))
+  // Server counts replace ours (our own vote only flips hasVoted locally), so nothing double-counts.
   useSocketEvent('poll:vote', (data: { pollId: string; options: Poll['options']; totalVotes: number }) => {
     setPolls((prev) => prev.map((poll) =>
       poll.id === data.pollId ? { ...poll, options: data.options } : poll
+    ))
+  })
+  useSocketEvent('poll:closed', (data: { pollId?: string; id?: string; status?: Poll['status']; options?: Poll['options'] }) => {
+    const pollId = data.pollId ?? data.id
+    setPolls((prev) => prev.map((poll) =>
+      poll.id === pollId ? { ...poll, status: data.status ?? 'CLOSED', options: data.options ?? poll.options } : poll
     ))
   })
 

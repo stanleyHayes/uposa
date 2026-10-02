@@ -1,5 +1,4 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import type {
@@ -7,16 +6,21 @@ import type {
   Member, Event, EventRsvp, News, Due, Project, Donation,
   Job, JobApplication, MentorshipRequest,
   ForumPost, ForumComment, Poll, Election, ContactMessage,
-  PaymentMethod, GalleryItem, GalleryCategory, SiteConfig,
+  PaymentMethod, GalleryItem, GalleryCategory, SiteConfig, Announcement,
 } from './types';
+import { REFRESH_TOKEN_KEY, TOKEN_KEY, getToken, removeToken, setToken } from './token-storage';
 
-const TOKEN_KEY = 'uposa_alumni_token';
-const REFRESH_TOKEN_KEY = 'uposa_alumni_refresh_token';
 
+const PRODUCTION_API_URL = 'https://uposa.onrender.com/api';
+
+// EXPO_PUBLIC_API_URL (set per EAS profile in eas.json, or in .env for local
+// work) wins. Otherwise dev builds talk to the local API and release builds to
+// production — never localhost in a shipped app.
 const apiUrl =
   process.env.EXPO_PUBLIC_API_URL ||
-  (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl ||
-  'http://localhost:5001/api';
+  (__DEV__
+    ? 'http://localhost:5001/api'
+    : (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl || PRODUCTION_API_URL);
 
 export const client = axios.create({
   baseURL: apiUrl,
@@ -25,7 +29,7 @@ export const client = axios.create({
 });
 
 client.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem(TOKEN_KEY);
+  const token = await getToken(TOKEN_KEY);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -52,8 +56,8 @@ export function setSessionExpiredHandler(handler: () => void) {
 
 async function clearAuthAndRedirect() {
   await Promise.all([
-    AsyncStorage.removeItem(TOKEN_KEY),
-    AsyncStorage.removeItem(REFRESH_TOKEN_KEY),
+    removeToken(TOKEN_KEY),
+    removeToken(REFRESH_TOKEN_KEY),
   ]);
   onSessionExpired?.();
   try {
@@ -78,8 +82,8 @@ client.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const refreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
-    const accessToken = await AsyncStorage.getItem(TOKEN_KEY);
+    const refreshToken = await getToken(REFRESH_TOKEN_KEY);
+    const accessToken = await getToken(TOKEN_KEY);
     if (!refreshToken || !accessToken) {
       if (accessToken) await clearAuthAndRedirect();
       return Promise.reject(error);
@@ -116,9 +120,9 @@ client.interceptors.response.use(
       const newRefreshToken = data?.refreshToken;
       if (!newToken) throw new Error('No token returned from refresh');
 
-      await AsyncStorage.setItem(TOKEN_KEY, newToken);
+      await setToken(TOKEN_KEY, newToken);
       if (newRefreshToken) {
-        await AsyncStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
+        await setToken(REFRESH_TOKEN_KEY, newRefreshToken);
       }
       flushQueue(newToken);
 
@@ -157,8 +161,9 @@ export const authApi = {
     client.post<ApiResponse>('/auth/forgot-password', { email }),
   resetPassword: (data: { token: string; password: string }) =>
     client.post<ApiResponse>('/auth/reset-password', data),
+  // Revokes every older refresh token (this device's too) and returns a fresh pair.
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
-    client.put<ApiResponse>('/auth/change-password', data),
+    client.put<ApiResponse<{ token: string; refreshToken: string }>>('/auth/change-password', data),
   logout: () =>
     client.post<ApiResponse>('/auth/logout'),
 };
@@ -318,6 +323,12 @@ export const galleryApi = {
     client.get<ApiResponse<GalleryItem[]>>('/gallery', { params }),
   categories: () =>
     client.get<ApiResponse<GalleryCategory[]>>('/gallery/categories'),
+};
+
+// -------- Announcements (published, audience ALL/MEMBERS, not expired) --------
+export const announcementsApi = {
+  members: () =>
+    client.get<ApiResponse<Announcement[]>>('/announcements/members', { params: { limit: 10 } }),
 };
 
 // -------- Public / Site config --------

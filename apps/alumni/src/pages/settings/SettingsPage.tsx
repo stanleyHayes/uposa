@@ -222,6 +222,7 @@ function PasswordInput({
 
 export default function SettingsPage() {
   const user = useAuthStore((s) => s.user)
+  const setAuth = useAuthStore((s) => s.setAuth)
   const { theme, setTheme } = useTheme()
   const toast = useToast()
   const [tab, setTab] = useState<TabKey>('preferences')
@@ -255,10 +256,14 @@ export default function SettingsPage() {
   const onPasswordSubmit = async (data: PasswordForm) => {
     setPasswordSaving(true)
     try {
-      await authApi.changePassword({
+      const res = await authApi.changePassword({
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
       })
+      // The change revokes our old refresh token: keep the new pair, exactly as
+      // after login, or the next refresh would sign the member out.
+      const tokens = res.data.data
+      if (tokens?.token && user) setAuth(tokens.token, tokens.refreshToken ?? null, user)
       setPasswordSuccess(true)
       reset()
       toast.success('Password updated successfully!')

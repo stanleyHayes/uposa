@@ -138,23 +138,32 @@ export default function EditProfileScreen() {
         'nextOfKinContact',
         'nextOfKinRelationship',
       ] as const;
+      // The API clears a field sent as ''. Send that for anything the member
+      // emptied — dropping it silently kept the old value.
+      const cleared: Record<string, ''> = {};
       for (const key of textFields) {
         const value = form[key].trim();
-        if (value) payload[key] = value;
+        if (value || user?.[key]) payload[key] = value;
       }
       if (form.gender) payload.gender = form.gender as Gender;
+      else if (user?.gender) cleared.gender = '';
       if (form.maritalStatus) payload.maritalStatus = form.maritalStatus as MaritalStatus;
+      else if (user?.maritalStatus) cleared.maritalStatus = '';
       if (form.programme) payload.programme = form.programme as Programme;
+      else if (user?.programme) cleared.programme = '';
       if (form.house) payload.house = form.house as House;
+      else if (user?.house) cleared.house = '';
       if (form.employmentType) payload.employmentType = form.employmentType as EmploymentType;
+      else if (user?.employmentType) cleared.employmentType = '';
       const year = Number(form.yearGroup.trim());
       if (form.yearGroup.trim() && Number.isFinite(year)) payload.yearGroup = year;
+      else if (!form.yearGroup.trim() && user?.yearGroup) cleared.yearGroup = '';
       payload.areaOfExpertise = form.areaOfExpertise
         .split(',')
         .map((item) => item.trim())
         .filter(Boolean);
 
-      const res = await membersApi.updateProfile(payload);
+      const res = await membersApi.updateProfile({ ...payload, ...cleared } as Partial<Member>);
       if (res.data.data) updateUser(res.data.data);
       // PUT /members/profile strips mentorBio; it is saved via the mentorship availability endpoint.
       const mentorBio = form.mentorBio.trim();

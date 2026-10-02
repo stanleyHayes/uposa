@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +37,8 @@ export default function MembersScreen() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [yearGroup, setYearGroup] = useState('');
   const [house, setHouse] = useState<HouseFilter>('ALL');
+  // Responses can arrive out of order while typing; only the latest request may update the list.
+  const requestId = useRef(0);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 350);
@@ -46,6 +48,7 @@ export default function MembersScreen() {
   const load = useCallback(
     async (pageToLoad: number, append = false) => {
       if (append) setLoadingMore(true);
+      const current = ++requestId.current;
       try {
         const params: Record<string, string | number> = { page: pageToLoad, limit: 20 };
         if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
@@ -54,15 +57,19 @@ export default function MembersScreen() {
         if (house !== 'ALL') params.house = house;
 
         const res = await membersApi.directory(params);
+        if (current !== requestId.current) return;
         const data = res.data.data ?? [];
         setMembers((prev) => (append ? [...prev, ...data] : data));
         setPage(res.data.pagination?.page ?? pageToLoad);
         setTotalPages(res.data.pagination?.totalPages ?? 1);
       } catch {
+        if (current !== requestId.current) return;
         if (!append) setMembers([]);
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (current === requestId.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     [debouncedSearch, yearGroup, house],

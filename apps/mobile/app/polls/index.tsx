@@ -24,6 +24,9 @@ export default function PollsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<PollFilter>('ALL');
+  // One vote in flight at a time: a double tap would otherwise send a second
+  // request that the server rejects, showing a spurious "Vote failed".
+  const [votingId, setVotingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -47,6 +50,8 @@ export default function PollsScreen() {
   };
 
   const onVote = async (poll: Poll, optionIds: number[]) => {
+    if (votingId) return;
+    setVotingId(poll.id);
     try {
       await pollsApi.vote(poll.id, optionIds);
       Alert.alert('Vote recorded', 'Thanks for participating.');
@@ -54,6 +59,8 @@ export default function PollsScreen() {
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Could not record vote.';
       Alert.alert('Vote failed', msg);
+    } finally {
+      setVotingId(null);
     }
   };
 
@@ -70,6 +77,7 @@ export default function PollsScreen() {
       contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
       data={filtered}
       keyExtractor={(item) => item.id}
+      extraData={votingId}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.tint} />}
       ListHeaderComponent={
         <View>
@@ -100,17 +108,17 @@ export default function PollsScreen() {
       renderItem={({ item, index }) =>
         index < 8 ? (
           <FadeInUp delay={Math.min(index, 7) * 40} distance={10}>
-            <PollCard poll={item} palette={palette} onVote={onVote} />
+            <PollCard poll={item} palette={palette} onVote={onVote} busy={votingId !== null} />
           </FadeInUp>
         ) : (
-          <PollCard poll={item} palette={palette} onVote={onVote} />
+          <PollCard poll={item} palette={palette} onVote={onVote} busy={votingId !== null} />
         )
       }
     />
   );
 }
 
-function PollCard({ poll, palette, onVote }: { poll: Poll; palette: Palette; onVote: (poll: Poll, optionIds: number[]) => void }) {
+function PollCard({ poll, palette, onVote, busy }: { poll: Poll; palette: Palette; onVote: (poll: Poll, optionIds: number[]) => void; busy: boolean }) {
   const closed = poll.status === 'CLOSED';
   const totalVotes = poll.options.reduce((sum, opt) => sum + opt.votes, 0);
   const showResults = poll.hasVoted || closed;
@@ -130,8 +138,8 @@ function PollCard({ poll, palette, onVote }: { poll: Poll; palette: Palette; onV
           return (
             <Pressable
               key={option.id}
-              onPress={() => !poll.hasVoted && !closed && onVote(poll, [option.id])}
-              disabled={!!poll.hasVoted || closed}
+              onPress={() => !poll.hasVoted && !closed && !busy && onVote(poll, [option.id])}
+              disabled={!!poll.hasVoted || closed || busy}
               style={({ pressed }) => ({ opacity: pressed ? 0.78 : poll.hasVoted || closed ? 0.82 : 1 })}
             >
               <Surface palette={palette} tone={myVoted ? 'gold' : 'default'} style={{ padding: 12, gap: 8 }}>

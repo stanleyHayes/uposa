@@ -193,18 +193,27 @@ export default function MembersPage() {
     if (yearFilter) params.yearGroup = yearFilter
     if (houseFilter !== 'ALL') params.house = houseFilter
 
+    // Each keystroke refetches; ignore responses that arrive after a newer request.
+    let active = true
     membersApi.directory(params)
       .then((res) => {
+        if (!active) return
         setMembers(res.data.data || [])
         setTotalPages(res.data.pagination?.totalPages || 1)
         setTotalMembers(res.data.pagination?.total || 0)
       })
       .catch(() => {
+        if (!active) return
         setMembers([])
         setTotalPages(1)
         setTotalMembers(0)
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
   }, [page, search, yearFilter, houseFilter])
 
   const hasFilters = Boolean(search.trim() || yearFilter || houseFilter !== 'ALL')

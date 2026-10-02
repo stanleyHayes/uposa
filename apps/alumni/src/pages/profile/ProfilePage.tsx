@@ -61,6 +61,15 @@ const schema = z.object({
   nextOfKinRelationship: z.string().optional(),
 })
 
+// Optional fields: when the member empties one we send '' (the API clears it)
+// instead of dropping it, which silently kept the old value.
+const CLEARABLE_FIELDS = [
+  'gender', 'dateOfBirth', 'maritalStatus', 'mobileNumber', 'altPhoneNumber', 'residentialAddress',
+  'city', 'region', 'country', 'yearGroup', 'programme', 'house', 'employmentType', 'occupation',
+  'organization', 'emergencyContactNumber', 'emergencyRelationship', 'nextOfKinName',
+  'nextOfKinContact', 'nextOfKinRelationship',
+] as const
+
 const programmes = ['GENERAL_ARTS', 'BUSINESS', 'HOME_ECONOMICS', 'VISUAL_ARTS', 'SCIENCE']
 const houses = ['ACKAH', 'DENSU', 'TANO', 'NKRUMAH', 'PRA', 'VOLTA']
 const employmentTypes = ['RETIRED', 'STUDENT', 'UNEMPLOYED', 'SELF_EMPLOYED', 'GOVERNMENT_WORKER', 'PRIVATE_WORKER']
@@ -193,7 +202,11 @@ export default function ProfilePage() {
       // through the mentorship availability endpoint instead.
       const { isAvailableAsMentor, mentorBio, ...profile } = data
       const cleaned = Object.fromEntries(
-        Object.entries(profile).filter(([, v]) => v !== '' && v !== undefined)
+        Object.entries(profile).flatMap(([key, v]) => {
+          if (v !== '' && v !== undefined) return [[key, v]]
+          const field = CLEARABLE_FIELDS.find((name) => name === key)
+          return field && user?.[field] ? [[key, '']] : []
+        })
       )
       const res = await membersApi.updateProfile(cleaned)
       if (res.data.data) updateUser(res.data.data)

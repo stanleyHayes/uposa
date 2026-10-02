@@ -59,6 +59,7 @@ import type {
   Poll,
   Project,
 } from '../../types'
+import MemberAnnouncements from '../../components/common/MemberAnnouncements'
 
 interface SectionProps {
   title: string
@@ -698,6 +699,8 @@ export default function DashboardPage() {
             </div>
           </section>
         </ScrollReveal>
+
+        <MemberAnnouncements />
 
         <StaggerChildren className="relative z-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {metrics.map((metric) => (

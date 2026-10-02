@@ -4,7 +4,7 @@ import type {
   Member, Event, EventRsvp, Project, News, Donation, Due, Job, JobApplication,
   MentorshipRequest, ForumPost, ForumComment, Poll, Election, ContactMessage,
   PaymentMethod, GalleryItem, GalleryCategory, Executive, SchoolLeader,
-  YearGroupRepsByYear,
+  YearGroupRepsByYear, Announcement,
 } from '../types'
 
 // Auth
@@ -19,8 +19,9 @@ export const authApi = {
     client.post<ApiResponse>('/auth/forgot-password', { email }),
   resetPassword: (data: { token: string; password: string }) =>
     client.post<ApiResponse>('/auth/reset-password', data),
+  // Revokes every older refresh token (this device's too) and returns a fresh pair.
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
-    client.put<ApiResponse>('/auth/change-password', data),
+    client.put<ApiResponse<{ token: string; refreshToken: string }>>('/auth/change-password', data),
   verifyEmail: (token: string) =>
     client.get<ApiResponse>(`/auth/verify-email/${token}`),
   logout: () =>
@@ -207,6 +208,12 @@ export const paymentsApi = {
     client.get<ApiResponse>(`/payments/status/${reference}`),
   platformFeePreview: (amount: number) =>
     client.get<ApiResponse<{ amount: number; platformFee: number; totalAmount: number; percent: number; fixed: number; enabled: boolean }>>(`/payments/platform-fee?amount=${amount}`),
+}
+
+// Announcements (published, audience ALL/MEMBERS, not expired)
+export const announcementsApi = {
+  members: () =>
+    client.get<ApiResponse<Announcement[]>>('/announcements/members', { params: { limit: 10 } }),
 }
 
 // Site Config

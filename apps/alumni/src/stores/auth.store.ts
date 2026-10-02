@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Member } from '../types'
+import { announceAuthToken } from '../api/client'
 
 const ACCESS_TOKEN_KEY = 'uposa_alumni_token'
 const REFRESH_TOKEN_KEY = 'uposa_alumni_refresh_token'
@@ -30,6 +31,7 @@ export const useAuthStore = create<AuthState>()(
           localStorage.removeItem(REFRESH_TOKEN_KEY)
         }
         set({ token, refreshToken: refreshToken ?? null, user, isAuthenticated: true })
+        announceAuthToken(token)
       },
       updateUser: (updates) =>
         set((state) => ({
@@ -39,6 +41,7 @@ export const useAuthStore = create<AuthState>()(
         localStorage.removeItem(ACCESS_TOKEN_KEY)
         localStorage.removeItem(REFRESH_TOKEN_KEY)
         set({ token: null, refreshToken: null, user: null, isAuthenticated: false })
+        announceAuthToken(null)
       },
     }),
     { name: 'uposa_alumni_auth' }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import {
   ArrowRight,
@@ -25,7 +25,7 @@ import Modal from '../../components/ui/Modal'
 import Avatar from '../../components/ui/Avatar'
 import { forumApi } from '../../api/services'
 import { useToast } from '../../hooks/useToast'
-import { useSocketEvent } from '../../hooks/useSocket'
+import { useSocketEvent, useSocketRoom } from '../../hooks/useSocket'
 import { formatEnum, timeAgo, truncate } from '../../utils/formatters'
 import type { ForumCategory, ForumPost } from '../../types'
 
@@ -190,20 +190,33 @@ export default function ForumPage() {
     defaultValues: { category: 'GENERAL' },
   })
 
+  // Switching categories quickly can resolve requests out of order; only the
+  // latest one may replace the list.
+  const requestId = useRef(0)
   const loadPosts = () => {
+    const current = ++requestId.current
     setLoading(true)
     forumApi.posts(category !== 'ALL' ? { category } : undefined)
-      .then((res) => setPosts(res.data.data || []))
-      .catch(() => setPosts([]))
-      .finally(() => setLoading(false))
+      .then((res) => {
+        if (current === requestId.current) setPosts(res.data.data || [])
+      })
+      .catch(() => {
+        if (current === requestId.current) setPosts([])
+      })
+      .finally(() => {
+        if (current === requestId.current) setLoading(false)
+      })
   }
 
   useEffect(() => {
     loadPosts()
   }, [category])
 
+  useSocketRoom('forum')
   useSocketEvent('forum:newPost', (newPost: ForumPost) => {
-    setPosts((prev) => [newPost, ...prev])
+    if (category !== 'ALL' && newPost.category !== category) return
+    // Our own new post also comes back through the refetch after submit.
+    setPosts((prev) => (prev.some((post) => post.id === newPost.id) ? prev : [newPost, ...prev]))
   })
 
   const filteredPosts = useMemo(() => {

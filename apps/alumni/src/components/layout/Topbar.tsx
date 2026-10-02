@@ -21,6 +21,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate } from 'react-router'
 import { useAuthStore } from '../../stores/auth.store'
+import { authApi } from '../../api/services'
 import { useUIStore } from '../../stores/ui.store'
 import { useTheme } from '../../hooks/useTheme'
 import Avatar from '../ui/Avatar'
@@ -44,6 +45,8 @@ export default function Topbar() {
   }, [])
 
   const handleLogout = () => {
+    // Best-effort server sign-out (clears its session cookies); never blocks the local logout.
+    authApi.logout().catch(() => {})
     logout()
     navigate('/login')
   }

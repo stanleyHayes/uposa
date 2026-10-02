@@ -2,10 +2,19 @@ import axios, { type AxiosError, type AxiosRequestConfig, type InternalAxiosRequ
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
-const ACCESS_TOKEN_KEY = 'uposa_alumni_token'
+export const ACCESS_TOKEN_KEY = 'uposa_alumni_token'
 const REFRESH_TOKEN_KEY = 'uposa_alumni_refresh_token'
 const USER_KEY = 'uposa_alumni_user'
 const AUTH_STORE_KEY = 'uposa_alumni_auth'
+
+// Fired on window with the new access token (string) after login/refresh, or
+// null on logout, so the live-update socket can re-authenticate without this
+// module importing socket.io.
+export const AUTH_TOKEN_EVENT = 'uposa:auth-token'
+
+export function announceAuthToken(token: string | null) {
+  window.dispatchEvent(new CustomEvent<string | null>(AUTH_TOKEN_EVENT, { detail: token }))
+}
 
 const client = axios.create({
   baseURL: API_BASE_URL,
@@ -63,6 +72,7 @@ async function performRefresh(refreshToken: string): Promise<string> {
 
   localStorage.setItem(ACCESS_TOKEN_KEY, newAccess)
   localStorage.setItem(REFRESH_TOKEN_KEY, newRefresh)
+  announceAuthToken(newAccess)
 
   // Best-effort: keep the persisted zustand store in sync so React reads see fresh tokens.
   try {

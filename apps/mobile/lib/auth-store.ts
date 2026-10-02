@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Member } from './types';
-import { TOKEN_KEY, REFRESH_TOKEN_KEY, authApi, setSessionExpiredHandler } from './api';
+import { authApi, setSessionExpiredHandler } from './api';
+import { REFRESH_TOKEN_KEY, TOKEN_KEY, getToken, removeToken, setToken } from './token-storage';
 
 const USER_KEY = 'uposa_alumni_user';
 
@@ -14,6 +15,7 @@ interface AuthState {
   hydrate: () => Promise<void>;
   login: (token: string, user: Member, refreshToken?: string) => Promise<void>;
   updateUser: (updates: Partial<Member>) => void;
+  setTokens: (token: string, refreshToken?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -27,8 +29,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   hydrate: async () => {
     try {
       const [token, refreshToken, userJson] = await Promise.all([
-        AsyncStorage.getItem(TOKEN_KEY),
-        AsyncStorage.getItem(REFRESH_TOKEN_KEY),
+        getToken(TOKEN_KEY),
+        getToken(REFRESH_TOKEN_KEY),
         AsyncStorage.getItem(USER_KEY),
       ]);
       if (token && userJson) {
@@ -55,13 +57,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (token, user, refreshToken) => {
     const writes: Promise<void>[] = [
-      AsyncStorage.setItem(TOKEN_KEY, token),
+      setToken(TOKEN_KEY, token),
       AsyncStorage.setItem(USER_KEY, JSON.stringify(user)),
     ];
     if (refreshToken) {
-      writes.push(AsyncStorage.setItem(REFRESH_TOKEN_KEY, refreshToken));
+      writes.push(setToken(REFRESH_TOKEN_KEY, refreshToken));
     } else {
-      writes.push(AsyncStorage.removeItem(REFRESH_TOKEN_KEY));
+      writes.push(removeToken(REFRESH_TOKEN_KEY));
     }
     await Promise.all(writes);
     set({ token, refreshToken: refreshToken ?? null, user, isAuthenticated: true });
@@ -75,14 +77,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ user: next });
   },
 
+  // Replace the session tokens without touching the member (e.g. after a
+  // password change, which revokes the previous refresh token).
+  setTokens: async (token, refreshToken) => {
+    await setToken(TOKEN_KEY, token);
+    if (refreshToken) await setToken(REFRESH_TOKEN_KEY, refreshToken);
+    set({ token, refreshToken: refreshToken ?? get().refreshToken });
+  },
+
   logout: async () => {
     // Best-effort server sign-out; never block local sign-out on it.
     try {
       await authApi.logout();
     } catch {}
     await Promise.all([
-      AsyncStorage.removeItem(TOKEN_KEY),
-      AsyncStorage.removeItem(REFRESH_TOKEN_KEY),
+      removeToken(TOKEN_KEY),
+      removeToken(REFRESH_TOKEN_KEY),
       AsyncStorage.removeItem(USER_KEY),
     ]);
     set({ token: null, refreshToken: null, user: null, isAuthenticated: false });

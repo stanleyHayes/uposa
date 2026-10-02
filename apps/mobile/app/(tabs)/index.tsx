@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Brand, Colors, Fonts, type Palette } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
+  announcementsApi,
   donationsApi,
   duesApi,
   electionsApi,
@@ -22,6 +23,7 @@ import {
 import { useAuthStore } from '@/lib/auth-store';
 import { useDrawerStore } from '@/lib/drawer-store';
 import type {
+  Announcement,
   Donation,
   Due,
   Election,
@@ -50,6 +52,7 @@ import {
   formatMoney,
   uiStyles,
 } from '@/components/mobile-ui';
+import { MemberAnnouncements } from '@/components/member-announcements';
 
 interface DuesSummary {
   totalDues: number;
@@ -279,6 +282,7 @@ export default function HomeScreen() {
   const [elections, setElections] = useState<Election[]>([]);
   const [mentorshipRequests, setMentorshipRequests] = useState<MentorshipRequest[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -297,6 +301,7 @@ export default function HomeScreen() {
         electionsRes,
         mentorshipRes,
         paymentMethodsRes,
+        announcementsRes,
       ] = await Promise.allSettled([
         eventsApi.upcoming(),
         newsApi.list({ limit: 5 }),
@@ -310,6 +315,7 @@ export default function HomeScreen() {
         electionsApi.list({ limit: 4 }),
         mentorshipApi.myRequests(),
         paymentMethodsApi.list(),
+        announcementsApi.members(),
       ]);
 
       setEvents(eventsRes.status === 'fulfilled' ? eventsRes.value.data.data?.slice(0, 4) ?? [] : []);
@@ -324,6 +330,7 @@ export default function HomeScreen() {
       setElections(electionsRes.status === 'fulfilled' ? electionsRes.value.data.data ?? [] : []);
       setMentorshipRequests(mentorshipRes.status === 'fulfilled' ? mentorshipRes.value.data.data ?? [] : []);
       setPaymentMethods(paymentMethodsRes.status === 'fulfilled' ? paymentMethodsRes.value.data.data ?? [] : []);
+      setAnnouncements(announcementsRes.status === 'fulfilled' ? announcementsRes.value.data.data ?? [] : []);
     } finally {
       setLoading(false);
     }
@@ -379,6 +386,8 @@ export default function HomeScreen() {
         description="Your alumni snapshot across dues, giving, decisions, events, projects, jobs, mentorship, and conversations."
         icon="grid-outline"
       />
+
+      <MemberAnnouncements palette={palette} items={announcements} />
 
       <HeroPanel
         palette={palette}

@@ -71,6 +71,7 @@ export default function SettingsScreen() {
   const scheme = useColorScheme() ?? 'light';
   const palette = Colors[scheme];
   const logout = useAuthStore((s) => s.logout);
+  const setTokens = useAuthStore((s) => s.setTokens);
   const { preference, setPreference } = useThemePreference();
 
   const themeOptions: { value: ThemePreference; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -137,7 +138,11 @@ export default function SettingsScreen() {
     }
     setSubmitting(true);
     try {
-      await authApi.changePassword({ currentPassword: currentPw, newPassword: newPw });
+      const res = await authApi.changePassword({ currentPassword: currentPw, newPassword: newPw });
+      // The change revokes our old refresh token: store the new pair, or the
+      // next refresh would sign the member out.
+      const tokens = res.data.data;
+      if (tokens?.token) await setTokens(tokens.token, tokens.refreshToken);
       Alert.alert('Password updated', 'Your password has been changed.');
       setCurrentPw('');
       setNewPw('');

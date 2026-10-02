@@ -25,6 +25,9 @@ export default function ElectionsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<ElectionFilter>('ALL');
+  // One vote in flight at a time: a double tap would otherwise send a second
+  // request that the server rejects, showing a spurious "Vote failed".
+  const [votingId, setVotingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -48,6 +51,8 @@ export default function ElectionsScreen() {
   };
 
   const onVote = async (electionId: string, candidateId: string) => {
+    if (votingId) return;
+    setVotingId(electionId);
     try {
       await electionsApi.vote(electionId, candidateId);
       Alert.alert('Vote cast', 'Thank you for participating in the election.');
@@ -55,6 +60,8 @@ export default function ElectionsScreen() {
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Could not record vote.';
       Alert.alert('Vote failed', msg);
+    } finally {
+      setVotingId(null);
     }
   };
 
@@ -71,6 +78,7 @@ export default function ElectionsScreen() {
       contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
       data={filtered}
       keyExtractor={(item) => item.id}
+      extraData={votingId}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.tint} />}
       ListHeaderComponent={
         <View>
@@ -101,10 +109,10 @@ export default function ElectionsScreen() {
       renderItem={({ item, index }) =>
         index < 8 ? (
           <FadeInUp delay={Math.min(index, 7) * 40} distance={10}>
-            <ElectionCard election={item} palette={palette} onVote={onVote} />
+            <ElectionCard election={item} palette={palette} onVote={onVote} busy={votingId !== null} />
           </FadeInUp>
         ) : (
-          <ElectionCard election={item} palette={palette} onVote={onVote} />
+          <ElectionCard election={item} palette={palette} onVote={onVote} busy={votingId !== null} />
         )
       }
     />
@@ -115,10 +123,12 @@ function ElectionCard({
   election,
   palette,
   onVote,
+  busy,
 }: {
   election: Election;
   palette: Palette;
   onVote: (electionId: string, candidateId: string) => void;
+  busy: boolean;
 }) {
   const isActive = election.status === 'ACTIVE';
 
@@ -140,7 +150,7 @@ function ElectionCard({
             candidate={candidate}
             palette={palette}
             isMyVote={election.myVote === candidate.id}
-            disabled={!isActive || !!election.hasVoted}
+            disabled={!isActive || !!election.hasVoted || busy}
             onVote={() => onVote(election.id, candidate.id)}
           />
         ))}

@@ -19,7 +19,7 @@ import StatusBadge from '../../components/ui/StatusBadge'
 import Avatar from '../../components/ui/Avatar'
 import { electionsApi } from '../../api/services'
 import { useToast } from '../../hooks/useToast'
-import { useSocketEvent } from '../../hooks/useSocket'
+import { useSocketEvent, useSocketRooms } from '../../hooks/useSocket'
 import { formatDate } from '../../utils/formatters'
 import type { Election, ElectionCandidate } from '../../types'
 
@@ -355,6 +355,17 @@ export default function ElectionsPage() {
       .finally(() => setIsFetching(false))
   }, [])
 
+  // The server only emits to election rooms; follow every live or upcoming election on the page.
+  useSocketRooms('election', elections.filter((election) => election.status === 'ACTIVE' || election.status === 'UPCOMING').map((election) => election.id))
+  useSocketEvent('election:status', (data: { electionId?: string; id?: string; status?: Election['status'] }) => {
+    const electionId = data.electionId ?? data.id
+    if (!data.status) return
+    setElections((prev) => prev.map((election) => (
+      election.id === electionId ? { ...election, status: data.status as Election['status'] } : election
+    )))
+  })
+  // Our own vote is not counted locally (handleVote only flips hasVoted), so
+  // the server's broadcast for it is the single increment.
   useSocketEvent('election:vote', (data: { electionId: string; candidateId: string; totalVotes: number }) => {
     setElections((prev) => prev.map((election) => {
       if (election.id !== data.electionId) return election
