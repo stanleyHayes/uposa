@@ -16,6 +16,9 @@ const stringArrayField = z.preprocess(
   z.array(z.string()).optional()
 );
 
+// Emails are compared/stored as trimmed lowercase ("Kofi@Mail.com " === "kofi@mail.com").
+export const emailField = z.string().trim().toLowerCase().email('Invalid email address');
+
 const booleanField = z.preprocess((val) => {
   if (val === 'true') return true;
   if (val === 'false') return false;
@@ -25,7 +28,7 @@ const booleanField = z.preprocess((val) => {
 export const registerSchema = z.object({
   body: z.object({
     fullName: z.string().min(2, 'Full name must be at least 2 characters'),
-    email: z.string().email('Invalid email address'),
+    email: emailField,
     password: z.string().min(8, 'Password must be at least 8 characters'),
     gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
     dateOfBirth: z.string().optional(),
@@ -63,14 +66,14 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   body: z.object({
-    email: z.string().email('Invalid email address'),
+    email: emailField,
     password: z.string().min(1, 'Password is required'),
   }),
 });
 
 export const forgotPasswordSchema = z.object({
   body: z.object({
-    email: z.string().email('Invalid email address'),
+    email: emailField,
   }),
 });
 
@@ -83,10 +86,14 @@ export const resetPasswordSchema = z.object({
 
 export const adminLoginSchema = z.object({
   body: z.object({
-    email: z.string().email('Invalid email address'),
+    email: emailField,
     password: z.string().min(1, 'Password is required'),
   }),
 });
+
+// Admin password reset uses the same shapes as the member flow.
+export const adminForgotPasswordSchema = forgotPasswordSchema;
+export const adminResetPasswordSchema = resetPasswordSchema;
 
 export const changePasswordSchema = z.object({
   body: z.object({

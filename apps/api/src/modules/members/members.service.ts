@@ -88,6 +88,7 @@ export async function getMemberById(id: string, requesterId?: string) {
 
 export async function updateProfile(memberId: string, data: UpdateProfileInput) {
   const { members } = getRepos();
+  // null (sent as '' or null) clears the field; omitted fields are left unchanged.
   const updateData: Record<string, unknown> = { ...data };
   if (data.dateOfBirth) {
     updateData.dateOfBirth = new Date(data.dateOfBirth);
@@ -200,6 +201,7 @@ export async function approveMember(id: string) {
     isApproved: true,
     approvedAt: new Date(),
     membershipStatus: 'ACTIVE',
+    rejectionReason: null,
   });
 
   try {
@@ -222,12 +224,21 @@ export async function suspendMember(id: string) {
   return safe;
 }
 
-export async function changeMemberStatus(id: string, status: 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'INACTIVE') {
+export async function changeMemberStatus(
+  id: string,
+  status: 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'INACTIVE',
+  rejectionReason?: string,
+) {
   const { members } = getRepos();
   const member = await members.findById(id);
   if (!member) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
 
-  const result = await members.updateById(id, { membershipStatus: status });
+  const updates: Record<string, unknown> = { membershipStatus: status };
+  // Rejecting a registration (INACTIVE) keeps the admin's reason; reactivating clears it.
+  if (status === 'INACTIVE' && rejectionReason) updates.rejectionReason = rejectionReason;
+  if (status === 'ACTIVE') updates.rejectionReason = null;
+
+  const result = await members.updateById(id, updates);
   const { password: _pw, verificationToken: _vt, resetToken: _rt, resetTokenExpiry: _rte, ...safe } = result as any;
   return safe;
 }

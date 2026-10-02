@@ -8,7 +8,7 @@ import {
   adminTogglePaymentMethodHandler,
   adminDeletePaymentMethodHandler,
 } from './payment-methods.controller';
-import { adminMiddleware } from '../../middleware/admin.middleware';
+import { adminMiddleware, requireAdminRole } from '../../middleware/admin.middleware';
 
 const router = Router();
 
@@ -18,9 +18,10 @@ router.get('/', listEnabledPaymentMethodsHandler);
 // Admin routes
 router.get('/admin', adminMiddleware, adminListPaymentMethodsHandler);
 router.get('/admin/:id', adminMiddleware, adminGetPaymentMethodHandler);
-router.post('/admin', adminMiddleware, adminCreatePaymentMethodHandler);
-router.put('/admin/:id', adminMiddleware, adminUpdatePaymentMethodHandler);
-router.patch('/admin/:id/toggle', adminMiddleware, adminTogglePaymentMethodHandler);
-router.delete('/admin/:id', adminMiddleware, adminDeletePaymentMethodHandler);
+// Provider credentials decide where money goes: ADMIN / SUPER_ADMIN only.
+router.post('/admin', adminMiddleware, requireAdminRole, adminCreatePaymentMethodHandler);
+router.put('/admin/:id', adminMiddleware, requireAdminRole, adminUpdatePaymentMethodHandler);
+router.patch('/admin/:id/toggle', adminMiddleware, requireAdminRole, adminTogglePaymentMethodHandler);
+router.delete('/admin/:id', adminMiddleware, requireAdminRole, adminDeletePaymentMethodHandler);
 
 export default router;

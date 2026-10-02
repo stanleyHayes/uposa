@@ -1,11 +1,13 @@
 import { Response } from 'express';
 import { RouteRequest } from '../../types/request.types';
-import { createContactMessageSchema } from './contact.validation';
+import { createContactMessageSchema, archiveMessageSchema } from './contact.validation';
 import {
   submitContactMessage,
   adminListMessages,
   markMessageAsRead,
   deleteMessage,
+  setMessageArchived,
+  markMessageReplied,
 } from './contact.service';
 import { successResponse } from '../../utils/response.utils';
 
@@ -30,4 +32,15 @@ export async function deleteMessageHandler(req: RouteRequest, res: Response): Pr
   const { id } = req.params;
   const result = await deleteMessage(id);
   successResponse(res, result.message);
+}
+
+export async function archiveMessageHandler(req: RouteRequest, res: Response): Promise<void> {
+  const parsed = archiveMessageSchema.parse({ body: req.body });
+  const message = await setMessageArchived(req.params.id, parsed.body.archived);
+  successResponse(res, parsed.body.archived ? 'Message archived' : 'Message unarchived', message);
+}
+
+export async function markMessageRepliedHandler(req: RouteRequest, res: Response): Promise<void> {
+  const message = await markMessageReplied(req.params.id);
+  successResponse(res, 'Message marked as replied', message);
 }

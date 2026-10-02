@@ -16,6 +16,8 @@ import {
   deleteJobHandler,
   adminGetJobApplicationsHandler,
   adminUpdateApplicationStatusHandler,
+  adminCreateJobHandler,
+  adminUpdateJobHandler,
 } from './jobs.controller';
 import { authMiddleware } from '../../middleware/auth.middleware';
 import { adminMiddleware } from '../../middleware/admin.middleware';
@@ -38,6 +40,8 @@ router.put('/applications/:id/status', authMiddleware, updateApplicationStatusHa
 // Admin routes
 router.get('/admin/all', adminMiddleware, adminListAllJobsHandler);
 router.get('/admin/pending', adminMiddleware, adminListPendingJobsHandler);
+router.post('/admin', adminMiddleware, adminCreateJobHandler);
+router.put('/admin/:id', adminMiddleware, adminUpdateJobHandler);
 router.put('/admin/:id/approve', adminMiddleware, approveJobHandler);
 router.delete('/admin/:id', adminMiddleware, deleteJobHandler);
 router.get('/admin/:id/applications', adminMiddleware, adminGetJobApplicationsHandler);

@@ -9,4 +9,10 @@ export const createContactMessageSchema = z.object({
   }),
 });
 
+export const archiveMessageSchema = z.object({
+  body: z.object({
+    archived: z.boolean(),
+  }),
+});
+
 export type CreateContactMessageInput = z.infer<typeof createContactMessageSchema>['body'];

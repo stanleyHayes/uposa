@@ -1,13 +1,22 @@
-import crypto from 'crypto';
 import { env } from '../config/env';
 import { getProviderCredentials } from '../modules/payment-methods/payment-methods.service';
+import { hmacHexMatches, webhookPayload } from '../utils/crypto.utils';
 import {
   PaymentProviderInterface,
   InitializePaymentInput,
   InitializePaymentResult,
   VerifyPaymentResult,
+  VerifyStatus,
   WebhookEvent,
 } from './payment.types';
+
+/** Latest Coinbase Commerce timeline status → verdict (NEW/PENDING/UNRESOLVED are in flight). */
+export function mapCoinbaseStatus(status: string | undefined): VerifyStatus {
+  const s = String(status || '').toUpperCase();
+  if (s === 'COMPLETED' || s === 'RESOLVED') return 'success';
+  if (s === 'EXPIRED' || s === 'CANCELED' || s === 'CANCELLED') return 'failed';
+  return 'pending';
+}
 
 async function getCredentials() {
   const dbCreds = await getProviderCredentials('CRYPTO');
@@ -101,7 +110,8 @@ export class CryptoProvider implements PaymentProviderInterface {
 
     const charge = data.data;
     const lastStatus = charge.timeline[charge.timeline.length - 1]?.status;
-    const isCompleted = lastStatus === 'COMPLETED';
+    const status = mapCoinbaseStatus(lastStatus);
+    const isCompleted = status === 'success';
 
     const currency = charge.pricing.local.currency;
     const rawAmount = parseFloat(charge.pricing.local.amount);
@@ -111,6 +121,7 @@ export class CryptoProvider implements PaymentProviderInterface {
 
     return {
       success: isCompleted,
+      status,
       reference: charge.metadata.reference || charge.code,
       providerRef: charge.code,
       amount,
@@ -120,14 +131,11 @@ export class CryptoProvider implements PaymentProviderInterface {
     };
   }
 
-  validateWebhook(body: unknown, signature: string): boolean {
-    const secret = env.CRYPTO_WEBHOOK_SECRET;
-    if (!secret) return false;
-    const hash = crypto
-      .createHmac('sha256', secret)
-      .update(JSON.stringify(body))
-      .digest('hex');
-    return hash === signature;
+  async validateWebhook(body: unknown, signature: string): Promise<boolean> {
+    // Coinbase signs the raw body (HMAC-SHA256) with the shared webhook secret
+    // (env or the encrypted copy set in the admin UI).
+    const creds = await getCredentials();
+    return hmacHexMatches('sha256', [creds.webhookSecret], webhookPayload(body), signature);
   }
 
   parseWebhookEvent(body: unknown): WebhookEvent | null {

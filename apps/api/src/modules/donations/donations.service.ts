@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { notify } from '../../utils/notify';
-import { CreateDonationInput, ConfirmDonationInput } from './donations.validation';
+import { CreateDonationInput, ConfirmDonationInput, AdminCreateDonationInput, AdminUpdateDonationInput } from './donations.validation';
 
 export async function submitDonation(data: CreateDonationInput, memberId?: string) {
   const repos = getRepos();
@@ -173,4 +173,100 @@ export async function getDonationSummary() {
     byChannel: byChannel.map((c: any) => ({ channel: c._id, _sum: { amount: c._sum }, _count: c._count })),
     byStatus: byStatus.map((s: any) => ({ status: s._id, _sum: { amount: s._sum }, _count: s._count })),
   };
+}
+
+// ── Admin: offline donations ──
+
+async function assertProjectExists(projectId: string) {
+  const project = await getRepos().projects.findById(projectId, { projection: 'title' });
+  if (!project) throw Object.assign(new Error('Project not found'), { statusCode: 404 });
+}
+
+export async function adminCreateDonation(data: AdminCreateDonationInput) {
+  const repos = getRepos();
+  const projectId = data.projectId || null;
+  if (projectId) await assertProjectExists(projectId);
+
+  const status = data.status || 'PENDING';
+  const donation = await repos.donations.create({
+    memberId: null,
+    donorName: data.donorName,
+    donorEmail: data.donorEmail || null,
+    amount: data.amount,
+    currency: data.currency || 'GHS',
+    channel: data.channel || 'CASH',
+    purpose: data.purpose || null,
+    transactionRef: data.transactionRef || null,
+    projectId,
+    notes: data.notes ?? data.note ?? null,
+    status,
+  });
+
+  if (status === 'CONFIRMED' && projectId) {
+    await repos.projects.incrementById(projectId, 'raisedAmount', data.amount);
+  }
+
+  return getDonationById(String(donation.id));
+}
+
+export async function adminUpdateDonation(id: string, data: AdminUpdateDonationInput) {
+  const repos = getRepos();
+  const existing = await repos.donations.findById(id);
+  if (!existing) throw Object.assign(new Error('Donation not found'), { statusCode: 404 });
+
+  const wasConfirmed = existing.status === 'CONFIRMED';
+  const projectId = data.projectId === undefined ? undefined : data.projectId || null;
+
+  // A confirmed donation is already counted in its project's raisedAmount, so
+  // the amount/currency/project are frozen until it's un-confirmed.
+  if (wasConfirmed) {
+    const changesAmount = data.amount !== undefined && data.amount !== existing.amount;
+    const changesCurrency = data.currency !== undefined && data.currency !== String(existing.currency || 'GHS').toUpperCase();
+    const changesProject = projectId !== undefined && String(projectId ?? '') !== String(existing.projectId ?? '');
+    if (changesAmount || changesCurrency || changesProject) {
+      throw Object.assign(new Error('Amount, currency and project can only be changed while the donation is not confirmed'), { statusCode: 400 });
+    }
+  }
+  if (projectId) await assertProjectExists(projectId);
+
+  const updates: Record<string, unknown> = {};
+  if (data.donorName !== undefined) updates.donorName = data.donorName;
+  if (data.donorEmail !== undefined) updates.donorEmail = data.donorEmail || null;
+  if (data.amount !== undefined) updates.amount = data.amount;
+  if (data.currency !== undefined) updates.currency = data.currency;
+  if (projectId !== undefined) updates.projectId = projectId;
+  if (data.channel !== undefined) updates.channel = data.channel;
+  if (data.purpose !== undefined) updates.purpose = data.purpose || null;
+  if (data.transactionRef !== undefined) updates.transactionRef = data.transactionRef || null;
+  if (data.notes !== undefined || data.note !== undefined) updates.notes = (data.notes ?? data.note) || null;
+  if (data.status !== undefined) updates.status = data.status;
+
+  // Apply only if the confirmed/unconfirmed state hasn't changed since we read
+  // it, so the raisedAmount adjustment below matches what was actually counted.
+  const result = await repos.donations.updateOne(
+    { _id: id, status: wasConfirmed ? 'CONFIRMED' : { $ne: 'CONFIRMED' } },
+    updates,
+  );
+  if (!result) throw Object.assign(new Error('Donation was changed by someone else — reload and try again'), { statusCode: 409 });
+
+  const isConfirmed = result.status === 'CONFIRMED';
+  if (!wasConfirmed && isConfirmed && result.projectId) {
+    await repos.projects.incrementById(String(result.projectId), 'raisedAmount', result.amount);
+  } else if (wasConfirmed && !isConfirmed && existing.projectId) {
+    await repos.projects.incrementById(String(existing.projectId), 'raisedAmount', -existing.amount);
+  }
+
+  return getDonationById(id);
+}
+
+export async function adminDeleteDonation(id: string) {
+  const repos = getRepos();
+  // Atomic delete returns the removed doc, so the reversal uses exactly what was counted.
+  const deleted = await repos.donations.deleteOne({ _id: id });
+  if (!deleted) throw Object.assign(new Error('Donation not found'), { statusCode: 404 });
+
+  if (deleted.status === 'CONFIRMED' && deleted.projectId) {
+    await repos.projects.incrementById(String(deleted.projectId), 'raisedAmount', -deleted.amount);
+  }
+  return { message: 'Donation deleted successfully' };
 }

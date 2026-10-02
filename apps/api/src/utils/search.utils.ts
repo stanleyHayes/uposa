@@ -8,3 +8,17 @@
 export function escapeRegex(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+/** Canonical form for stored/compared emails. */
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+/**
+ * Case-insensitive exact-match filter for an email. Accounts created before
+ * emails were normalised may be stored mixed-case, so lookups can't rely on an
+ * exact lowercase match. Anchored and regex-escaped (no partial/ReDoS matches).
+ */
+export function emailMatch(email: string): { $regex: string; $options: string } {
+  return { $regex: `^${escapeRegex(normalizeEmail(email))}$`, $options: 'i' };
+}

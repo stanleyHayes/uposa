@@ -77,3 +77,15 @@ export function verifyAdminToken(token: string): AdminTokenPayload {
   if (!ADMIN_ROLES.includes(String(payload.role)) || payload.tokenType === 'refresh') reject('Invalid admin token');
   return payload as unknown as AdminTokenPayload;
 }
+
+/**
+ * True when a token was issued before the account's password last changed, i.e.
+ * the session must be revoked. Compared at whole-second precision (JWT `iat`
+ * is in seconds) so the fresh token issued in the same second as the change
+ * isn't rejected.
+ */
+export function issuedBeforePasswordChange(iat: number | undefined, passwordChangedAt?: Date | string | null): boolean {
+  if (!passwordChangedAt) return false;
+  const changedAtSec = Math.floor(new Date(passwordChangedAt).getTime() / 1000);
+  return (iat ?? 0) < changedAtSec;
+}

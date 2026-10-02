@@ -1,6 +1,23 @@
 import bcrypt from 'bcryptjs';
 import { getRepos, type IRepository } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
+import { emailMatch } from '../../utils/search.utils';
+import { signAdminToken, signAdminRefreshToken } from '../../utils/jwt.utils';
+
+/** Admin record without credentials (password hash, reset-token hash). */
+export function toSafeAdmin<T extends object>(admin: T): Omit<T, 'password' | 'resetTokenHash' | 'resetTokenExpiry'> {
+  const { password: _pw, resetTokenHash: _rth, resetTokenExpiry: _rte, ...safe } = admin as T & {
+    password?: unknown; resetTokenHash?: unknown; resetTokenExpiry?: unknown;
+  };
+  return safe;
+}
+
+async function assertEmailFree(email: string, exceptId?: string) {
+  const existing = await getRepos().admins.findOne({ email: emailMatch(email) });
+  if (existing && String((existing as { id: unknown }).id) !== exceptId) {
+    throw Object.assign(new Error('An admin with this email already exists'), { statusCode: 409 });
+  }
+}
 
 interface CreateAdminInput {
   fullName: string;
@@ -309,7 +326,7 @@ export async function listAdmins(query: Record<string, string | undefined>) {
   const { page, limit, skip } = getPaginationParams(query);
 
   const [data, total] = await Promise.all([
-    admins.findMany({}, { projection: '-password', sort: { createdAt: -1 }, skip, limit }),
+    admins.findMany({}, { projection: '-password -resetTokenHash -resetTokenExpiry', sort: { createdAt: -1 }, skip, limit }),
     admins.count(),
   ]);
 
@@ -318,10 +335,7 @@ export async function listAdmins(query: Record<string, string | undefined>) {
 
 export async function createAdmin(data: CreateAdminInput) {
   const { admins } = getRepos();
-  const existing = await admins.findOne({ email: data.email });
-  if (existing) {
-    throw Object.assign(new Error('An admin with this email already exists'), { statusCode: 409 });
-  }
+  await assertEmailFree(data.email);
 
   const hashedPassword = await bcrypt.hash(data.password, 12);
   const doc = await admins.create({
@@ -332,18 +346,17 @@ export async function createAdmin(data: CreateAdminInput) {
     isActive: true,
   });
 
-  const { password: _pw, ...safe } = doc as any;
-  return safe;
+  return toSafeAdmin(doc);
 }
 
 export async function updateAdmin(id: string, data: UpdateAdminInput) {
   const { admins } = getRepos();
   const admin = await admins.findById(id);
   if (!admin) throw Object.assign(new Error('Admin not found'), { statusCode: 404 });
+  if (data.email) await assertEmailFree(data.email, id);
 
   const result = await admins.updateById(id, data);
-  const { password: _pw, ...safe } = result as any;
-  return safe;
+  return toSafeAdmin(result!);
 }
 
 export async function updateOwnProfile(adminId: string, data: { fullName?: string; email?: string }) {
@@ -351,14 +364,10 @@ export async function updateOwnProfile(adminId: string, data: { fullName?: strin
   const admin = await admins.findById(adminId);
   if (!admin) throw Object.assign(new Error('Admin not found'), { statusCode: 404 });
 
-  if (data.email && data.email !== admin.email) {
-    const existing = await admins.findOne({ email: data.email });
-    if (existing) throw Object.assign(new Error('Email already in use'), { statusCode: 409 });
-  }
+  if (data.email) await assertEmailFree(data.email, adminId);
 
   const result = await admins.updateById(adminId, data as Record<string, unknown>);
-  const { password: _pw, ...safe } = result as any;
-  return safe;
+  return toSafeAdmin(result!);
 }
 
 export async function changeAdminPassword(adminId: string, currentPassword: string, newPassword: string) {
@@ -370,8 +379,15 @@ export async function changeAdminPassword(adminId: string, currentPassword: stri
   if (!isMatch) throw Object.assign(new Error('Current password is incorrect'), { statusCode: 400 });
 
   const hashed = await bcrypt.hash(newPassword, 12);
-  await admins.updateById(adminId, { password: hashed });
-  return { message: 'Password changed successfully' };
+  await admins.updateById(adminId, { password: hashed, passwordChangedAt: new Date() });
+
+  // Older refresh tokens are now revoked; hand this device a fresh session.
+  const tokenPayload = { id: String(admin.id), email: admin.email, role: admin.role as 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR' };
+  return {
+    message: 'Password changed successfully',
+    accessToken: signAdminToken(tokenPayload),
+    refreshToken: signAdminRefreshToken(tokenPayload),
+  };
 }
 
 export async function deactivateAdmin(id: string, requesterId: string) {
@@ -383,6 +399,5 @@ export async function deactivateAdmin(id: string, requesterId: string) {
   if (!admin) throw Object.assign(new Error('Admin not found'), { statusCode: 404 });
 
   const result = await admins.updateById(id, { isActive: false });
-  const { password: _pw, ...safe } = result as any;
-  return safe;
+  return toSafeAdmin(result!);
 }

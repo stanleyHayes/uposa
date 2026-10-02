@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { RouteRequest } from '../../types/request.types';
-import { createDonationSchema, confirmDonationSchema } from './donations.validation';
+import { createDonationSchema, confirmDonationSchema, adminCreateDonationSchema, adminUpdateDonationSchema } from './donations.validation';
 import {
   submitDonation,
   getMyDonations,
@@ -8,6 +8,9 @@ import {
   confirmDonation,
   getDonationSummary,
   getDonationById,
+  adminCreateDonation,
+  adminUpdateDonation,
+  adminDeleteDonation,
 } from './donations.service';
 import { successResponse, errorResponse } from '../../utils/response.utils';
 
@@ -47,4 +50,21 @@ export async function getDonationByIdHandler(req: RouteRequest, res: Response): 
 export async function getDonationSummaryHandler(req: RouteRequest, res: Response): Promise<void> {
   const summary = await getDonationSummary();
   successResponse(res, 'Donation summary retrieved', summary);
+}
+
+export async function adminCreateDonationHandler(req: RouteRequest, res: Response): Promise<void> {
+  const parsed = adminCreateDonationSchema.parse({ body: req.body });
+  const donation = await adminCreateDonation(parsed.body);
+  successResponse(res, 'Donation recorded', donation, 201);
+}
+
+export async function adminUpdateDonationHandler(req: RouteRequest, res: Response): Promise<void> {
+  const parsed = adminUpdateDonationSchema.parse({ body: req.body });
+  const donation = await adminUpdateDonation(req.params.id, parsed.body);
+  successResponse(res, 'Donation updated', donation);
+}
+
+export async function adminDeleteDonationHandler(req: RouteRequest, res: Response): Promise<void> {
+  const result = await adminDeleteDonation(req.params.id);
+  successResponse(res, result.message);
 }

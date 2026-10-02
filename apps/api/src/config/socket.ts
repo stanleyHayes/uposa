@@ -1,8 +1,26 @@
 import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import { isCorsOriginAllowed } from './cors';
+import { verifyMemberToken, verifyAdminToken, MemberTokenPayload, AdminTokenPayload } from '../utils/jwt.utils';
 
 let io: Server;
+
+/**
+ * Resolve a handshake token to a member or admin identity (ACCESS tokens only;
+ * refresh tokens are rejected by the verifiers). Null when neither verifies.
+ */
+export function authenticateSocketToken(token: unknown): { user?: MemberTokenPayload; admin?: AdminTokenPayload } | null {
+  if (typeof token !== 'string' || !token) return null;
+  const raw = token.startsWith('Bearer ') ? token.substring(7) : token;
+  try {
+    return { user: verifyMemberToken(raw) };
+  } catch { /* try admin */ }
+  try {
+    return { admin: verifyAdminToken(raw) };
+  } catch {
+    return null;
+  }
+}
 
 export function initSocket(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
@@ -17,6 +35,20 @@ export function initSocket(httpServer: HttpServer): Server {
       methods: ['GET', 'POST'],
       credentials: true,
     },
+  });
+
+  // Forum posts/comments and vote updates are members-only content: every
+  // connection must present a valid member or admin access token
+  // (io(url, { auth: { token } })). Clients reconnect with a fresh token after refresh.
+  io.use((socket, next) => {
+    const identity = authenticateSocketToken(socket.handshake.auth?.token);
+    if (!identity) {
+      next(new Error('Unauthorized'));
+      return;
+    }
+    socket.data.user = identity.user;
+    socket.data.admin = identity.admin;
+    next();
   });
 
   io.on('connection', (socket: Socket) => {

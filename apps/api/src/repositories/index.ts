@@ -6,13 +6,13 @@ import {
   ForumPost, ForumComment, Poll, PollVote,
   Election, ElectionVote, ContactMessage, GalleryCategory, GalleryItem,
   SchoolLeader, Executive, SiteConfig, YearGroupRep, PaymentMethod, Payment,
-  TranscriptRequest, NewsletterSubscription, AdminNotification,
+  TranscriptRequest, NewsletterSubscription, AdminNotification, Announcement,
   IMember, IAdmin, IEvent, IEventRsvp, IProject, INews,
   IDonation, IDue, IJob, IJobApplication, IMentorshipRequest,
   IForumPost, IForumComment, IPoll, IPollVote,
   IElection, IElectionVote, IContactMessage, IGalleryCategory, IGalleryItem,
   ISchoolLeader, IExecutive, ISiteConfig, IYearGroupRep, IPaymentMethod, IPayment,
-  ITranscriptRequest, INewsletterSubscription, IAdminNotification,
+  ITranscriptRequest, INewsletterSubscription, IAdminNotification, IAnnouncement,
 } from '../models';
 
 // ═══════════════════════════════════════════════════════════
@@ -49,6 +49,7 @@ export interface Repositories {
   transcriptRequests: IRepository<ITranscriptRequest>;
   newsletterSubscriptions: IRepository<INewsletterSubscription>;
   adminNotifications: IRepository<IAdminNotification>;
+  announcements: IRepository<IAnnouncement>;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -88,6 +89,7 @@ function createMongooseRepositories(): Repositories {
     transcriptRequests: new MongooseRepository(TranscriptRequest),
     newsletterSubscriptions: new MongooseRepository(NewsletterSubscription),
     adminNotifications: new MongooseRepository(AdminNotification),
+    announcements: new MongooseRepository(Announcement),
   };
 }
 

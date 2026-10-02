@@ -8,22 +8,21 @@ import {
   getPaymentByReference,
   getPlatformFeePreview,
   adminListPayments,
+  toPublicPaymentView,
 } from './payments.service';
 import { getPaymentProvider } from '../../providers/payment.registry';
 import { successResponse, errorResponse } from '../../utils/response.utils';
 
-/**
- * The /status/:reference and /verify/:reference endpoints are unauthenticated
- * (a guest paying a donation has no token and looks up by reference). Strip the
- * raw provider payload and the payer's email so a reference cannot be used to
- * harvest PII / provider metadata. Receipt-essential fields (status, amount,
- * currency, purpose, payerName, paidAt) are retained.
- */
-function toPublicPaymentView<T>(payment: T): T {
-  if (!payment || typeof payment !== 'object') return payment;
-  const { providerData: _pd, payerEmail: _pe, ...safe } = payment as Record<string, unknown>;
-  return safe as T;
-}
+// /status/:reference and /verify/:reference are unauthenticated (guests pay
+// donations too), so they return only toPublicPaymentView: reference, status,
+// amount, currency, purpose.
+
+const VERIFY_MESSAGES: Record<string, string> = {
+  SUCCESS: 'Payment verified',
+  PENDING: 'Payment is still being processed',
+  FAILED: 'Payment failed',
+  CANCELLED: 'Payment was cancelled',
+};
 
 export async function initializePaymentHandler(req: RouteRequest, res: Response): Promise<void> {
   const parsed = initializePaymentSchema.parse({ body: req.body });
@@ -35,7 +34,7 @@ export async function initializePaymentHandler(req: RouteRequest, res: Response)
 export async function verifyPaymentHandler(req: RouteRequest, res: Response): Promise<void> {
   const { reference } = req.params;
   const payment = await verifyPayment(reference);
-  successResponse(res, 'Payment verified', toPublicPaymentView(payment));
+  successResponse(res, VERIFY_MESSAGES[payment.status] ?? 'Payment status retrieved', toPublicPaymentView(payment));
 }
 
 export async function getPaymentStatusHandler(req: RouteRequest, res: Response): Promise<void> {
@@ -53,7 +52,7 @@ export async function paystackWebhookHandler(req: RouteRequest, res: Response): 
   }
 
   const provider = getPaymentProvider('PAYSTACK');
-  if (!provider.validateWebhook(req.body, signature)) {
+  if (!(await provider.validateWebhook(req.rawBody ?? req.body, signature))) {
     errorResponse(res, 'Invalid signature', 401);
     return;
   }
@@ -76,7 +75,7 @@ export async function stripeWebhookHandler(req: RouteRequest, res: Response): Pr
   }
 
   const provider = getPaymentProvider('STRIPE');
-  if (!provider.validateWebhook(req.body, signature)) {
+  if (!(await provider.validateWebhook(req.body, signature))) {
     errorResponse(res, 'Invalid signature', 401);
     return;
   }
@@ -98,7 +97,7 @@ export async function cryptoWebhookHandler(req: RouteRequest, res: Response): Pr
   }
 
   const provider = getPaymentProvider('CRYPTO');
-  if (!provider.validateWebhook(req.body, signature)) {
+  if (!(await provider.validateWebhook(req.rawBody ?? req.body, signature))) {
     errorResponse(res, 'Invalid signature', 401);
     return;
   }

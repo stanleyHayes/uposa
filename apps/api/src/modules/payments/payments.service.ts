@@ -1,6 +1,5 @@
 import { escapeRegex } from '../../utils/search.utils';
 import crypto from 'crypto';
-import mongoose from 'mongoose';
 import { getRepos } from '../../repositories';
 import { env } from '../../config/env';
 import { logger } from '../../config/logger';
@@ -33,14 +32,21 @@ export function isExpectedAmount(
     && Number(paid.amount) >= toSmallestUnit(payment.totalAmount, payment.currency);
 }
 
-// Clients hold our generated reference; legacy rows only have providerRef / _id.
+// Public lookups: our generated reference (what every client holds) or the
+// provider's id for legacy rows. Never the DB _id — ObjectIds are partly
+// predictable, so they'd let anyone enumerate other people's payments.
 function referenceFilter(reference: string) {
+  return { $or: [{ reference }, { providerRef: reference }] };
+}
+
+/** What a payer needs to see for a reference — no names, emails or provider payloads. */
+export function toPublicPaymentView(payment: { reference?: string; providerRef?: string; status: string; amount: number; currency: string; purpose: string }) {
   return {
-    $or: [
-      { reference },
-      { providerRef: reference },
-      ...(mongoose.Types.ObjectId.isValid(reference) ? [{ _id: reference }] : []),
-    ],
+    reference: payment.reference || payment.providerRef,
+    status: payment.status,
+    amount: payment.amount,
+    currency: payment.currency,
+    purpose: payment.purpose,
   };
 }
 
@@ -207,18 +213,30 @@ export async function verifyPayment(reference: string) {
   }
 
   const provider = getPaymentProvider(payment.provider);
-  // Paystack/Stripe look transactions up by our reference; Coinbase by its charge code.
-  const lookupRef = payment.provider === 'CRYPTO' ? payment.providerRef : payment.reference;
+  // Paystack looks transactions up by our reference; Stripe by the Checkout
+  // Session id and Coinbase by the charge code (both stored as providerRef).
+  const lookupRef = payment.provider === 'PAYSTACK' ? payment.reference : payment.providerRef;
   const result = await provider.verify(lookupRef || reference);
 
-  if (result.success && isExpectedAmount(payment, result)) {
+  if (result.status === 'success') {
+    if (!isExpectedAmount(payment, result)) {
+      logger.warn({ paymentId: payment.id, expected: payment.totalAmount, currency: payment.currency, paid: result.amount, paidCurrency: result.currency }, 'Verify amount/currency mismatch — payment not finalized');
+      return payment;
+    }
     // null => a concurrent webhook/verify already finalized it.
-    return (await finalizePayment(payment.id, result.providerRef, result.rawData)) ?? payments.findById(payment.id);
+    return (await finalizePayment(payment.id, result.providerRef, result.rawData)) ?? (await payments.findById(payment.id))!;
   }
 
-  // Update as failed
-  const updated = await payments.updateById(payment.id, { status: 'FAILED', providerData: result.rawData });
-  return updated;
+  // Only a definitive failure (failed/abandoned/expired/cancelled) is recorded.
+  // In-flight payments — e.g. mobile money awaiting approval — stay PENDING so
+  // the payer isn't told it failed (and doesn't pay twice) before the webhook lands.
+  if (result.status === 'failed') {
+    return (await payments.updateOne(
+      { _id: payment.id, status: { $ne: 'SUCCESS' } },
+      { status: 'FAILED', providerData: result.rawData },
+    )) ?? (await payments.findById(payment.id))!;
+  }
+  return payment;
 }
 
 export async function handleWebhookEvent(providerName: string, event: WebhookEvent) {
@@ -291,7 +309,7 @@ async function finalizePayment(
 }
 
 export async function getPaymentByReference(reference: string) {
-  const { payments, donations, dues } = getRepos();
+  const { payments } = getRepos();
 
   const payment = await payments.findOne(referenceFilter(reference));
 
@@ -299,25 +317,7 @@ export async function getPaymentByReference(reference: string) {
     throw Object.assign(new Error('Payment not found'), { statusCode: 404 });
   }
 
-  const result = payment as Record<string, any>;
-
-  // Attach donation info
-  if (payment.donationId) {
-    const d = await donations.findById(String(payment.donationId), {
-      projection: { id: 1, donorName: 1, amount: 1, purpose: 1 },
-    });
-    result.donation = d ? { id: d.id, donorName: d.donorName, amount: d.amount, purpose: d.purpose } : null;
-  }
-
-  // Attach due info
-  if (payment.dueId) {
-    const d = await dues.findById(String(payment.dueId), {
-      projection: { id: 1, year: 1, amount: 1 },
-    });
-    result.due = d ? { id: d.id, year: d.year, amount: d.amount } : null;
-  }
-
-  return result;
+  return payment;
 }
 
 export async function adminListPayments(query: Record<string, string | undefined>) {

@@ -7,19 +7,35 @@ import { CreateJobInput, UpdateJobInput, ApplyToJobInput, UpdateApplicationStatu
 // The poster's email is only for admins: the public job board (/api/jobs, /api/jobs/:id)
 // must not expose members' personal addresses — jobs carry their own contactEmail.
 async function attachPostedBy(doc: Record<string, any>, includeEmail = false) {
-  if (!doc.postedById) return { ...doc, postedBy: null };
+  if (!doc.postedById) return { ...doc, postedBy: await adminPoster(doc) };
   const repos = getRepos();
   const m = await repos.members.findById(doc.postedById, { projection: 'fullName email' });
   return { ...doc, postedBy: m ? { id: (m as any).id, fullName: (m as any).fullName, ...(includeEmail ? { email: (m as any).email } : {}) } : null };
 }
 
 async function attachPostedByMany(docs: Record<string, any>[], includeEmail = false) {
-  const ids = [...new Set(docs.map(d => d.postedById).filter(Boolean))];
-  if (ids.length === 0) return docs.map(d => ({ ...d, postedBy: null }));
   const repos = getRepos();
-  const mDocs = await repos.members.findMany({ _id: { $in: ids } }, { projection: 'fullName email' });
-  const mMap = new Map(mDocs.map((m: any) => [String(m.id), { id: m.id, fullName: m.fullName, ...(includeEmail ? { email: m.email } : {}) }]));
-  return docs.map(d => ({ ...d, postedBy: d.postedById ? mMap.get(String(d.postedById)) || null : null }));
+  const ids = [...new Set(docs.map(d => d.postedById).filter(Boolean))];
+  const adminIds = [...new Set(docs.map(d => d.postedByAdminId).filter(Boolean))];
+  const [mDocs, aDocs] = await Promise.all([
+    ids.length > 0 ? repos.members.findMany({ _id: { $in: ids } }, { projection: 'fullName email' }) : [],
+    adminIds.length > 0 ? repos.admins.findMany({ _id: { $in: adminIds } }, { projection: 'fullName' }) : [],
+  ]);
+  const mMap = new Map(mDocs.map((m) => [String(m.id), { id: m.id, fullName: m.fullName, ...(includeEmail ? { email: m.email } : {}) }]));
+  const aMap = new Map(aDocs.map((a) => [String(a.id), { id: a.id, fullName: a.fullName, isAdmin: true }]));
+  return docs.map(d => ({
+    ...d,
+    postedBy: d.postedById
+      ? mMap.get(String(d.postedById)) || null
+      : d.postedByAdminId ? aMap.get(String(d.postedByAdminId)) || null : null,
+  }));
+}
+
+// Jobs created from the admin dashboard have no member poster.
+async function adminPoster(doc: { postedByAdminId?: unknown }) {
+  if (!doc.postedByAdminId) return null;
+  const a = await getRepos().admins.findById(String(doc.postedByAdminId), { projection: 'fullName' });
+  return a ? { id: a.id, fullName: a.fullName, isAdmin: true } : null;
 }
 
 async function attachAppCount(docs: Record<string, any>[]) {
@@ -307,6 +323,38 @@ export async function approveJob(id: string) {
   const result = await repos.jobs.updateById(id, { isApproved: true });
   const withPosted = await attachPostedBy(result as Record<string, any>, true);
   return withPosted;
+}
+
+/** Admin-created jobs are published immediately (no approval queue). */
+export async function adminCreateJob(adminId: string, data: CreateJobInput) {
+  const repos = getRepos();
+  const job = await repos.jobs.create({
+    title: data.title,
+    description: data.description,
+    company: data.company,
+    location: data.location || null,
+    jobType: data.jobType || 'FULL_TIME',
+    contactEmail: data.contactEmail || null,
+    externalUrl: data.externalUrl || null,
+    expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+    postedByAdminId: adminId,
+    isApproved: true,
+  });
+  return attachPostedBy(job as Record<string, any>, true);
+}
+
+export async function adminUpdateJob(id: string, data: UpdateJobInput) {
+  const repos = getRepos();
+  const job = await repos.jobs.findById(id);
+  if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });
+
+  const updateData: Record<string, unknown> = { ...data };
+  if (data.expiresAt !== undefined) updateData.expiresAt = data.expiresAt ? new Date(data.expiresAt) : null;
+  if (data.externalUrl !== undefined) updateData.externalUrl = data.externalUrl || null;
+  if (data.contactEmail !== undefined) updateData.contactEmail = data.contactEmail || null;
+
+  const result = await repos.jobs.updateById(id, updateData);
+  return attachPostedBy(result as Record<string, any>, true);
 }
 
 export async function deleteJob(id: string) {

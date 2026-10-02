@@ -8,6 +8,8 @@ import {
   adminLoginSchema,
   changePasswordSchema,
   refreshTokenSchema,
+  adminForgotPasswordSchema,
+  adminResetPasswordSchema,
 } from './auth.validation';
 import {
   registerMember,
@@ -20,6 +22,8 @@ import {
   changeMemberPassword,
   refreshMemberSession,
   refreshAdminSession,
+  adminForgotPassword,
+  adminResetPassword,
 } from './auth.service';
 import { successResponse, errorResponse } from '../../utils/response.utils';
 import { uploadToCloudinary } from '../../utils/cloudinary.utils';
@@ -174,6 +178,22 @@ export async function changePasswordHandler(req: RouteRequest, res: Response): P
   }
   const parsed = changePasswordSchema.parse({ body: req.body });
   const result = await changeMemberPassword(req.user.id, parsed.body);
+
+  // The change revokes older sessions; keep this device signed in with new tokens.
+  res.cookie('accessToken', result.accessToken, { ...COOKIE_OPTIONS, maxAge: 15 * 60 * 1000 });
+  res.cookie('refreshToken', result.refreshToken, { ...COOKIE_OPTIONS, maxAge: 7 * 24 * 60 * 60 * 1000 });
+  successResponse(res, result.message, { token: result.accessToken, refreshToken: result.refreshToken });
+}
+
+export async function adminForgotPasswordHandler(req: RouteRequest, res: Response): Promise<void> {
+  const parsed = adminForgotPasswordSchema.parse({ body: req.body });
+  const result = await adminForgotPassword(parsed.body.email);
+  successResponse(res, result.message);
+}
+
+export async function adminResetPasswordHandler(req: RouteRequest, res: Response): Promise<void> {
+  const parsed = adminResetPasswordSchema.parse({ body: req.body });
+  const result = await adminResetPassword(parsed.body.token, parsed.body.password);
   successResponse(res, result.message);
 }
 

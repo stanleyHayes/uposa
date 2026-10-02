@@ -18,6 +18,8 @@ import {
   deleteJob,
   adminGetJobApplications,
   adminUpdateApplicationStatus,
+  adminCreateJob,
+  adminUpdateJob,
 } from './jobs.service';
 import { successResponse, errorResponse } from '../../utils/response.utils';
 
@@ -101,6 +103,19 @@ export async function adminListAllJobsHandler(req: RouteRequest, res: Response):
 export async function adminListPendingJobsHandler(req: RouteRequest, res: Response): Promise<void> {
   const result = await adminListPendingJobs(req.query as Record<string, string | undefined>);
   successResponse(res, 'Pending jobs retrieved', result.data, 200, result.meta);
+}
+
+export async function adminCreateJobHandler(req: RouteRequest, res: Response): Promise<void> {
+  if (!req.admin) { errorResponse(res, 'Unauthorized', 401); return; }
+  const parsed = createJobSchema.parse({ body: req.body });
+  const job = await adminCreateJob(req.admin.id, parsed.body);
+  successResponse(res, 'Job created', job, 201);
+}
+
+export async function adminUpdateJobHandler(req: RouteRequest, res: Response): Promise<void> {
+  const parsed = updateJobSchema.parse({ body: req.body });
+  const job = await adminUpdateJob(req.params.id, parsed.body);
+  successResponse(res, 'Job updated', job);
 }
 
 export async function approveJobHandler(req: RouteRequest, res: Response): Promise<void> {

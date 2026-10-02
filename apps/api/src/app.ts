@@ -42,6 +42,8 @@ import notificationsRoutes from './modules/notifications/notifications.routes';
 import galleryRoutes, { adminGalleryRouter } from './modules/gallery/gallery.routes';
 import schoolLeadersRoutes, { adminSchoolLeadersRouter } from './modules/school-leaders/school-leaders.routes';
 import aiRoutes from './modules/ai/ai.routes';
+import announcementsRoutes from './modules/announcements/announcements.routes';
+import { parseQueryFirstValue } from './utils/query-parser.utils';
 
 const app = express();
 
@@ -50,15 +52,17 @@ const app = express();
 // (e.g. express-rate-limit).
 app.set('trust proxy', 1);
 
+// Repeated query keys (?status=a&status=b) collapse to the first value: every
+// handler treats query values as strings, and arrays crashed them with 500s.
+app.set('query parser', parseQueryFirstValue);
+
 // Security middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
-// CORS
-if (env.NODE_ENV !== 'production') {
-  console.log('[CORS] allowList=', corsAllowedOrigins, 'patterns=', corsAllowedOriginPatterns.map((pattern) => pattern.source));
-}
+// CORS — log the effective allow-list once at startup (patterns are anchored).
+logger.info({ allowList: corsAllowedOrigins, patterns: corsAllowedOriginPatterns.map((pattern) => pattern.source) }, 'CORS origins');
 app.use(cors({
   origin: (origin, callback) => {
     if (isCorsOriginAllowed(origin)) {
@@ -79,8 +83,15 @@ app.use('/api/payments/webhooks/stripe', express.raw({ type: 'application/json' 
 // Cookie parsing (must be before auth middleware)
 app.use(cookieParser());
 
-// Request parsing
-app.use(express.json({ limit: '10mb' }));
+// Request parsing. Payment webhooks keep the exact bytes in req.rawBody: the
+// Paystack/Coinbase HMACs are over the raw payload, and re-serialising the
+// parsed JSON doesn't always reproduce it byte-for-byte.
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, _res, buf) => {
+    if (req.url?.startsWith('/api/payments/webhooks/')) (req as express.Request).rawBody = buf;
+  },
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Structured request logging (skips the health probe to cut noise).
@@ -114,6 +125,7 @@ app.use(
     '/api/admin/site',
     '/api/admin/gallery',
     '/api/admin/school-leaders',
+    '/api/announcements/admin',
   ],
   rebuildMarketingOnWrite,
 );
@@ -149,6 +161,7 @@ app.use('/api/gallery', galleryRoutes);
 app.use('/api/admin/gallery', adminGalleryRouter);
 app.use('/api/school-leaders', schoolLeadersRoutes);
 app.use('/api/admin/school-leaders', adminSchoolLeadersRouter);
+app.use('/api/announcements', announcementsRoutes);
 
 // 404 handler
 app.use(notFoundMiddleware);

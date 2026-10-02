@@ -138,6 +138,22 @@ export async function sendPasswordResetEmail(email: string, token: string, name:
   });
 }
 
+export async function sendAdminPasswordResetEmail(email: string, resetUrl: string, name: string): Promise<void> {
+  const first = escapeHtml(firstNameOf(name));
+  await sendEmail({
+    to: email,
+    subject: 'Reset your UPOSA admin password',
+    html: renderBrandedEmail({
+      preheader: 'Reset your UPOSA admin dashboard password.',
+      heading: 'Reset your admin password',
+      intro: `Hello ${first}, we received a request to reset the password for your UPOSA admin account. Click below to choose a new one.`,
+      ctaLabel: 'Reset my password',
+      ctaUrl: resetUrl,
+      footnote: `This link expires in 1 hour and can be used once. If you didn't request a reset, you can safely ignore this email — your password won't change.`,
+    }),
+  });
+}
+
 export async function sendApprovalEmail(email: string, name: string): Promise<void> {
   const url = `${env.CLIENT_URL}/login`;
   const first = escapeHtml(firstNameOf(name));

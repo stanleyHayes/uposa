@@ -130,7 +130,9 @@ export async function updateEvent(id: string, data: UpdateEventInput, imageUrl?:
 
   const updateData: Record<string, unknown> = { ...data };
   if (data.date) updateData.date = new Date(data.date);
-  if (data.endDate) updateData.endDate = new Date(data.endDate);
+  // '' clears the optional end date / location.
+  if (data.endDate !== undefined) updateData.endDate = data.endDate ? new Date(data.endDate) : null;
+  if (data.location !== undefined) updateData.location = data.location || null;
   // Uploaded file wins; otherwise a pasted URL is kept and '' clears the image.
   if (imageUrl) updateData.imageUrl = imageUrl;
   else if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl || null;

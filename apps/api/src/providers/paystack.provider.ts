@@ -1,13 +1,21 @@
-import crypto from 'crypto';
 import { env } from '../config/env';
 import { getProviderCredentials } from '../modules/payment-methods/payment-methods.service';
+import { hmacHexMatches, webhookPayload } from '../utils/crypto.utils';
 import {
   PaymentProviderInterface,
   InitializePaymentInput,
   InitializePaymentResult,
   VerifyPaymentResult,
+  VerifyStatus,
   WebhookEvent,
 } from './payment.types';
+
+/** Paystack transaction status → verdict ("ongoing"/"pending"/"processing"/"queued" are in flight). */
+export function mapPaystackStatus(status: string | undefined): VerifyStatus {
+  if (status === 'success') return 'success';
+  if (status === 'failed' || status === 'abandoned' || status === 'reversed') return 'failed';
+  return 'pending';
+}
 
 async function getCredentials() {
   // DB credentials take priority, env vars are fallback
@@ -87,8 +95,10 @@ export class PaystackProvider implements PaymentProviderInterface {
       throw Object.assign(new Error(data.message || 'Paystack verification failed'), { statusCode: 502 });
     }
 
+    const status = mapPaystackStatus(data.data.status);
     return {
-      success: data.data.status === 'success',
+      success: status === 'success',
+      status,
       reference: data.data.reference,
       providerRef: String(data.data.id),
       amount: data.data.amount,
@@ -99,16 +109,13 @@ export class PaystackProvider implements PaymentProviderInterface {
     };
   }
 
-  validateWebhook(body: unknown, signature: string): boolean {
-    // Webhook validation uses env var directly since it's called synchronously
-    // and DB credentials may not be loaded yet in the request lifecycle
-    const secret = env.PAYSTACK_WEBHOOK_SECRET;
-    if (!secret) return false;
-    const hash = crypto
-      .createHmac('sha512', secret)
-      .update(JSON.stringify(body))
-      .digest('hex');
-    return hash === signature;
+  async validateWebhook(body: unknown, signature: string): Promise<boolean> {
+    // Paystack signs webhooks (HMAC-SHA512 of the raw body) with the account's
+    // SECRET KEY. A separately configured webhook secret is also accepted, but
+    // without falling back to the secret key (env or the encrypted DB copy set
+    // in the admin UI) every webhook was rejected when only the key was set.
+    const creds = await getCredentials();
+    return hmacHexMatches('sha512', [creds.webhookSecret, creds.secretKey], webhookPayload(body), signature);
   }
 
   parseWebhookEvent(body: unknown): WebhookEvent | null {

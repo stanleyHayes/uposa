@@ -92,14 +92,23 @@ export const uploadLimiter = rateLimit({
 });
 
 /**
- * Limiter for unauthenticated public write endpoints (contact form, transcript
- * requests, newsletter signup, guest donations). These accept anonymous POSTs
- * and are the prime targets for spam and storage-bloat abuse.
+ * Limiters for unauthenticated public write endpoints (contact form, transcript
+ * requests, newsletter signup, guest donations, event RSVPs) — prime targets for
+ * spam and storage bloat. Each endpoint gets its OWN counter: one shared
+ * instance meant a few people behind a carrier-NAT IP exhausted every form.
  *
- * 10 submissions per 15 minutes per IP.
+ * 20 submissions per 15 minutes per IP, per endpoint.
  */
-export const publicWriteLimiter = rateLimit({
-  ...baseOptions,
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-});
+function publicWriteLimiter() {
+  return rateLimit({
+    ...baseOptions,
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+  });
+}
+
+export const contactLimiter = publicWriteLimiter();
+export const transcriptLimiter = publicWriteLimiter();
+export const newsletterLimiter = publicWriteLimiter();
+export const donationLimiter = publicWriteLimiter();
+export const rsvpLimiter = publicWriteLimiter();

@@ -1,31 +1,37 @@
 import { z } from 'zod';
 
+// '' or null clears an optional field (stored as null); undefined leaves it unchanged.
+const blankToNull = (val: unknown) => (val === '' ? null : val);
+const clearableText = z.preprocess(blankToNull, z.string().nullable().optional());
+const clearableEnum = <T extends [string, ...string[]]>(values: T) =>
+  z.preprocess(blankToNull, z.enum(values).nullable().optional());
+
 export const updateProfileSchema = z.object({
   body: z.object({
     fullName: z.string().min(2).optional(),
-    gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
-    dateOfBirth: z.string().optional(),
-    maritalStatus: z.enum(['SINGLE', 'MARRIED', 'SEPARATED', 'DIVORCED', 'WIDOWED']).optional(),
-    mobileNumber: z.string().optional(),
-    altPhoneNumber: z.string().optional(),
-    residentialAddress: z.string().optional(),
-    city: z.string().optional(),
-    region: z.string().optional(),
-    country: z.string().optional(),
-    yearGroup: z.coerce.number().int().min(1981).optional(),
-    programme: z.enum(['GENERAL_ARTS', 'BUSINESS', 'HOME_ECONOMICS', 'VISUAL_ARTS', 'SCIENCE']).optional(),
-    house: z.enum(['ACKAH', 'DENSU', 'TANO', 'NKRUMAH', 'PRA', 'VOLTA']).optional(),
-    employmentType: z.enum(['RETIRED', 'STUDENT', 'UNEMPLOYED', 'SELF_EMPLOYED', 'GOVERNMENT_WORKER', 'PRIVATE_WORKER']).optional(),
-    occupation: z.string().optional(),
-    organization: z.string().optional(),
+    gender: clearableEnum(['MALE', 'FEMALE', 'OTHER']),
+    dateOfBirth: clearableText,
+    maritalStatus: clearableEnum(['SINGLE', 'MARRIED', 'SEPARATED', 'DIVORCED', 'WIDOWED']),
+    mobileNumber: clearableText,
+    altPhoneNumber: clearableText,
+    residentialAddress: clearableText,
+    city: clearableText,
+    region: clearableText,
+    country: clearableText,
+    yearGroup: z.preprocess(blankToNull, z.coerce.number().int().min(1981).nullable().optional()),
+    programme: clearableEnum(['GENERAL_ARTS', 'BUSINESS', 'HOME_ECONOMICS', 'VISUAL_ARTS', 'SCIENCE']),
+    house: clearableEnum(['ACKAH', 'DENSU', 'TANO', 'NKRUMAH', 'PRA', 'VOLTA']),
+    employmentType: clearableEnum(['RETIRED', 'STUDENT', 'UNEMPLOYED', 'SELF_EMPLOYED', 'GOVERNMENT_WORKER', 'PRIVATE_WORKER']),
+    occupation: clearableText,
+    organization: clearableText,
     areaOfExpertise: z.array(z.string()).optional(),
-    emergencyContactNumber: z.string().optional(),
-    emergencyRelationship: z.string().optional(),
-    nextOfKinName: z.string().optional(),
-    nextOfKinContact: z.string().optional(),
-    nextOfKinRelationship: z.string().optional(),
+    emergencyContactNumber: clearableText,
+    emergencyRelationship: clearableText,
+    nextOfKinName: clearableText,
+    nextOfKinContact: clearableText,
+    nextOfKinRelationship: clearableText,
     isWhatsAppMember: z.boolean().optional(),
-    willingToVolunteer: z.enum(['YES', 'NO', 'MAYBE']).optional(),
+    willingToVolunteer: clearableEnum(['YES', 'NO', 'MAYBE']),
     preferredContributions: z.array(z.string()).optional(),
   }),
 });
@@ -45,6 +51,9 @@ export const listMembersQuerySchema = z.object({
 export const adminUpdateMemberStatusSchema = z.object({
   body: z.object({
     membershipStatus: z.enum(['PENDING', 'ACTIVE', 'SUSPENDED', 'INACTIVE']),
+    // Registration rejection (status INACTIVE) — `reason` accepted as an alias.
+    rejectionReason: z.string().trim().max(2000).optional(),
+    reason: z.string().trim().max(2000).optional(),
   }),
 });
 

@@ -63,9 +63,10 @@ export async function adminUpdateExecutiveHandler(req: RouteRequest, res: Respon
   if (name !== undefined) data.name = name;
   if (position !== undefined) data.position = position;
   if (classOf !== undefined) data.classOf = classOf;
-  if (email !== undefined) data.email = email;
-  if (phone !== undefined) data.phone = phone;
-  if (bio !== undefined) data.bio = bio;
+  // '' (or null) clears these optional contact fields.
+  if (email !== undefined) data.email = email || null;
+  if (phone !== undefined) data.phone = phone || null;
+  if (bio !== undefined) data.bio = bio || null;
   if (order !== undefined) data.order = parseInt(order, 10);
   if (isActive !== undefined) data.isActive = isActive === 'true' || isActive === true;
 

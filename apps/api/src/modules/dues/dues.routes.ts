@@ -9,7 +9,7 @@ import {
   bulkCreateDuesHandler,
 } from './dues.controller';
 import { authMiddleware } from '../../middleware/auth.middleware';
-import { adminMiddleware } from '../../middleware/admin.middleware';
+import { adminMiddleware, requireAdminRole } from '../../middleware/admin.middleware';
 
 const router = Router();
 
@@ -20,8 +20,9 @@ router.post('/my/:id/pay', authMiddleware, memberPayDueHandler);
 
 // Admin routes
 router.get('/admin', adminMiddleware, adminListDuesHandler);
-router.post('/admin', adminMiddleware, createDueHandler);
-router.put('/admin/:id/mark-paid', adminMiddleware, markDuePaidHandler);
-router.post('/admin/bulk', adminMiddleware, bulkCreateDuesHandler);
+// Financial records: ADMIN / SUPER_ADMIN only (not moderators)
+router.post('/admin', adminMiddleware, requireAdminRole, createDueHandler);
+router.put('/admin/:id/mark-paid', adminMiddleware, requireAdminRole, markDuePaidHandler);
+router.post('/admin/bulk', adminMiddleware, requireAdminRole, bulkCreateDuesHandler);
 
 export default router;

@@ -114,7 +114,7 @@ export async function suspendMemberHandler(req: RouteRequest, res: Response): Pr
 export async function changeMemberStatusHandler(req: RouteRequest, res: Response): Promise<void> {
   const { id } = req.params;
   const parsed = adminUpdateMemberStatusSchema.parse({ body: req.body });
-  const member = await changeMemberStatus(id, parsed.body.membershipStatus);
+  const member = await changeMemberStatus(id, parsed.body.membershipStatus, parsed.body.rejectionReason || parsed.body.reason);
   successResponse(res, 'Member status updated', member);
 }
 

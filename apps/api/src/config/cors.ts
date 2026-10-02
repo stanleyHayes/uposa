@@ -32,7 +32,15 @@ export const corsAllowedOrigins = Array.from(
   )
 );
 
-export const corsAllowedOriginPatterns = env.ALLOWED_ORIGIN_PATTERNS.map((pattern: string) => new RegExp(pattern));
+/**
+ * Patterns are anchored to the whole origin: an unanchored `uposa\.org` would
+ * otherwise also allow `https://uposa.org.evil.com`.
+ */
+export function compileOriginPattern(pattern: string): RegExp {
+  return new RegExp(`^(?:${pattern})$`);
+}
+
+export const corsAllowedOriginPatterns = env.ALLOWED_ORIGIN_PATTERNS.map(compileOriginPattern);
 
 export function isCorsOriginAllowed(origin?: string): boolean {
   if (!origin) return true;

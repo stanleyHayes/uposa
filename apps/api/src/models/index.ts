@@ -82,6 +82,8 @@ export interface IMember {
   membershipStatus: string;
   isApproved: boolean;
   approvedAt?: Date;
+  rejectionReason?: string | null;
+  passwordChangedAt?: Date | null;
   consentGiven: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -93,6 +95,9 @@ export interface IAdmin { id: string;
   password: string;
   role: string;
   isActive: boolean;
+  passwordChangedAt?: Date | null;
+  resetTokenHash?: string | null;
+  resetTokenExpiry?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -167,7 +172,7 @@ export interface INews { id: string;
 export interface IDonation { id: string;
   memberId?: mongoose.Types.ObjectId;
   donorName: string;
-  donorEmail: string;
+  donorEmail?: string;
   amount: number;
   currency: string;
   channel: string;
@@ -200,7 +205,8 @@ export interface IJob { id: string;
   jobType: string;
   contactEmail?: string;
   externalUrl?: string;
-  postedById: mongoose.Types.ObjectId;
+  postedById?: mongoose.Types.ObjectId;
+  postedByAdminId?: mongoose.Types.ObjectId;
   isApproved: boolean;
   expiresAt?: Date;
   createdAt: Date;
@@ -296,6 +302,8 @@ export interface IContactMessage { id: string;
   message: string;
   isRead: boolean;
   repliedAt?: Date;
+  isArchived: boolean;
+  archivedAt?: Date | null;
   createdAt: Date;
 }
 
@@ -437,6 +445,9 @@ const MemberSchema = new Schema<IMember>(
     membershipStatus: { type: String, enum: MembershipStatus, default: 'PENDING' },
     isApproved: { type: Boolean, default: false },
     approvedAt: { type: Date },
+    rejectionReason: { type: String },
+    // Refresh tokens issued before this are rejected (password change/reset revokes sessions).
+    passwordChangedAt: { type: Date },
     consentGiven: { type: Boolean, default: false },
   },
   { timestamps: true, collection: 'members', toJSON: toJSONOptions },
@@ -452,6 +463,10 @@ const AdminSchema = new Schema<IAdmin>(
     password: { type: String, required: true },
     role: { type: String, enum: AdminRole, default: 'ADMIN' },
     isActive: { type: Boolean, default: true },
+    passwordChangedAt: { type: Date },
+    // Only the sha256 of the emailed reset token is stored.
+    resetTokenHash: { type: String },
+    resetTokenExpiry: { type: Date },
   },
   { timestamps: true, collection: 'admins', toJSON: toJSONOptions },
 );
@@ -550,7 +565,8 @@ const DonationSchema = new Schema<IDonation>(
   {
     memberId: { type: Schema.Types.ObjectId, ref: 'Member' },
     donorName: { type: String, required: true },
-    donorEmail: { type: String, required: true },
+    // Optional: offline (cash/bank) donations recorded by admins may have no email.
+    donorEmail: { type: String },
     amount: { type: Number, required: true },
     currency: { type: String, default: 'GHS' },
     channel: { type: String, enum: DonationChannel, default: 'CASH' },
@@ -591,7 +607,9 @@ const JobSchema = new Schema<IJob>(
     jobType: { type: String, enum: JobType, default: 'FULL_TIME' },
     contactEmail: { type: String },
     externalUrl: { type: String },
-    postedById: { type: Schema.Types.ObjectId, ref: 'Member', required: true },
+    // Member poster; admin-created jobs set postedByAdminId instead.
+    postedById: { type: Schema.Types.ObjectId, ref: 'Member' },
+    postedByAdminId: { type: Schema.Types.ObjectId, ref: 'Admin' },
     isApproved: { type: Boolean, default: false },
     expiresAt: { type: Date },
   },
@@ -731,6 +749,8 @@ const ContactMessageSchema = new Schema<IContactMessage>(
     message: { type: String, required: true },
     isRead: { type: Boolean, default: false },
     repliedAt: { type: Date },
+    isArchived: { type: Boolean, default: false },
+    archivedAt: { type: Date },
   },
   { timestamps: { createdAt: true, updatedAt: false }, collection: 'contact_messages', toJSON: toJSONOptions },
 );
@@ -943,3 +963,39 @@ const AdminNotificationSchema = new Schema<IAdminNotification>(
 AdminNotificationSchema.index({ isRead: 1, createdAt: -1 });
 
 export const AdminNotification: Model<IAdminNotification> = mongoose.models.AdminNotification || mongoose.model<IAdminNotification>('AdminNotification', AdminNotificationSchema);
+
+// ── Announcement ──
+export const AnnouncementType = ['INFO', 'WARNING', 'URGENT', 'SUCCESS'] as const;
+export const AnnouncementStatus = ['DRAFT', 'PUBLISHED', 'ARCHIVED'] as const;
+export const AnnouncementAudience = ['ALL', 'MEMBERS', 'EXECUTIVES'] as const;
+
+export interface IAnnouncement { id: string;
+  title: string;
+  body: string;
+  type: string;
+  status: string;
+  audience: string;
+  publishedAt?: Date | null;
+  expiresAt?: Date | null;
+  createdById: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const AnnouncementSchema = new Schema<IAnnouncement>(
+  {
+    title: { type: String, required: true },
+    body: { type: String, required: true }, // markdown
+    type: { type: String, enum: AnnouncementType, default: 'INFO' },
+    status: { type: String, enum: AnnouncementStatus, default: 'DRAFT' },
+    audience: { type: String, enum: AnnouncementAudience, default: 'ALL' },
+    publishedAt: { type: Date, default: null },
+    expiresAt: { type: Date, default: null },
+    createdById: { type: Schema.Types.ObjectId, ref: 'Admin', required: true },
+  },
+  { timestamps: true, collection: 'announcements', toJSON: toJSONOptions },
+);
+
+AnnouncementSchema.index({ status: 1, audience: 1, publishedAt: -1 });
+
+export const Announcement: Model<IAnnouncement> = mongoose.models.Announcement || mongoose.model<IAnnouncement>('Announcement', AnnouncementSchema);

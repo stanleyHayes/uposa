@@ -47,3 +47,10 @@ export function requireRole(...roles: Array<'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR
     next();
   };
 }
+
+/**
+ * Financial and destructive operations (payment-provider credentials, member
+ * deletion/suspension, donation/dues records, admin management): ADMIN or
+ * SUPER_ADMIN. Moderators keep content moderation only.
+ */
+export const requireAdminRole = requireRole('SUPER_ADMIN', 'ADMIN');

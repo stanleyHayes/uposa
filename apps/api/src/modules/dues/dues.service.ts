@@ -8,16 +8,16 @@ import { CreateDueInput, MarkPaidInput, BulkCreateDuesInput, MemberPayDueInput }
 async function attachMember(doc: Record<string, any>) {
   if (!doc.memberId) return { ...doc, member: null };
   const repos = getRepos();
-  const m = await repos.members.findById(doc.memberId, { projection: 'fullName email' });
-  return { ...doc, member: m ? { id: (m as any).id, fullName: (m as any).fullName, email: (m as any).email } : null };
+  const m = await repos.members.findById(doc.memberId, { projection: 'fullName email yearGroup' });
+  return { ...doc, member: m ? { id: m.id, fullName: m.fullName, email: m.email, yearGroup: m.yearGroup ?? null } : null };
 }
 
 async function attachMemberMany(docs: Record<string, any>[]) {
   const mIds = [...new Set(docs.map(d => d.memberId).filter(Boolean))];
   if (mIds.length === 0) return docs.map(d => ({ ...d, member: null }));
   const repos = getRepos();
-  const mDocs = await repos.members.findMany({ _id: { $in: mIds } }, { projection: 'fullName email' });
-  const mMap = new Map(mDocs.map((m: any) => [String(m.id), { id: m.id, fullName: m.fullName, email: m.email }]));
+  const mDocs = await repos.members.findMany({ _id: { $in: mIds } }, { projection: 'fullName email yearGroup' });
+  const mMap = new Map(mDocs.map((m: any) => [String(m.id), { id: m.id, fullName: m.fullName, email: m.email, yearGroup: m.yearGroup ?? null }]));
   return docs.map(d => ({ ...d, member: d.memberId ? mMap.get(String(d.memberId)) || null : null }));
 }
 
@@ -39,7 +39,7 @@ export async function adminListDues(query: Record<string, string | undefined>) {
   const repos = getRepos();
 
   const where: Record<string, unknown> = {};
-  if (status) where.status = status.toUpperCase();
+  if (status && status.toLowerCase() !== 'all') where.status = status.toUpperCase();
   if (year) where.year = parseInt(year, 10);
   if (memberId) where.memberId = memberId;
 
@@ -89,13 +89,15 @@ export async function markDuePaid(id: string, data: MarkPaidInput) {
   const due = await repos.dues.findById(id);
   if (!due) throw Object.assign(new Error('Due not found'), { statusCode: 404 });
 
-  const result = await repos.dues.updateById(id, {
+  // Conditional so a double-click doesn't overwrite the original paidAt/reference.
+  const result = await repos.dues.updateOne({ _id: id, status: { $ne: 'PAID' } }, {
     status: 'PAID',
     paidAt: new Date(),
     // Keep the reference the member submitted if the admin doesn't enter one.
     transactionRef: data.transactionRef || due.transactionRef || null,
     notes: data.notes || (due as any).notes,
   });
+  if (!result) throw Object.assign(new Error('This due is already marked as paid'), { statusCode: 409 });
 
   const withMember = await attachMember(result as Record<string, any>);
   return withMember;

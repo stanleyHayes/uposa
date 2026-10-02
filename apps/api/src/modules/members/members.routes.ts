@@ -14,15 +14,15 @@ import {
   changeMemberStatusHandler,
   deleteMemberHandler,
 } from './members.controller';
-import { authMiddleware } from '../../middleware/auth.middleware';
-import { adminMiddleware } from '../../middleware/admin.middleware';
+import { authMiddleware, memberOrAdminMiddleware } from '../../middleware/auth.middleware';
+import { adminMiddleware, requireAdminRole } from '../../middleware/admin.middleware';
 import { uploadSingle } from '../../middleware/upload.middleware';
 import { uploadLimiter } from '../../middleware/ratelimit.middleware';
 
 const router = Router();
 
-// Public routes
-router.get('/directory', getMemberDirectoryHandler);
+// Directory: any signed-in member OR admin (alumni, mobile and admin all read it)
+router.get('/directory', memberOrAdminMiddleware, getMemberDirectoryHandler);
 
 // Auth required
 router.get('/', authMiddleware, listMembersHandler);
@@ -40,6 +40,7 @@ export const adminMembersRouter = Router();
 adminMembersRouter.get('/', adminMiddleware, adminListMembersHandler);
 adminMembersRouter.get('/:id', adminMiddleware, adminGetMemberByIdHandler);
 adminMembersRouter.put('/:id/approve', adminMiddleware, approveMemberHandler);
-adminMembersRouter.put('/:id/suspend', adminMiddleware, suspendMemberHandler);
-adminMembersRouter.put('/:id/status', adminMiddleware, changeMemberStatusHandler);
-adminMembersRouter.delete('/:id', adminMiddleware, deleteMemberHandler);
+// Destructive member operations: ADMIN / SUPER_ADMIN only (not moderators)
+adminMembersRouter.put('/:id/suspend', adminMiddleware, requireAdminRole, suspendMemberHandler);
+adminMembersRouter.put('/:id/status', adminMiddleware, requireAdminRole, changeMemberStatusHandler);
+adminMembersRouter.delete('/:id', adminMiddleware, requireAdminRole, deleteMemberHandler);

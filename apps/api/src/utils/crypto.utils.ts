@@ -49,3 +49,26 @@ export function decryptCredentials(creds: Record<string, string>): Record<string
   }
   return decrypted;
 }
+
+/** Bytes a webhook signature is computed over: the raw body when captured, else re-serialised JSON. */
+export function webhookPayload(body: unknown): Buffer | string {
+  if (Buffer.isBuffer(body) || typeof body === 'string') return body;
+  return JSON.stringify(body);
+}
+
+/**
+ * Timing-safe check of a hex HMAC signature against each candidate secret
+ * (empty secrets are skipped, so an unconfigured secret never "matches").
+ */
+export function hmacHexMatches(
+  algorithm: 'sha256' | 'sha512',
+  secrets: Array<string | undefined>,
+  payload: Buffer | string,
+  signature: string,
+): boolean {
+  const received = Buffer.from(String(signature || ''), 'utf8');
+  return secrets.filter(Boolean).some((secret) => {
+    const expected = Buffer.from(crypto.createHmac(algorithm, secret as string).update(payload).digest('hex'), 'utf8');
+    return expected.length === received.length && crypto.timingSafeEqual(expected, received);
+  });
+}

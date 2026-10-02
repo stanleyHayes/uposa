@@ -11,6 +11,8 @@ import {
   changePasswordHandler,
   refreshTokenHandler,
   adminRefreshTokenHandler,
+  adminForgotPasswordHandler,
+  adminResetPasswordHandler,
 } from './auth.controller';
 import { authMiddleware } from '../../middleware/auth.middleware';
 import { adminMiddleware } from '../../middleware/admin.middleware';
@@ -27,6 +29,8 @@ router.post('/forgot-password', authLimiter, forgotPasswordHandler);
 router.post('/reset-password', authLimiter, resetPasswordHandler);
 router.post('/refresh', refreshLimiter, refreshTokenHandler);
 router.post('/admin/refresh', refreshLimiter, adminRefreshTokenHandler);
+router.post('/admin/forgot-password', authLimiter, adminForgotPasswordHandler);
+router.post('/admin/reset-password', authLimiter, adminResetPasswordHandler);
 router.get('/verify-email/:token', verifyEmail);
 router.post('/logout', logout);
 

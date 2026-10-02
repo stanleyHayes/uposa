@@ -14,8 +14,16 @@ export interface InitializePaymentResult {
   providerRef?: string;
 }
 
+/**
+ * Provider verdict: 'failed' only for a definitive failure (failed, abandoned,
+ * expired, cancelled). In-flight payments (mobile money awaiting approval,
+ * processing, etc.) are 'pending' and must not be marked FAILED.
+ */
+export type VerifyStatus = 'success' | 'pending' | 'failed';
+
 export interface VerifyPaymentResult {
   success: boolean;
+  status: VerifyStatus;
   reference: string;
   providerRef: string;
   amount: number; // in smallest unit
@@ -29,7 +37,8 @@ export interface PaymentProviderInterface {
   name: string;
   initialize(input: InitializePaymentInput): Promise<InitializePaymentResult>;
   verify(reference: string): Promise<VerifyPaymentResult>;
-  validateWebhook(body: unknown, signature: string): boolean;
+  /** `body` is the raw request bytes when available (preferred), else the parsed JSON. */
+  validateWebhook(body: unknown, signature: string): Promise<boolean>;
   parseWebhookEvent(body: unknown): WebhookEvent | null;
 }
 

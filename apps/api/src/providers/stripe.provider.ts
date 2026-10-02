@@ -5,8 +5,16 @@ import {
   InitializePaymentInput,
   InitializePaymentResult,
   VerifyPaymentResult,
+  VerifyStatus,
   WebhookEvent,
 } from './payment.types';
+
+/** Checkout Session → verdict (open/unpaid sessions are still in flight). */
+export function mapStripeSession(session: { status?: string | null; payment_status?: string | null }): VerifyStatus {
+  if (session.payment_status === 'paid' || session.payment_status === 'no_payment_required') return 'success';
+  if (session.status === 'expired') return 'failed';
+  return 'pending';
+}
 
 async function getCredentials() {
   const dbCreds = await getProviderCredentials('STRIPE');
@@ -61,42 +69,40 @@ export class StripeProvider implements PaymentProviderInterface {
     };
   }
 
-  async verify(reference: string): Promise<VerifyPaymentResult> {
+  /** `sessionId` is the Checkout Session id stored as the payment's providerRef. */
+  async verify(sessionId: string): Promise<VerifyPaymentResult> {
     const stripe = await getStripeClient();
 
-    const allSessions = await stripe.checkout.sessions.list({ limit: 100 });
-    let session: any = null;
-    for (const s of allSessions.data) {
-      if (s.client_reference_id === reference || s.metadata?.reference === reference) {
-        session = s;
-        break;
-      }
-    }
-
-    if (!session) {
+    // Fetch the session directly; scanning the latest 100 sessions missed older payments.
+    let session: any;
+    try {
+      session = await stripe.checkout.sessions.retrieve(sessionId);
+    } catch {
       throw Object.assign(new Error('Stripe session not found'), { statusCode: 404 });
     }
 
+    const status = mapStripeSession(session);
     return {
-      success: session.payment_status === 'paid',
-      reference,
+      success: status === 'success',
+      status,
+      reference: session.client_reference_id || session.metadata?.reference || sessionId,
       providerRef: session.payment_intent || session.id,
       amount: session.amount_total || 0,
       currency: (session.currency || 'usd').toUpperCase(),
-      paidAt: session.payment_status === 'paid' ? new Date().toISOString() : undefined,
+      paidAt: status === 'success' ? new Date().toISOString() : undefined,
       rawData: session,
     };
   }
 
-  validateWebhook(body: unknown, signature: string): boolean {
+  async validateWebhook(body: unknown, signature: string): Promise<boolean> {
+    // Signing secret from the admin UI (encrypted in the DB) or env. Uses the
+    // static helper: `new Stripe('')` throws, so with only DB-stored keys every
+    // webhook used to be rejected.
+    const { webhookSecret } = await getCredentials();
+    if (!webhookSecret) return false;
     try {
       const Stripe = require('stripe');
-      const stripe = new Stripe(env.STRIPE_SECRET_KEY);
-      stripe.webhooks.constructEvent(
-        body as string | Buffer,
-        signature,
-        env.STRIPE_WEBHOOK_SECRET,
-      );
+      Stripe.webhooks.constructEvent(body as string | Buffer, signature, webhookSecret);
       return true;
     } catch {
       return false;

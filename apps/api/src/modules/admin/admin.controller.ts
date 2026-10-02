@@ -15,7 +15,7 @@ import { successResponse, errorResponse } from '../../utils/response.utils';
 const createAdminSchema = z.object({
   body: z.object({
     fullName: z.string().min(2, 'Full name is required'),
-    email: z.string().email('Invalid email'),
+    email: z.string().trim().toLowerCase().email('Invalid email'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MODERATOR']).optional(),
   }),
@@ -24,7 +24,7 @@ const createAdminSchema = z.object({
 const updateAdminSchema = z.object({
   body: z.object({
     fullName: z.string().min(2).optional(),
-    email: z.string().email().optional(),
+    email: z.string().trim().toLowerCase().email().optional(),
     role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MODERATOR']).optional(),
     isActive: z.boolean().optional(),
   }),
@@ -73,7 +73,7 @@ export async function deactivateAdminHandler(req: RouteRequest, res: Response): 
 const updateProfileSchema = z.object({
   body: z.object({
     fullName: z.string().min(2, 'Name is required').optional(),
-    email: z.string().email('Invalid email').optional(),
+    email: z.string().trim().toLowerCase().email('Invalid email').optional(),
   }),
 });
 
@@ -94,5 +94,6 @@ export async function changePasswordHandler(req: RouteRequest, res: Response): P
   }
   const parsed = changePasswordSchema.parse({ body: req.body });
   const result = await changeAdminPassword(req.admin.id, parsed.body.currentPassword, parsed.body.newPassword);
-  successResponse(res, result.message);
+  // Earlier sessions are revoked by the change; return this device's new tokens.
+  successResponse(res, result.message, { token: result.accessToken, refreshToken: result.refreshToken });
 }

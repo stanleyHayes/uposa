@@ -1,7 +1,9 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { getRepos } from '../../repositories';
-import { notify } from '../../utils/notify';
+import { env } from '../../config/env';
+import { emailMatch } from '../../utils/search.utils';
+import { toSafeAdmin } from '../admin/admin.service';
 import {
   signMemberToken,
   signMemberRefreshToken,
@@ -9,17 +11,20 @@ import {
   signAdminRefreshToken,
   verifyMemberRefreshToken,
   verifyAdminRefreshToken,
+  issuedBeforePasswordChange,
 } from '../../utils/jwt.utils';
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
+  sendAdminPasswordResetEmail,
   sendWelcomeEmail,
 } from '../../utils/email.utils';
 import { RegisterInput, LoginInput, ForgotPasswordInput, ResetPasswordInput } from './auth.validation';
 
 export async function registerMember(data: RegisterInput, photoUrl?: string) {
   const { members } = getRepos();
-  const existing = await members.findOne({ email: data.email });
+  // Case-insensitive: older accounts may be stored mixed-case.
+  const existing = await members.findOne({ email: emailMatch(data.email) });
   if (existing) {
     throw Object.assign(new Error('Email already registered'), { statusCode: 409 });
   }
@@ -81,7 +86,7 @@ export async function registerMember(data: RegisterInput, photoUrl?: string) {
 
 export async function loginMember(data: LoginInput) {
   const { members } = getRepos();
-  const member = await members.findOne({ email: data.email });
+  const member = await members.findOne({ email: emailMatch(data.email) });
   if (!member) {
     throw Object.assign(new Error('Invalid email or password'), { statusCode: 401 });
   }
@@ -127,7 +132,7 @@ export async function loginMember(data: LoginInput) {
 }
 
 export async function refreshMemberSession(refreshToken: string) {
-  let payload: { id: string; email: string };
+  let payload: { id: string; email: string; iat?: number };
   try {
     payload = verifyMemberRefreshToken(refreshToken);
   } catch {
@@ -144,6 +149,11 @@ export async function refreshMemberSession(refreshToken: string) {
     throw Object.assign(new Error('Invalid or expired refresh token'), { statusCode: 401 });
   }
 
+  // A password change/reset revokes every session issued before it.
+  if (issuedBeforePasswordChange(payload.iat, member.passwordChangedAt)) {
+    throw Object.assign(new Error('Session expired, please log in again'), { statusCode: 401 });
+  }
+
   const tokenPayload = { id: (member as any).id, email: (member as any).email };
   const accessToken = signMemberToken(tokenPayload);
   const newRefreshToken = signMemberRefreshToken(tokenPayload);
@@ -153,7 +163,7 @@ export async function refreshMemberSession(refreshToken: string) {
 
 export async function loginAdmin(email: string, password: string) {
   const { admins } = getRepos();
-  const admin = await admins.findOne({ email });
+  const admin = await admins.findOne({ email: emailMatch(email) });
   if (!admin) {
     throw Object.assign(new Error('Invalid credentials'), { statusCode: 401 });
   }
@@ -171,8 +181,7 @@ export async function loginAdmin(email: string, password: string) {
   const accessToken = signAdminToken(tokenPayload);
   const refreshToken = signAdminRefreshToken(tokenPayload);
 
-  const { password: _pw, ...safeData } = admin as any;
-  return { admin: safeData, accessToken, refreshToken };
+  return { admin: toSafeAdmin(admin), accessToken, refreshToken };
 }
 
 /**
@@ -182,7 +191,7 @@ export async function loginAdmin(email: string, password: string) {
  * changes take effect at the next refresh.
  */
 export async function refreshAdminSession(refreshToken: string) {
-  let payload: { id: string };
+  let payload: { id: string; iat?: number };
   try {
     payload = verifyAdminRefreshToken(refreshToken);
   } catch {
@@ -193,6 +202,9 @@ export async function refreshAdminSession(refreshToken: string) {
   const admin = await admins.findById(payload.id);
   if (!admin || !admin.isActive) {
     throw Object.assign(new Error('Invalid or expired refresh token'), { statusCode: 401 });
+  }
+  if (issuedBeforePasswordChange(payload.iat, admin.passwordChangedAt)) {
+    throw Object.assign(new Error('Session expired, please log in again'), { statusCode: 401 });
   }
 
   const tokenPayload = { id: (admin as any).id, email: admin.email, role: admin.role as 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR' };
@@ -212,7 +224,7 @@ export async function verifyEmailToken(token: string) {
 
 export async function forgotPassword(data: ForgotPasswordInput) {
   const { members } = getRepos();
-  const member = await members.findOne({ email: data.email });
+  const member = await members.findOne({ email: emailMatch(data.email) });
   if (!member) return { message: 'If an account exists with that email, a reset link has been sent' };
 
   const resetToken = crypto.randomBytes(32).toString('hex');
@@ -241,7 +253,12 @@ export async function resetPassword(data: ResetPasswordInput) {
   }
 
   const hashedPassword = await bcrypt.hash(data.password, 12);
-  await members.updateById((member as any).id, { password: hashedPassword, resetToken: null, resetTokenExpiry: null });
+  await members.updateById((member as any).id, {
+    password: hashedPassword,
+    resetToken: null,
+    resetTokenExpiry: null,
+    passwordChangedAt: new Date(),
+  });
 
   return { message: 'Password reset successfully' };
 }
@@ -263,9 +280,15 @@ export async function changeMemberPassword(memberId: string, data: { currentPass
   }
 
   const hashedPassword = await bcrypt.hash(data.newPassword, 12);
-  await members.updateById(member.id, { password: hashedPassword });
+  await members.updateById(member.id, { password: hashedPassword, passwordChangedAt: new Date() });
 
-  return { message: 'Password changed successfully' };
+  // Older refresh tokens are now revoked; hand this device a fresh session.
+  const tokenPayload = { id: member.id, email: member.email };
+  return {
+    message: 'Password changed successfully',
+    accessToken: signMemberToken(tokenPayload),
+    refreshToken: signMemberRefreshToken(tokenPayload),
+  };
 }
 
 export async function getMe(userId: string, isAdmin: boolean) {
@@ -274,12 +297,61 @@ export async function getMe(userId: string, isAdmin: boolean) {
   if (isAdmin) {
     const admin = await admins.findById(userId);
     if (!admin) throw Object.assign(new Error('Admin not found'), { statusCode: 404 });
-    const { password: _pw, ...safeData } = admin as any;
-    return { type: 'admin', data: safeData };
+    return { type: 'admin', data: toSafeAdmin(admin) };
   }
 
   const member = await members.findById(userId);
   if (!member) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
   const { password: _pw, verificationToken: _vt, resetToken: _rt, resetTokenExpiry: _rte, ...safeData } = member as any;
   return { type: 'member', data: safeData };
+}
+
+// ── Admin password reset ──
+
+const ADMIN_RESET_MESSAGE = 'If an admin account exists with that email, a reset link has been sent';
+
+function sha256(value: string): string {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+/** Always resolves with the same message (no account enumeration). */
+export async function adminForgotPassword(email: string) {
+  const { admins } = getRepos();
+  const admin = await admins.findOne({ email: emailMatch(email) });
+  if (!admin || !admin.isActive) return { message: ADMIN_RESET_MESSAGE };
+
+  // Only the hash is stored, so a database leak doesn't expose usable reset links.
+  const token = crypto.randomBytes(32).toString('hex');
+  await admins.updateById((admin as any).id, {
+    resetTokenHash: sha256(token),
+    resetTokenExpiry: new Date(Date.now() + 60 * 60 * 1000),
+  });
+
+  try {
+    await sendAdminPasswordResetEmail(admin.email, `${env.ADMIN_URL}/reset-password?token=${token}`, admin.fullName);
+  } catch (emailErr) {
+    console.error('Failed to send admin reset email:', emailErr);
+  }
+
+  return { message: ADMIN_RESET_MESSAGE };
+}
+
+export async function adminResetPassword(token: string, password: string) {
+  const { admins } = getRepos();
+  const admin = await admins.findOne({
+    resetTokenHash: sha256(token),
+    resetTokenExpiry: { $gt: new Date() },
+  });
+  if (!admin || !admin.isActive) {
+    throw Object.assign(new Error('Invalid or expired reset token'), { statusCode: 400 });
+  }
+
+  await admins.updateById((admin as any).id, {
+    password: await bcrypt.hash(password, 12),
+    resetTokenHash: null,
+    resetTokenExpiry: null,
+    passwordChangedAt: new Date(),
+  });
+
+  return { message: 'Password reset successfully' };
 }

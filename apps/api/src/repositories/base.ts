@@ -24,6 +24,8 @@ export interface IRepository<T = Record<string, any>> {
   incrementById(id: string, field: string, amount: number, options?: FindOptions): Promise<T | null>;
   upsert(filter: Record<string, unknown>, data: any, options?: FindOptions): Promise<T>;
   deleteById(id: string, options?: FindOptions): Promise<boolean>;
+  /** Atomic delete: returns the deleted doc, or null when nothing matched the filter. */
+  deleteOne(filter: Record<string, unknown>, options?: FindOptions): Promise<T | null>;
   deleteMany(filter: Record<string, unknown>, options?: FindOptions): Promise<number>;
   count(filter?: Record<string, unknown>, options?: FindOptions): Promise<number>;
   aggregate<R = any>(pipeline: Record<string, unknown>[], options?: FindOptions): Promise<R[]>;
@@ -104,6 +106,11 @@ export class MongooseRepository<T> implements IRepository<T> {
   async deleteById(id: string, options?: FindOptions): Promise<boolean> {
     const result = await this.model.findByIdAndDelete(id, { session: options?.session });
     return !!result;
+  }
+
+  async deleteOne(filter: Record<string, unknown>, options?: FindOptions): Promise<T | null> {
+    const doc = await this.model.findOneAndDelete(filter, { session: options?.session });
+    return doc ? (doc.toJSON() as T) : null;
   }
 
   async deleteMany(filter: Record<string, unknown>, options?: FindOptions): Promise<number> {
