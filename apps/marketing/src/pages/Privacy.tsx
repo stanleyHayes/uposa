@@ -42,6 +42,7 @@ const sections: LegalSection[] = [
                     <li>Forum posts and comments, job postings and applications (including cover letters and CV links), mentorship requests, event RSVPs, and your participation in polls and elections.</li>
                     <li>Dues and donation records: amount, currency, reference, status and the name and email used to pay.</li>
                     <li>Messages you send through our contact, transcript request and newsletter forms.</li>
+                    <li>Reports you make about content or members, and the members you block. A reported member is never told who reported them.</li>
                 </ul>
                 <p><strong>Payments:</strong> card and mobile money details are entered directly with our payment providers (Paystack, Stripe and Coinbase Commerce). We never receive or store your full card number, CVV or mobile money PIN.</p>
                 <p><strong>Technical data:</strong> our servers record IP addresses and request details to keep the Services secure and to prevent abuse. Your browser or phone stores your sign-in session and display preferences (such as light or dark mode). We do not use advertising, tracking or analytics cookies.</p>

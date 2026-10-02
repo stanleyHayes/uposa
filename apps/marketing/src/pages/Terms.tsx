@@ -41,7 +41,13 @@ const sections: LegalSection[] = [
                     <li>Copy, scrape or use member directory information for marketing, solicitation or any purpose unrelated to the association.</li>
                     <li>Impersonate others, interfere with polls or elections, or attempt to access accounts or data that are not yours.</li>
                 </ul>
-                <p>We may remove content, and suspend or close accounts, that break these rules or the association's constitution.</p>
+                <p>
+                    <strong>UPOSA has zero tolerance for objectionable content and abusive members.</strong> Offensive language is blocked
+                    when you post. You can report any post, comment, job advert or member, and block members so you no longer see their
+                    content. Our moderators review reports within 24 hours. Content reported by several members is hidden while it is
+                    reviewed. We remove content that breaks these rules or the association's constitution, and suspend or close the
+                    accounts responsible.
+                </p>
             </>
         ),
     },
