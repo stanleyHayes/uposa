@@ -18,6 +18,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
 import type { Job } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 export default function JobsPage() {
   const navigate = useNavigate()
@@ -36,8 +37,8 @@ export default function JobsPage() {
     try {
       const res = await adminJobsApi.listAll({ limit: 100 })
       setJobs((res.data.data || []) as Job[])
-    } catch {
-      toast.error('Failed to load jobs')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load jobs'))
     } finally {
       setLoading(false)
     }
@@ -76,8 +77,8 @@ export default function JobsPage() {
       toast.success('Job deleted')
       setDeleteTarget(null)
       fetchJobs()
-    } catch {
-      toast.error('Failed to delete job')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete job'))
     }
   }
 

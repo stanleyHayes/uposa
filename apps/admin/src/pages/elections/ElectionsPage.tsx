@@ -18,6 +18,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
 import type { Election } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 export default function ElectionsPage() {
   const navigate = useNavigate()
@@ -32,8 +33,8 @@ export default function ElectionsPage() {
     try {
       const res = await adminElectionsApi.listAll({ limit: 100 })
       setElections((res.data as any).data || [])
-    } catch {
-      toast.error('Failed to load elections')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load elections'))
     } finally {
       setLoading(false)
     }
@@ -81,8 +82,8 @@ export default function ElectionsPage() {
       toast.success('Election deleted')
       setDeleteElectionTarget(null)
       fetchElections()
-    } catch {
-      toast.error('Failed to delete election')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete election'))
     }
   }
 

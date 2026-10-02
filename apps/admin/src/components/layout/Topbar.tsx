@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import { useUIStore } from '../../stores/ui.store'
 import { useNotificationStore } from '../../stores/notification.store'
 import { useAuth } from '../../hooks/useAuth'
-import { ROLES } from '../../constants/roles'
 import { cn } from '../../utils/cn'
 import { formatTimeAgo } from '../../utils/formatters'
 import { animateThemeToggle } from '../../utils/themeTransition'
@@ -235,7 +234,7 @@ export default function Topbar() {
                 {currentUser?.name}
               </span>
               <span className="text-[11px] leading-tight text-brand-950/42 dark:text-gray-500">
-                {currentUser ? ROLES[currentUser.role] : ''}
+                {currentUser?.roleInfo?.name ?? ''}
               </span>
             </div>
           </button>

@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useUIStore } from '../../stores/ui.store'
 import { useAuth } from '../../hooks/useAuth'
@@ -10,7 +10,20 @@ import { PageSkeleton } from '../ui/Skeleton'
 
 export default function DashboardLayout() {
   const { sidebarCollapsed, mobileSidebarOpen, setMobileSidebarOpen } = useUIStore()
-  const { currentUser } = useAuth()
+  const { currentUser, fetchMe } = useAuth()
+
+  // Permissions are server-side and can change while the admin is signed in: re-read them
+  // on load, when the window regains focus, and every 5 minutes.
+  useEffect(() => {
+    fetchMe()
+    const onFocus = () => { fetchMe() }
+    window.addEventListener('focus', onFocus)
+    const interval = setInterval(fetchMe, 5 * 60_000)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      clearInterval(interval)
+    }
+  }, [fetchMe])
 
   return (
     <div className="flex h-screen overflow-hidden bg-cream-50 text-brand-950 dark:bg-dark-bg dark:text-gray-100">

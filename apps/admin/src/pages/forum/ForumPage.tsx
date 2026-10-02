@@ -20,6 +20,7 @@ import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
 import { cn } from '../../utils/cn'
 import type { ForumCategory, ForumThread, ForumReply, ThreadStatus, ReplyStatus } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 const ITEMS_PER_PAGE = 10
 
@@ -80,8 +81,8 @@ export default function ForumPage() {
     try {
       const res = await adminForumApi.listPosts({ limit: 100 })
       setThreads((res.data.data || []) as ForumThread[])
-    } catch {
-      toast.error('Failed to load forum posts')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load forum posts'))
     } finally {
       setLoading(false)
     }
@@ -125,8 +126,8 @@ export default function ForumPage() {
       })
       toast.success(wasPinned ? 'Thread unpinned' : 'Thread pinned')
       fetchPosts()
-    } catch {
-      toast.error('Failed to toggle pin')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to toggle pin'))
     }
   }
 
@@ -144,8 +145,8 @@ export default function ForumPage() {
       })
       toast.success(wasClosed ? 'Thread reopened' : 'Thread closed')
       fetchPosts()
-    } catch {
-      toast.error('Failed to toggle lock')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to toggle lock'))
     }
   }
 
@@ -164,8 +165,8 @@ export default function ForumPage() {
       setDeleteTarget(null)
       if (selectedThread?.id === deleteTarget.id) setSelectedThread(null)
       fetchPosts()
-    } catch {
-      toast.error('Failed to delete thread')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete thread'))
     }
   }
 
@@ -198,8 +199,8 @@ export default function ForumPage() {
       toast.success('Reply deleted permanently')
       setDeleteReplyTarget(null)
       fetchPosts()
-    } catch {
-      toast.error('Failed to delete reply')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete reply'))
     }
   }
 
@@ -252,7 +253,7 @@ export default function ForumPage() {
                   {' · '}{formatDate(freshThread.createdAt)}
                 </p>
               </div>
-              <RoleGate permission="forum:moderate">
+              <RoleGate permission="forum:edit">
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => handlePin(freshThread)}
@@ -268,12 +269,14 @@ export default function ForumPage() {
                   >
                     {freshThread.status === 'closed' ? <Unlock size={16} /> : <Lock size={16} />}
                   </button>
-                  <button
-                    onClick={() => setDeleteTarget(freshThread)}
-                    className="rounded-lg p-2 text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-all"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <RoleGate permission="forum:delete">
+                    <button
+                      onClick={() => setDeleteTarget(freshThread)}
+                      className="rounded-lg p-2 text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </RoleGate>
                 </div>
               </RoleGate>
             </div>
@@ -348,7 +351,7 @@ export default function ForumPage() {
                       </div>
 
                       {/* Moderation actions */}
-                      <RoleGate permission="forum:moderate">
+                      <RoleGate permission="forum:edit">
                         <div className="flex items-center gap-0.5 shrink-0">
                           {reply.status === 'flagged' && (
                             <button
@@ -385,13 +388,15 @@ export default function ForumPage() {
                               <Eye size={15} />
                             </button>
                           )}
-                          <button
-                            onClick={() => setDeleteReplyTarget(reply)}
-                            title="Delete permanently"
-                            className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-all"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                          <RoleGate permission="forum:delete">
+                            <button
+                              onClick={() => setDeleteReplyTarget(reply)}
+                              title="Delete permanently"
+                              className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-all"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </RoleGate>
                         </div>
                       </RoleGate>
                     </div>
@@ -404,7 +409,7 @@ export default function ForumPage() {
 
         {/* Admin reply box */}
         {freshThread.status !== 'closed' && freshThread.status !== 'deleted' && (
-          <RoleGate permission="forum:moderate">
+          <RoleGate permission="forum:edit">
             <div className="admin-card-surface p-4">
               <label className="text-sm font-semibold text-gray-900 dark:text-gray-100 block mb-2">
                 Reply as Admin
@@ -577,7 +582,7 @@ export default function ForumPage() {
                           >
                             <ChevronRight size={15} />
                           </button>
-                          <RoleGate permission="forum:moderate">
+                          <RoleGate permission="forum:edit">
                             {thread.status !== 'deleted' && (
                               <>
                                 <button
@@ -594,12 +599,14 @@ export default function ForumPage() {
                                 >
                                   {thread.status === 'closed' ? <Unlock size={15} /> : <Lock size={15} />}
                                 </button>
-                                <button
-                                  onClick={() => setDeleteTarget(thread)}
-                                  className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-all duration-150"
-                                >
-                                  <Trash2 size={15} />
-                                </button>
+                                <RoleGate permission="forum:delete">
+                                  <button
+                                    onClick={() => setDeleteTarget(thread)}
+                                    className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-all duration-150"
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
+                                </RoleGate>
                               </>
                             )}
                           </RoleGate>

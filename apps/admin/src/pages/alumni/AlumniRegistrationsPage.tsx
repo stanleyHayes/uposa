@@ -19,6 +19,7 @@ import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
 import { exportToCSV } from '../../utils/export'
 import type { RegistrationStatus, Programme, House } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 const ITEMS_PER_PAGE = 10
 
@@ -94,14 +95,14 @@ export default function AlumniRegistrationsPage() {
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
 
-  const handleApprove = async (id: string, name: string) => {
+  const handleApprove = async (id: string, name: string, reinstate = false) => {
     if (!currentUser) return
     try {
       await approveRegistration(id, currentUser.id, currentUser.name)
-      addActivity({ action: 'approved alumni registration for', targetType: name, targetId: id, performedBy: currentUser.id, performedByName: currentUser.name })
-      toast.success('Registration approved', `${name} has been approved.`)
-    } catch {
-      toast.error('Failed to approve registration')
+      addActivity({ action: reinstate ? 'reinstated member' : 'approved alumni registration for', targetType: name, targetId: id, performedBy: currentUser.id, performedByName: currentUser.name })
+      toast.success(reinstate ? 'Member reinstated' : 'Registration approved', `${name} has been ${reinstate ? 'reinstated' : 'approved'}.`)
+    } catch (err) {
+      toast.error(apiErrorMessage(err, reinstate ? 'Failed to reinstate member' : 'Failed to approve registration'))
     }
   }
 
@@ -113,8 +114,8 @@ export default function AlumniRegistrationsPage() {
       toast.success('Registration rejected', `${rejectModal.name}'s registration has been rejected.`)
       setRejectModal(null)
       setRejectReason('')
-    } catch {
-      toast.error('Failed to reject registration')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to reject registration'))
     }
   }
 
@@ -143,7 +144,7 @@ export default function AlumniRegistrationsPage() {
         title="Alumni Registrations"
         description={`${registrations.filter((r) => r.status === 'pending').length} pending review`}
         actions={
-          <RoleGate permission="alumni:export">
+          <RoleGate permission="registrations:view">
             <Button variant="secondary" leftIcon={<Download size={16} />} onClick={handleExport}>
               Export CSV
             </Button>
@@ -252,7 +253,7 @@ export default function AlumniRegistrationsPage() {
                         </button>
                         {reg.status === 'pending' && (
                           <>
-                            <RoleGate permission="alumni:approve">
+                            <RoleGate permission="registrations:edit">
                               <button
                                 onClick={() => handleApprove(reg.id, reg.fullName)}
                                 className="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600 transition-all duration-150"
@@ -261,7 +262,7 @@ export default function AlumniRegistrationsPage() {
                                 <CheckCircle size={16} />
                               </button>
                             </RoleGate>
-                            <RoleGate permission="alumni:reject">
+                            <RoleGate permission="registrations:edit">
                               <button
                                 onClick={() => setRejectModal({ id: reg.id, name: reg.fullName })}
                                 className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-all duration-150"
@@ -271,6 +272,20 @@ export default function AlumniRegistrationsPage() {
                               </button>
                             </RoleGate>
                           </>
+                        )}
+                        {/* Reinstating uses the approve route (registrations:edit) and also needs members:edit. */}
+                        {reg.membershipStatus === 'SUSPENDED' && (
+                          <RoleGate permission="registrations:edit">
+                          <RoleGate permission="members:edit">
+                            <button
+                              onClick={() => handleApprove(reg.id, reg.fullName, true)}
+                              className="rounded-lg p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600 transition-all duration-150"
+                              title="Reinstate member"
+                            >
+                              <CheckCircle size={16} />
+                            </button>
+                          </RoleGate>
+                          </RoleGate>
                         )}
                       </div>
                     </td>

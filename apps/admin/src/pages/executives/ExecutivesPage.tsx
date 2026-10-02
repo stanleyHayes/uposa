@@ -17,6 +17,7 @@ import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import type { Executive } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 export default function ExecutivesPage() {
   const navigate = useNavigate()
@@ -41,8 +42,8 @@ export default function ExecutivesPage() {
     try {
       const res = await adminExecutivesApi.list({ limit: 100 })
       setExecutives((res.data.data || []) as Executive[])
-    } catch {
-      toast.error('Failed to load executives')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load executives'))
     } finally {
       setLoading(false)
     }
@@ -79,8 +80,8 @@ export default function ExecutivesPage() {
       toast.success('Executive deleted')
       setDeleteTarget(null)
       fetchExecutives()
-    } catch {
-      toast.error('Failed to delete executive')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete executive'))
     }
   }
 

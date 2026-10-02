@@ -22,9 +22,9 @@ import EmptyState from '../../components/ui/EmptyState'
 import Spinner from '../../components/ui/Spinner'
 import { adminPaymentMethodsApi } from '../../api/services'
 import { useToast } from '../../hooks/useToast'
-import { useAuth } from '../../hooks/useAuth'
-import { isModerator } from '../../utils/permissions'
+import { usePermission } from '../../hooks/usePermission'
 import type { PaymentMethod } from '../../types/donation.types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 const providerMeta: Record<string, { icon: typeof CreditCard; color: string; bg: string; border: string; gradient: string }> = {
   PAYSTACK: {
@@ -72,15 +72,15 @@ export default function PaymentMethodsPage() {
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState<string | null>(null)
   const { toast } = useToast()
-  const { currentUser } = useAuth()
-  // Credential edits and enable/disable are refused to moderators by the API.
-  const canManage = !isModerator(currentUser)
+  const { can } = usePermission()
+  // Credential edits and enable/disable need payment_methods:edit on the server.
+  const canManage = can('payment_methods:edit')
 
   const fetchMethods = () => {
     setLoading(true)
     adminPaymentMethodsApi.list()
       .then((res) => setMethods((res.data.data as PaymentMethod[]) || []))
-      .catch(() => toast.error('Failed to load payment methods'))
+      .catch((err) => toast.error(apiErrorMessage(err, 'Failed to load payment methods')))
       .finally(() => setLoading(false))
   }
 
@@ -92,8 +92,8 @@ export default function PaymentMethodsPage() {
       await adminPaymentMethodsApi.toggle(method.id, !method.isEnabled)
       setMethods((prev) => prev.map((m) => m.id === method.id ? { ...m, isEnabled: !m.isEnabled } : m))
       toast.success(`${method.displayName} ${method.isEnabled ? 'disabled' : 'enabled'}`)
-    } catch {
-      toast.error('Failed to toggle payment method')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to toggle payment method'))
     } finally {
       setToggling(null)
     }

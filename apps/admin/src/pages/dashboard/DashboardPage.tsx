@@ -37,7 +37,6 @@ import { useAuth } from '../../hooks/useAuth'
 import { useActivityStore } from '../../stores/activity.store'
 import { useReportsStore } from '../../stores/reports.store'
 import { usePermission } from '../../hooks/usePermission'
-import { ROLES } from '../../constants/roles'
 import { formatTimeAgo } from '../../utils/formatters'
 import { Skeleton } from '../../components/ui/Skeleton'
 import type { Permission } from '../../types'
@@ -443,7 +442,7 @@ export default function DashboardPage() {
   const { can } = usePermission()
   const openReports = useReportsStore((s) => s.openCount)
   const fetchOpenReports = useReportsStore((s) => s.fetchOpenCount)
-  const canSeeReports = can('forum:view')
+  const canSeeReports = can('reports:view')
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -526,17 +525,17 @@ export default function DashboardPage() {
       icon: AlertTriangle,
       tone: 'amber',
       path: '/alumni-registrations',
-      permission: 'alumni:view',
+      permission: 'registrations:view',
     },
   ]
 
   const queueItems: QueueItem[] = [
-    { label: 'Pending registrations', value: o.pendingApprovals, detail: 'Alumni waiting for approval', icon: UserCheck, path: '/alumni-registrations', permission: 'alumni:view', tone: o.pendingApprovals > 0 ? 'warning' : 'neutral' },
+    { label: 'Pending registrations', value: o.pendingApprovals, detail: 'Alumni waiting for approval', icon: UserCheck, path: '/alumni-registrations', permission: 'registrations:view', tone: o.pendingApprovals > 0 ? 'warning' : 'neutral' },
     { label: 'Unread contact messages', value: o.unreadMessagesCount, detail: 'Public enquiries needing reply', icon: Mail, path: '/contact-messages', permission: 'contact:view', tone: o.unreadMessagesCount > 0 ? 'danger' : 'neutral' },
     { label: 'Job posts to review', value: o.pendingJobs, detail: 'Submitted opportunities not yet approved', icon: Briefcase, path: '/jobs', permission: 'jobs:view', tone: o.pendingJobs > 0 ? 'warning' : 'neutral' },
-    { label: 'Mentorship requests', value: o.pendingMentorshipRequests, detail: 'Relationship requests waiting on response', icon: Handshake, path: '/members', permission: 'members:view', tone: o.pendingMentorshipRequests > 0 ? 'warning' : 'neutral' },
+    { label: 'Mentorship requests', value: o.pendingMentorshipRequests, detail: 'Relationship requests waiting on response', icon: Handshake, path: '/mentorship', permission: 'mentorship:view', tone: o.pendingMentorshipRequests > 0 ? 'warning' : 'neutral' },
     { label: 'Pending donations', value: o.pendingDonationsCount, detail: 'Manual or provider gifts to reconcile', icon: WalletCards, path: '/donations', permission: 'donations:view', tone: o.pendingDonationsCount > 0 ? 'warning' : 'neutral' },
-    { label: 'Reported content', value: openReports, detail: 'Member reports awaiting moderation', icon: Flag, path: '/reports', permission: 'forum:view', tone: openReports > 0 ? 'danger' : 'neutral' },
+    { label: 'Reported content', value: openReports, detail: 'Member reports awaiting moderation', icon: Flag, path: '/reports', permission: 'reports:view', tone: openReports > 0 ? 'danger' : 'neutral' },
     { label: 'Transcript requests', value: o.pendingTranscriptRequestsCount, detail: 'Service desk requests still open', icon: FileText, path: '/contact-messages', permission: 'contact:view', tone: o.pendingTranscriptRequestsCount > 0 ? 'warning' : 'neutral' },
   ]
 
@@ -544,16 +543,16 @@ export default function DashboardPage() {
     { label: 'Post news', detail: 'Publish an update, report, or announcement.', icon: Newspaper, path: '/news/new', permission: 'news:create' },
     { label: 'Create event', detail: 'Add upcoming gatherings and RSVP paths.', icon: Calendar, path: '/events/new', permission: 'events:create' },
     { label: 'Launch poll', detail: 'Start a quick member decision point.', icon: Vote, path: '/polls/new', permission: 'polls:create' },
-    { label: 'Site config', detail: 'Update public website content blocks.', icon: Settings, path: '/site-config', permission: 'settings:edit' },
+    { label: 'Site config', detail: 'Update public website content blocks.', icon: Settings, path: '/site-config', permission: 'site:edit' },
   ]
 
   const contentLanes: Array<{ label: string; value: number; icon: ElementType; path: string; permission: Permission }> = [
     { label: 'Published news', value: o.publishedNewsCount, icon: Newspaper, path: '/news', permission: 'news:view' },
     { label: 'Upcoming events', value: o.upcomingEventsCount, icon: Calendar, path: '/events', permission: 'events:view' },
     { label: 'Active projects', value: o.activeProjectsCount, icon: FolderKanban, path: '/projects', permission: 'projects:view' },
-    { label: 'Gallery items', value: o.galleryItemCount, icon: Image, path: '/gallery', permission: 'content:view' },
+    { label: 'Gallery items', value: o.galleryItemCount, icon: Image, path: '/gallery', permission: 'gallery:view' },
     { label: 'Executives', value: o.activeExecutivesCount, icon: ShieldCheck, path: '/executives', permission: 'executives:view' },
-    { label: 'Newsletter', value: o.newsletterSubscribers, icon: Send, path: '/newsletter', permission: 'settings:view' },
+    { label: 'Newsletter', value: o.newsletterSubscribers, icon: Send, path: '/newsletter', permission: 'newsletter:view' },
   ]
 
   const donationBuckets = financials.donationsByChannel.length
@@ -575,7 +574,7 @@ export default function DashboardPage() {
         <div className="relative grid gap-0 lg:grid-cols-[1.45fr_0.9fr]">
           <div className="border-b border-white/10 p-6 md:p-8 lg:border-b-0 lg:border-r">
             <p className="mb-3 text-[11px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">
-              {currentUser ? ROLES[currentUser.role] : 'Admin desk'} / {today}
+              {currentUser?.roleInfo?.name ?? 'Admin desk'} / {today}
             </p>
             <h1 className="max-w-3xl text-3xl font-black leading-tight tracking-tight sm:text-4xl">
               Good day, {firstName}. Here is the platform at a glance.
@@ -610,7 +609,7 @@ export default function DashboardPage() {
               <p className="mt-3 text-sm leading-6 text-cream-100/62">Open items across approvals, messages, finances, jobs, transcripts, and mentorship.</p>
             </div>
             <div className="mt-8 grid gap-3">
-              <RoleGate permission="alumni:view">
+              <RoleGate permission="registrations:view">
                 <button onClick={() => navigate('/alumni-registrations')} className="group flex items-center justify-between border border-[#D4AF37]/40 bg-[#D4AF37] px-4 py-3 text-sm font-black text-[#001B50]">
                   Review queue <ArrowRight size={17} className="transition-transform group-hover:translate-x-1" />
                 </button>

@@ -40,8 +40,8 @@ export default function GalleryPage() {
     try {
       const res = await adminGalleryApi.listCategories()
       setCategories((res.data as any).data || [])
-    } catch {
-      toast.error('Failed to load gallery categories')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load gallery categories'))
     } finally {
       setLoading(false)
     }
@@ -105,8 +105,8 @@ export default function GalleryPage() {
       toast.success('Category deleted')
       setDeleteTarget(null)
       fetchCategories()
-    } catch {
-      toast.error('Failed to delete category')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete category'))
     }
   }
 
@@ -120,7 +120,7 @@ export default function GalleryPage() {
         title="Gallery"
         description={`${categories.length} categories, ${totalImages} images`}
         actions={
-          <RoleGate permission="content:create">
+          <RoleGate permission="gallery:create">
             <Button leftIcon={<FolderPlus size={16} />} onClick={() => setShowCreate(true)}>
               New Category
             </Button>
@@ -189,7 +189,7 @@ export default function GalleryPage() {
             title="No gallery categories yet"
             description="Create your first category to start organizing images."
             action={
-              <RoleGate permission="content:create">
+              <RoleGate permission="gallery:create">
                 <Button leftIcon={<FolderPlus size={16} />} onClick={() => setShowCreate(true)}>
                   New Category
                 </Button>
@@ -220,7 +220,7 @@ export default function GalleryPage() {
                 </div>
                 {/* Actions */}
                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                  <RoleGate permission="content:delete">
+                  <RoleGate permission="gallery:delete">
                     <button onClick={() => setDeleteTarget(cat)} className="w-7 h-7 rounded-lg bg-white/90 dark:bg-dark-card/90 flex items-center justify-center shadow-sm hover:bg-red-50 dark:hover:bg-red-900/30">
                       <Trash2 size={13} className="text-red-500" />
                     </button>

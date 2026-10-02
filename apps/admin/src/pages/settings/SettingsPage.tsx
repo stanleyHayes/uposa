@@ -16,6 +16,7 @@ import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../../hooks/useAuth'
+import { isSuperAdmin } from '../../utils/permissions'
 import { useActivityStore } from '../../stores/activity.store'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
@@ -149,7 +150,7 @@ export default function SettingsPage() {
     { key: 'profile', label: 'Profile', icon: User },
     { key: 'organization', label: 'Organization', icon: Building2 },
     { key: 'notifications', label: 'Notifications', icon: Bell },
-    ...(currentUser?.role === 'super_admin' ? [{ key: 'danger' as TabKey, label: 'Danger Zone', icon: Shield }] : []),
+    ...(isSuperAdmin(currentUser) ? [{ key: 'danger' as TabKey, label: 'Danger Zone', icon: Shield }] : []),
   ]
 
   const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name ?? 'User')}&background=001B50&color=FFF8DC&bold=true&size=128`
@@ -203,7 +204,7 @@ export default function SettingsPage() {
                   <p className="text-sm text-gray-500 dark:text-gray-400">{currentUser?.email}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-100 text-brand-700">
-                      {currentUser?.role?.replace('_', ' ')}
+                      {currentUser?.roleInfo?.name}
                     </span>
                     {currentUser?.createdAt && (
                       <span className="text-xs text-gray-400">Member since {formatDate(currentUser.createdAt)}</span>
@@ -337,7 +338,7 @@ export default function SettingsPage() {
         )}
 
         {/* Danger Zone Tab */}
-        {activeTab === 'danger' && currentUser?.role === 'super_admin' && (
+        {activeTab === 'danger' && isSuperAdmin(currentUser) && (
           <div className="space-y-4">
             <div className="admin-card-surface border border-red-200 dark:border-red-900/50 shadow-sm p-6">
               <div className="flex items-start gap-3 mb-5">

@@ -19,6 +19,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
 import type { Poll } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 const ITEMS_PER_PAGE = 10
 const GRID_ITEMS_PER_PAGE = 9
@@ -40,8 +41,8 @@ export default function PollsPage() {
         ...p,
         totalVotes: p.totalVotes ?? (p._count?.votes ?? p.options?.reduce((s: number, o: any) => s + (o.votes || 0), 0) ?? 0),
       })))
-    } catch {
-      toast.error('Failed to load polls')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load polls'))
     } finally {
       setLoading(false)
     }
@@ -88,8 +89,8 @@ export default function PollsPage() {
       toast.success('Poll deleted')
       setDeleteTarget(null)
       fetchPolls()
-    } catch {
-      toast.error('Failed to delete poll')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete poll'))
     }
   }
 

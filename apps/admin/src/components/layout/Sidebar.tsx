@@ -13,6 +13,7 @@ import {
   FolderKanban,
   Globe,
   GraduationCap,
+  Handshake,
   HandCoins,
   Receipt,
   Images,
@@ -70,17 +71,17 @@ const navSections: NavSection[] = [
       { label: 'Announcements', to: '/announcements', icon: Megaphone, permission: 'announcements:view' },
       { label: 'Projects', to: '/projects', icon: FolderKanban, permission: 'projects:view' },
       { label: 'Donations', to: '/donations', icon: HandCoins, permission: 'donations:view', notifTypes: ['NEW_DONATION'] },
-      { label: 'Dues', to: '/dues', icon: Receipt, permission: 'donations:view' },
-      { label: 'Payment Methods', to: '/payment-methods', icon: Wallet, permission: 'settings:edit' },
+      { label: 'Dues', to: '/dues', icon: Receipt, permission: 'dues:view' },
+      { label: 'Payment Methods', to: '/payment-methods', icon: Wallet, permission: 'payment_methods:view' },
       { label: 'Jobs', to: '/jobs', icon: Briefcase, permission: 'jobs:view', notifTypes: ['PENDING_JOB'] },
-      { label: 'Gallery', to: '/gallery', icon: Images, permission: 'content:view' },
+      { label: 'Gallery', to: '/gallery', icon: Images, permission: 'gallery:view' },
     ],
   },
   {
     title: 'Community',
     items: [
       { label: 'Forum', to: '/forum', icon: MessageSquare, permission: 'forum:view', notifTypes: ['NEW_FORUM_POST'] },
-      { label: 'Reports', to: '/reports', icon: Flag, permission: 'forum:view', countKey: 'openReports' },
+      { label: 'Reports', to: '/reports', icon: Flag, permission: 'reports:view', countKey: 'openReports' },
       { label: 'Polls', to: '/polls', icon: BarChart3, permission: 'polls:view' },
       { label: 'Elections', to: '/elections', icon: Vote, permission: 'elections:view', notifTypes: ['ELECTION_STARTED'] },
     ],
@@ -89,17 +90,18 @@ const navSections: NavSection[] = [
     title: 'Association',
     items: [
       { label: 'Executives', to: '/executives', icon: Crown, permission: 'executives:view' },
-      { label: 'School Leaders', to: '/school-leaders', icon: GraduationCap, permission: 'content:view' },
-      { label: 'About Content', to: '/about-content', icon: BookOpen, permission: 'content:view' },
+      { label: 'School Leaders', to: '/school-leaders', icon: GraduationCap, permission: 'school_leaders:view' },
+      { label: 'About Content', to: '/about-content', icon: BookOpen, permission: 'about:view' },
     ],
   },
   {
     title: 'Members',
     items: [
-      { label: 'Alumni Registrations', to: '/alumni-registrations', icon: UserCheck, permission: 'alumni:view', notifTypes: ['NEW_REGISTRATION'] },
+      { label: 'Alumni Registrations', to: '/alumni-registrations', icon: UserCheck, permission: 'registrations:view', notifTypes: ['NEW_REGISTRATION'] },
       { label: 'Members Directory', to: '/members', icon: Users, permission: 'members:view' },
+      { label: 'Mentorship', to: '/mentorship', icon: Handshake, permission: 'mentorship:view' },
       { label: 'Contact Messages', to: '/contact-messages', icon: Mail, permission: 'contact:view', notifTypes: ['NEW_CONTACT_MESSAGE', 'NEW_TRANSCRIPT_REQUEST'] },
-      { label: 'Newsletter', to: '/newsletter', icon: Send, permission: 'settings:view' },
+      { label: 'Newsletter', to: '/newsletter', icon: Send, permission: 'newsletter:view' },
     ],
   },
   {
@@ -107,8 +109,8 @@ const navSections: NavSection[] = [
     items: [
       { label: 'Roles & Permissions', to: '/roles', icon: ShieldHalf, permission: 'roles:view' },
       { label: 'Admin Users', to: '/admin-users', icon: ShieldCheck, permission: 'admin_users:view' },
-      { label: 'Site Config', to: '/site-config', icon: Globe, permission: 'settings:edit' },
-      { label: 'Settings', to: '/settings', icon: Settings, permission: 'settings:view' },
+      { label: 'Site Config', to: '/site-config', icon: Globe, permission: 'site:view' },
+      { label: 'Settings', to: '/settings', icon: Settings },
     ],
   },
 ]
@@ -123,7 +125,7 @@ export default function Sidebar({ collapsed, onCloseMobile }: SidebarProps) {
   const notifications = useNotificationStore((s) => s.notifications)
   const openReports = useReportsStore((s) => s.openCount)
   const fetchOpenReports = useReportsStore((s) => s.fetchOpenCount)
-  const canSeeReports = can('forum:view')
+  const canSeeReports = can('reports:view')
   const { setSidebarCollapsed } = useUIStore()
   const location = useLocation()
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})

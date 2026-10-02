@@ -11,6 +11,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
 import type { News } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 export default function NewsDetailPage() {
   const navigate = useNavigate()
@@ -28,8 +29,8 @@ export default function NewsDetailPage() {
     try {
       const res = await adminNewsApi.getById(id)
       setArticle((res.data as any).data)
-    } catch {
-      toast.error('Article not found')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Article not found'))
       navigate('/news', { replace: true })
     } finally {
       setLoading(false)
@@ -47,8 +48,8 @@ export default function NewsDetailPage() {
       addActivity({ action: 'deleted news article', targetType: article.title, targetId: article.id, performedBy: currentUser.id, performedByName: currentUser.name })
       toast.success('Article deleted')
       navigate('/news', { replace: true })
-    } catch {
-      toast.error('Failed to delete article')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete article'))
     }
   }
 

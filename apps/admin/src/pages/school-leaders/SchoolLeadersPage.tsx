@@ -17,6 +17,7 @@ import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import type { SchoolLeader } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 export default function SchoolLeadersPage() {
   const navigate = useNavigate()
@@ -41,8 +42,8 @@ export default function SchoolLeadersPage() {
     try {
       const res = await adminSchoolLeadersApi.list({ limit: 100 })
       setLeaders((res.data.data || []) as SchoolLeader[])
-    } catch {
-      toast.error('Failed to load school leaders')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load school leaders'))
     } finally {
       setLoading(false)
     }
@@ -79,8 +80,8 @@ export default function SchoolLeadersPage() {
       toast.success('School leader deleted')
       setDeleteTarget(null)
       fetchLeaders()
-    } catch {
-      toast.error('Failed to delete school leader')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete school leader'))
     }
   }
 
@@ -92,7 +93,7 @@ export default function SchoolLeadersPage() {
         title="School Leadership"
         description={`${leaders.length} school leaders`}
         actions={
-          <RoleGate permission="content:create">
+          <RoleGate permission="school_leaders:create">
             <Button leftIcon={<PlusCircle size={16} />} onClick={() => navigate('/school-leaders/new')}>
               Add Leader
             </Button>
@@ -131,7 +132,7 @@ export default function SchoolLeadersPage() {
             title={search || statusFilter ? 'No matching leaders' : 'No school leaders yet'}
             description={search || statusFilter ? 'Try adjusting your search or filters.' : 'Add your first school leader to get started.'}
             action={!search && !statusFilter ? (
-              <RoleGate permission="content:create">
+              <RoleGate permission="school_leaders:create">
                 <Button leftIcon={<PlusCircle size={16} />} onClick={() => navigate('/school-leaders/new')}>
                   Add Leader
                 </Button>
@@ -184,7 +185,7 @@ export default function SchoolLeadersPage() {
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="inline-flex items-center gap-1">
-                        <RoleGate permission="content:edit">
+                        <RoleGate permission="school_leaders:edit">
                           <button
                             onClick={() => navigate(`/school-leaders/${leader.id}/edit`)}
                             className="rounded-lg p-1.5 text-gray-400 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:text-brand-600 transition-all duration-150"
@@ -192,7 +193,7 @@ export default function SchoolLeadersPage() {
                             <Pencil size={15} />
                           </button>
                         </RoleGate>
-                        <RoleGate permission="content:delete">
+                        <RoleGate permission="school_leaders:delete">
                           <button
                             onClick={() => setDeleteTarget(leader)}
                             className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-all duration-150"

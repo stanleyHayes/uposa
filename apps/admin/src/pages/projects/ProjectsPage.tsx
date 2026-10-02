@@ -18,6 +18,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
 import type { Project } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 const statusFilterOptions = [
   { value: 'all', label: 'All Statuses' },
@@ -72,8 +73,8 @@ export default function ProjectsPage() {
       addActivity({ action: 'deleted project', targetType: deleteTarget.title, targetId: deleteTarget.id, performedBy: currentUser.id, performedByName: currentUser.name })
       toast.success('Project deleted')
       setDeleteTarget(null)
-    } catch {
-      toast.error('Failed to delete project')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete project'))
     }
   }
 

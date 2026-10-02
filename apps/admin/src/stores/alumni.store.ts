@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { AlumniRegistration } from '../types'
 import { adminMembersApi } from '../api/services'
 import { useUIStore } from './ui.store'
+import { apiErrorMessage } from '../utils/apiError'
 
 interface AlumniState {
   registrations: AlumniRegistration[]
@@ -30,9 +31,9 @@ export const useAlumniStore = create<AlumniState>()((set) => ({
         page++
       } while (page <= totalPages)
       set({ registrations: all })
-    } catch {
+    } catch (err) {
       // Keep existing data on error, but tell the admin the list may be stale/empty.
-      useUIStore.getState().addToast({ type: 'error', title: 'Failed to load alumni registrations' })
+      useUIStore.getState().addToast({ type: 'error', title: apiErrorMessage(err, 'Failed to load alumni registrations') })
     } finally {
       set({ loading: false })
     }

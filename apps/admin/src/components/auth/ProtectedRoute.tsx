@@ -7,18 +7,20 @@ import type { Permission } from '../../types'
 
 interface ProtectedRouteProps {
   requiredPermission?: Permission
+  /** Allow access with any one of these (for pages the API serves under several permissions). */
+  anyPermission?: Permission[]
   children?: ReactNode
 }
 
-export default function ProtectedRoute({ requiredPermission, children }: ProtectedRouteProps) {
+export default function ProtectedRoute({ requiredPermission, anyPermission, children }: ProtectedRouteProps) {
   const { isAuthenticated } = useAuth()
-  const { can } = usePermission()
+  const { can, canAny } = usePermission()
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 
-  if (requiredPermission && !can(requiredPermission)) {
+  if ((requiredPermission && !can(requiredPermission)) || (anyPermission && !canAny(anyPermission))) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <div className="mb-4 rounded-full bg-red-50 p-5 text-red-400">

@@ -1,8 +1,14 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { AdminUser, ApiAdminRole } from '../types'
-import { API_ROLE_MAP } from '../types/auth.types'
-import { ADMIN_REFRESH_TOKEN_KEY, ADMIN_TOKEN_KEY, clearAdminSession, refreshAdminSession } from '../api/client'
+import type { AdminUser } from '../types'
+import {
+  ADMIN_REFRESH_TOKEN_KEY,
+  ADMIN_TOKEN_KEY,
+  clearAdminSession,
+  onAdminAccessRefreshed,
+  refreshAdminSession,
+  type AdminAccess,
+} from '../api/client'
 
 interface AuthState {
   currentUser: AdminUser | null
@@ -11,10 +17,36 @@ interface AuthState {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   updateCurrentUser: (updates: Partial<AdminUser>) => void
+  /** Re-read the admin (and their current permissions) from /auth/me. */
   fetchMe: () => Promise<void>
+  /** Apply permissions/role returned by the API (login, refresh, /auth/me). */
+  applyAccess: (access: AdminAccess) => void
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
+
+interface ApiAdminPayload {
+  id: string
+  fullName: string
+  email: string
+  role: string
+  isActive: boolean
+  createdAt: string
+}
+
+/** Login, /auth/admin/refresh and /auth/me return `permissions` and `roleInfo` beside the admin object. */
+function toCurrentUser(admin: ApiAdminPayload, access: AdminAccess | undefined): AdminUser {
+  return {
+    id: admin.id,
+    name: admin.fullName,
+    email: admin.email,
+    password: '',
+    roleInfo: access?.roleInfo ?? { key: admin.role, name: admin.role },
+    permissions: access?.permissions ?? [],
+    createdAt: admin.createdAt,
+    isActive: admin.isActive,
+  }
+}
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -41,20 +73,7 @@ export const useAuthStore = create<AuthState>()(
           localStorage.setItem(ADMIN_TOKEN_KEY, token)
           if (refreshToken) localStorage.setItem(ADMIN_REFRESH_TOKEN_KEY, refreshToken)
 
-          const frontendRole = API_ROLE_MAP[admin.role as ApiAdminRole] || 'moderator'
-
-          const adminUser: AdminUser = {
-            id: admin.id,
-            name: admin.fullName,
-            email: admin.email,
-            password: '',
-            role: frontendRole,
-            apiRole: admin.role,
-            createdAt: admin.createdAt,
-            lastLoginAt: new Date().toISOString(),
-            isActive: admin.isActive,
-          }
-
+          const adminUser = { ...toCurrentUser(admin, data.data), lastLoginAt: new Date().toISOString() }
           set({ currentUser: adminUser, isAuthenticated: true, isLoading: false })
           return { success: true }
         } catch {
@@ -70,6 +89,16 @@ export const useAuthStore = create<AuthState>()(
       updateCurrentUser: (updates) =>
         set((s) => ({
           currentUser: s.currentUser ? { ...s.currentUser, ...updates } : null,
+        })),
+      applyAccess: (access) =>
+        set((s) => ({
+          currentUser: s.currentUser
+            ? {
+                ...s.currentUser,
+                ...(access.permissions ? { permissions: access.permissions } : {}),
+                ...(access.roleInfo ? { roleInfo: access.roleInfo } : {}),
+              }
+            : null,
         })),
       fetchMe: async () => {
         const token = localStorage.getItem(ADMIN_TOKEN_KEY)
@@ -92,28 +121,20 @@ export const useAuthStore = create<AuthState>()(
             return
           }
 
-          const admin = data.data?.data
+          const admin = data.data?.data as ApiAdminPayload | undefined
           if (admin && data.data?.type === 'admin') {
-            const frontendRole = API_ROLE_MAP[admin.role as ApiAdminRole] || 'moderator'
-            set({
-              currentUser: {
-                id: admin.id,
-                name: admin.fullName,
-                email: admin.email,
-                password: '',
-                role: frontendRole,
-                apiRole: admin.role,
-                createdAt: admin.createdAt,
-                isActive: admin.isActive,
-              },
+            set((s) => ({
+              currentUser: { ...toCurrentUser(admin, data.data), lastLoginAt: s.currentUser?.lastLoginAt },
               isAuthenticated: true,
-            })
+            }))
           }
         } catch {
-          // Silently fail - user will need to login again
+          // Network hiccup: keep the current session; the next poll retries.
         }
       },
     }),
     { name: 'uposa_auth' }
   )
 )
+
+onAdminAccessRefreshed((access) => useAuthStore.getState().applyAccess(access))

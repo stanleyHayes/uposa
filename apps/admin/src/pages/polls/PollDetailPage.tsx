@@ -26,6 +26,7 @@ import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
 import { cn } from '../../utils/cn'
 import type { PollOption } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 const barColors = [
   'bg-brand-700',
@@ -250,8 +251,8 @@ export default function PollDetailPage() {
       })
       toast.success('Poll deleted')
       navigate('/polls', { replace: true })
-    } catch {
-      toast.error('Failed to delete poll')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete poll'))
     }
   }
 

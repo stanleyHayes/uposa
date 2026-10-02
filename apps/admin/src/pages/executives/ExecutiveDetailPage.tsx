@@ -29,6 +29,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
 import type { Executive } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 export default function ExecutiveDetailPage() {
   const navigate = useNavigate()
@@ -46,8 +47,8 @@ export default function ExecutiveDetailPage() {
     try {
       const res = await adminExecutivesApi.getById(id)
       setExecutive(res.data.data as Executive)
-    } catch {
-      toast.error('Executive not found')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Executive not found'))
       navigate('/executives')
     } finally {
       setLoading(false)
@@ -69,8 +70,8 @@ export default function ExecutiveDetailPage() {
       })
       toast.success('Executive deleted')
       navigate('/executives')
-    } catch {
-      toast.error('Failed to delete executive')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete executive'))
     }
   }
 

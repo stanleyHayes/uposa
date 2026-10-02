@@ -14,7 +14,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { apiErrorMessage } from '../../utils/apiError'
 import { formatDateTime } from '../../utils/formatters'
-import { isModerator } from '../../utils/permissions'
+import { usePermission } from '../../hooks/usePermission'
 import type { ContentReport, ResolveReportInput } from '../../types'
 import { ACTION_LABELS, REASON_BADGE, STATUS_BADGE, TARGET_LABELS, targetLink } from './reportLabels'
 
@@ -24,6 +24,7 @@ export default function ReportDetailPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const { currentUser } = useAuth()
+  const { can } = usePermission()
   const { addActivity } = useActivityStore()
   const { toast } = useToast()
   const fetchOpenCount = useReportsStore((s) => s.fetchOpenCount)
@@ -60,8 +61,9 @@ export default function ReportDetailPage() {
 
   const isOpen = report.status === 'OPEN'
   const isMember = report.targetType === 'MEMBER'
-  // SUSPEND_AUTHOR is refused to moderators by the API.
-  const canSuspend = !isModerator(currentUser)
+  const canResolve = can('reports:edit')
+  // SUSPEND_AUTHOR also changes a member's account status, so it needs members:edit too.
+  const canSuspend = canResolve && can('members:edit')
   // The API reports the reported member as the "author" of a member report; admin-posted jobs have none.
   const suspendTargetId = report.target.authorId ?? null
   const link = report.target.exists ? targetLink(report.targetType, report.targetId) : null
@@ -145,7 +147,11 @@ export default function ReportDetailPage() {
           </div>
 
           {/* Actions */}
-          {isOpen ? (
+          {isOpen && !canResolve ? (
+            <div className="admin-card-surface p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400">You don't have permission to resolve reports.</p>
+            </div>
+          ) : isOpen ? (
             <div className="admin-card-surface p-6 space-y-4">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Resolve</h3>
               <p className="text-xs text-gray-500 dark:text-gray-400">

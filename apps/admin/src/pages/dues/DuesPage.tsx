@@ -199,7 +199,7 @@ export default function DuesPage() {
                       <td className="px-5 py-3.5 text-xs font-mono text-gray-600 dark:text-gray-400">{due.transactionRef || <span className="font-sans text-gray-300 dark:text-gray-600">—</span>}</td>
                       <td className="px-5 py-3.5">
                         {due.status !== 'PAID' && (
-                          <RoleGate permission="donations:edit">
+                          <RoleGate permission="dues:edit">
                             <Button size="sm" variant="secondary" leftIcon={<CheckCircle size={14} />} onClick={() => openMarkPaid(due)}>
                               Mark paid
                             </Button>

@@ -326,7 +326,7 @@ export default function ContactMessagesPage() {
             </div>
 
             {/* Actions */}
-            <RoleGate permission="contact:manage">
+            <RoleGate permission="contact:edit">
               <div className="px-5 py-4 border-t border-gray-100 dark:border-dark-border space-y-2 shrink-0">
                 <Button
                   variant="secondary"

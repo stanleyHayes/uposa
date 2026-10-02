@@ -47,8 +47,8 @@ export default function GalleryCategoryPage() {
       ])
       setCategory((catRes.data as any).data)
       setItems((itemsRes.data as any).data || [])
-    } catch {
-      toast.error('Failed to load category')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load category'))
       navigate('/gallery', { replace: true })
     } finally {
       setLoading(false)
@@ -125,8 +125,8 @@ export default function GalleryCategoryPage() {
       toast.success('Image deleted')
       setDeleteTarget(null)
       fetchData()
-    } catch {
-      toast.error('Failed to delete image')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete image'))
     }
   }
 
@@ -139,8 +139,8 @@ export default function GalleryCategoryPage() {
       setSelectedIds(new Set())
       setBulkDeleteOpen(false)
       fetchData()
-    } catch {
-      toast.error('Failed to delete images')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete images'))
     }
   }
 
@@ -193,7 +193,7 @@ export default function GalleryCategoryPage() {
         title={category?.name || 'Category'}
         description={category?.description || `${items.length} images`}
         actions={
-          <RoleGate permission="content:create">
+          <RoleGate permission="gallery:create">
             <Button leftIcon={<ImagePlus size={16} />} onClick={() => setShowUpload(true)}>
               Add Images
             </Button>
@@ -252,7 +252,7 @@ export default function GalleryCategoryPage() {
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 mb-4">
           <span className="text-sm text-gray-500 dark:text-gray-400">{selectedIds.size} selected</span>
-          <RoleGate permission="content:delete">
+          <RoleGate permission="gallery:delete">
             <Button variant="danger" size="sm" leftIcon={<Trash2 size={14} />} onClick={() => setBulkDeleteOpen(true)}>
               Delete Selected
             </Button>
@@ -268,7 +268,7 @@ export default function GalleryCategoryPage() {
             title="No images yet"
             description="Upload your first images to this category."
             action={
-              <RoleGate permission="content:create">
+              <RoleGate permission="gallery:create">
                 <Button leftIcon={<ImagePlus size={16} />} onClick={() => setShowUpload(true)}>
                   Add Images
                 </Button>
@@ -308,7 +308,7 @@ export default function GalleryCategoryPage() {
                   </button>
 
                   {/* Delete button */}
-                  <RoleGate permission="content:delete">
+                  <RoleGate permission="gallery:delete">
                     <button onClick={() => setDeleteTarget(item)} className="absolute top-2 right-2 z-10 w-6 h-6 rounded bg-white/90 dark:bg-dark-card/90 flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 dark:hover:bg-red-900/30">
                       <Trash2 size={12} className="text-red-500" />
                     </button>

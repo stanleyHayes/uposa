@@ -4,7 +4,6 @@ export * from './event.types'
 export * from './news.types'
 export * from './project.types'
 export * from './donation.types'
-export * from './aboutContent.types'
 export * from './executive.types'
 export * from './job.types'
 export * from './election.types'
@@ -16,6 +15,7 @@ export * from './gallery.types'
 export * from './schoolLeader.types'
 export * from './due.types'
 export * from './report.types'
+export * from './mentorship.types'
 
 export interface ActivityLogEntry {
   id: string

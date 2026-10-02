@@ -1,18 +1,16 @@
-import { ROLE_PERMISSIONS } from '../constants/roles'
-import type { AdminUser, Permission, Role } from '../types'
+import { SUPER_ADMIN_ROLE, type AdminUser, type Permission } from '../types'
 
-export function hasPermission(role: Role, permission: Permission): boolean {
-  return ROLE_PERMISSIONS[role]?.includes(permission) ?? false
+export function isSuperAdmin(user: AdminUser | null | undefined): boolean {
+  return user?.roleInfo?.key === SUPER_ADMIN_ROLE
 }
 
-export function hasAnyPermission(role: Role, permissions: Permission[]): boolean {
-  return permissions.some(p => hasPermission(role, p))
+/** True when the server granted `permission` to this admin (SUPER_ADMIN has everything). */
+export function hasPermission(user: AdminUser | null | undefined, permission: Permission): boolean {
+  if (!user) return false
+  if (isSuperAdmin(user)) return true
+  return user.permissions?.includes(permission) ?? false
 }
 
-/**
- * The API refuses some actions to MODERATOR admins regardless of the (locally
- * editable) role-permission matrix, e.g. payment credential edits and member deletion.
- */
-export function isModerator(user: AdminUser | null | undefined): boolean {
-  return user?.apiRole === 'MODERATOR' || user?.role === 'moderator'
+export function hasAnyPermission(user: AdminUser | null | undefined, permissions: Permission[]): boolean {
+  return permissions.some((p) => hasPermission(user, p))
 }

@@ -10,6 +10,7 @@ import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
+import { apiErrorMessage } from '../../utils/apiError'
 
 export default function ProjectDetailPage() {
   const navigate = useNavigate()
@@ -37,8 +38,8 @@ export default function ProjectDetailPage() {
       addActivity({ action: 'deleted project', targetType: project.title, targetId: project.id, performedBy: currentUser.id, performedByName: currentUser.name })
       toast.success('Project deleted')
       navigate('/projects')
-    } catch {
-      toast.error('Failed to delete project')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete project'))
     }
   }
 

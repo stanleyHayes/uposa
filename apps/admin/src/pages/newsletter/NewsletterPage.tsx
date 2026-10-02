@@ -12,6 +12,7 @@ import { PageSkeleton } from '../../components/ui/Skeleton'
 import RoleGate from '../../components/auth/RoleGate'
 import { adminNewsletterApi } from '../../api/services'
 import { useToast } from '../../hooks/useToast'
+import { apiErrorMessage } from '../../utils/apiError'
 
 interface Subscriber {
   id: string
@@ -45,8 +46,8 @@ export default function NewsletterPage() {
       setSubscribers((res.data.data || []) as Subscriber[])
       const p = res.data.pagination
       if (p) setPagination({ page: p.page, totalPages: p.totalPages, total: p.total })
-    } catch {
-      toast.error('Failed to load subscribers')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load subscribers'))
     } finally {
       setLoading(false)
     }
@@ -72,8 +73,8 @@ export default function NewsletterPage() {
       toast.success('Subscriber deactivated')
       setUnsubTarget(null)
       fetchSubscribers(pagination.page)
-    } catch {
-      toast.error('Failed to unsubscribe')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to unsubscribe'))
     }
   }
 
@@ -84,8 +85,8 @@ export default function NewsletterPage() {
       toast.success('Subscriber deleted')
       setDeleteTarget(null)
       fetchSubscribers(pagination.page)
-    } catch {
-      toast.error('Failed to delete subscriber')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete subscriber'))
     }
   }
 
@@ -162,7 +163,7 @@ export default function NewsletterPage() {
                     <td className="px-5 py-3.5">
                       <div className="inline-flex items-center gap-1">
                         {sub.isActive && (
-                          <RoleGate permission="settings:edit">
+                          <RoleGate permission="newsletter:edit">
                             <button
                               onClick={() => setUnsubTarget(sub)}
                               title="Unsubscribe"
@@ -172,7 +173,7 @@ export default function NewsletterPage() {
                             </button>
                           </RoleGate>
                         )}
-                        <RoleGate permission="settings:edit">
+                        <RoleGate permission="newsletter:delete">
                           <button
                             onClick={() => setDeleteTarget(sub)}
                             title="Delete"

@@ -13,6 +13,7 @@ import ToastContainer from './components/ui/ToastContainer'
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'))
 const AlumniRegistrationsPage = lazy(() => import('./pages/alumni/AlumniRegistrationsPage'))
 const MembersDirectoryPage = lazy(() => import('./pages/members/MembersDirectoryPage'))
+const MentorshipPage = lazy(() => import('./pages/mentorship/MentorshipPage'))
 const EventsPage = lazy(() => import('./pages/events/EventsPage'))
 const EventFormPage = lazy(() => import('./pages/events/EventFormPage'))
 const EventDetailPage = lazy(() => import('./pages/events/EventDetailPage'))
@@ -78,15 +79,16 @@ export default function App() {
             <Route
               path="/alumni-registrations"
               element={
-                <ProtectedRoute requiredPermission="alumni:view">
+                <ProtectedRoute requiredPermission="registrations:view">
                   <AlumniRegistrationsPage />
                 </ProtectedRoute>
               }
             />
+            {/* Member profile: the API serves it to members:view or registrations:view (reports link here). */}
             <Route
               path="/alumni-registrations/:id"
               element={
-                <ProtectedRoute requiredPermission="alumni:view">
+                <ProtectedRoute anyPermission={['members:view', 'registrations:view']}>
                   <AlumniDetailPage />
                 </ProtectedRoute>
               }
@@ -96,6 +98,14 @@ export default function App() {
               element={
                 <ProtectedRoute requiredPermission="members:view">
                   <MembersDirectoryPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mentorship"
+              element={
+                <ProtectedRoute requiredPermission="mentorship:view">
+                  <MentorshipPage />
                 </ProtectedRoute>
               }
             />
@@ -230,7 +240,7 @@ export default function App() {
             <Route
               path="/dues"
               element={
-                <ProtectedRoute requiredPermission="donations:view">
+                <ProtectedRoute requiredPermission="dues:view">
                   <DuesPage />
                 </ProtectedRoute>
               }
@@ -270,7 +280,7 @@ export default function App() {
             <Route
               path="/settings"
               element={
-                <ProtectedRoute requiredPermission="settings:view">
+                <ProtectedRoute>
                   <SettingsPage />
                 </ProtectedRoute>
               }
@@ -280,7 +290,7 @@ export default function App() {
             <Route
               path="/about-content"
               element={
-                <ProtectedRoute requiredPermission="content:view">
+                <ProtectedRoute requiredPermission="about:view">
                   <AboutContentPage />
                 </ProtectedRoute>
               }
@@ -425,7 +435,7 @@ export default function App() {
             <Route
               path="/reports"
               element={
-                <ProtectedRoute requiredPermission="forum:view">
+                <ProtectedRoute requiredPermission="reports:view">
                   <ReportsPage />
                 </ProtectedRoute>
               }
@@ -433,7 +443,7 @@ export default function App() {
             <Route
               path="/reports/:id"
               element={
-                <ProtectedRoute requiredPermission="forum:view">
+                <ProtectedRoute requiredPermission="reports:view">
                   <ReportDetailPage />
                 </ProtectedRoute>
               }
@@ -481,7 +491,7 @@ export default function App() {
             <Route
               path="/payment-methods"
               element={
-                <ProtectedRoute requiredPermission="settings:edit">
+                <ProtectedRoute requiredPermission="payment_methods:view">
                   <PaymentMethodsPage />
                 </ProtectedRoute>
               }
@@ -489,7 +499,7 @@ export default function App() {
             <Route
               path="/payment-methods/:id/edit"
               element={
-                <ProtectedRoute requiredPermission="settings:edit">
+                <ProtectedRoute requiredPermission="payment_methods:edit">
                   <PaymentMethodFormPage />
                 </ProtectedRoute>
               }
@@ -497,7 +507,7 @@ export default function App() {
             <Route
               path="/site-config"
               element={
-                <ProtectedRoute requiredPermission="settings:edit">
+                <ProtectedRoute requiredPermission="site:view">
                   <SiteConfigPage />
                 </ProtectedRoute>
               }
@@ -505,7 +515,7 @@ export default function App() {
             <Route
               path="/gallery"
               element={
-                <ProtectedRoute requiredPermission="content:view">
+                <ProtectedRoute requiredPermission="gallery:view">
                   <GalleryPage />
                 </ProtectedRoute>
               }
@@ -513,7 +523,7 @@ export default function App() {
             <Route
               path="/gallery/:id"
               element={
-                <ProtectedRoute requiredPermission="content:view">
+                <ProtectedRoute requiredPermission="gallery:view">
                   <GalleryCategoryPage />
                 </ProtectedRoute>
               }
@@ -521,7 +531,7 @@ export default function App() {
             <Route
               path="/school-leaders"
               element={
-                <ProtectedRoute requiredPermission="content:view">
+                <ProtectedRoute requiredPermission="school_leaders:view">
                   <SchoolLeadersPage />
                 </ProtectedRoute>
               }
@@ -529,7 +539,7 @@ export default function App() {
             <Route
               path="/school-leaders/new"
               element={
-                <ProtectedRoute requiredPermission="content:create">
+                <ProtectedRoute requiredPermission="school_leaders:create">
                   <SchoolLeaderFormPage />
                 </ProtectedRoute>
               }
@@ -537,7 +547,7 @@ export default function App() {
             <Route
               path="/school-leaders/:id/edit"
               element={
-                <ProtectedRoute requiredPermission="content:edit">
+                <ProtectedRoute requiredPermission="school_leaders:edit">
                   <SchoolLeaderFormPage />
                 </ProtectedRoute>
               }
@@ -545,7 +555,7 @@ export default function App() {
             <Route
               path="/newsletter"
               element={
-                <ProtectedRoute requiredPermission="settings:view">
+                <ProtectedRoute requiredPermission="newsletter:view">
                   <NewsletterPage />
                 </ProtectedRoute>
               }

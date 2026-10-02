@@ -21,6 +21,19 @@ client.interceptors.request.use((config) => {
 // One refresh at a time: requests that 401 together share the same attempt.
 let refreshInFlight: Promise<string | null> | null = null
 
+/** Effective permissions and role the API returns alongside a session (login, refresh, /auth/me). */
+export interface AdminAccess {
+  permissions?: string[]
+  roleInfo?: { key: string; name: string }
+}
+
+// The auth store subscribes so permission changes picked up on refresh apply immediately
+// (client.ts can't import the store: the store imports this module).
+let accessListener: ((access: AdminAccess) => void) | null = null
+export function onAdminAccessRefreshed(listener: (access: AdminAccess) => void) {
+  accessListener = listener
+}
+
 /**
  * Exchange the stored refresh token for a new access token. Access tokens last
  * 15 minutes, so without this admins were bounced to /login mid-edit (losing
@@ -40,6 +53,7 @@ export function refreshAdminSession(): Promise<string | null> {
       if (!token) return null
       localStorage.setItem(ADMIN_TOKEN_KEY, token)
       if (nextRefresh) localStorage.setItem(ADMIN_REFRESH_TOKEN_KEY, nextRefresh)
+      if (res.data?.data?.permissions) accessListener?.(res.data.data as AdminAccess)
       return token
     })
     .catch(() => null)

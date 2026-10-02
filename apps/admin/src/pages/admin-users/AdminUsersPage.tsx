@@ -11,14 +11,14 @@ import EmptyState from '../../components/ui/EmptyState'
 import Pagination from '../../components/ui/Pagination'
 import PageStats from '../../components/ui/PageStats'
 import { PageSkeleton } from '../../components/ui/Skeleton'
-import { adminUsersApi } from '../../api/services'
+import RoleGate from '../../components/auth/RoleGate'
+import { adminRolesApi, adminUsersApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { apiErrorMessage } from '../../utils/apiError'
 import { formatDate } from '../../utils/formatters'
-import { ROLES } from '../../constants/roles'
-import { toAdminUser, type AdminUser, type ApiAdmin, type Role } from '../../types'
+import { SUPER_ADMIN_ROLE, toAdminUser, type AdminRole, type AdminUser, type ApiAdmin } from '../../types'
 
 export default function AdminUsersPage() {
   const navigate = useNavigate()
@@ -33,14 +33,21 @@ export default function AdminUsersPage() {
   const [deactivateTarget, setDeactivateTarget] = useState<AdminUser | null>(null)
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
+  const [roles, setRoles] = useState<AdminRole[]>([])
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await adminUsersApi.list({ limit: 100 })
-      // The API returns `fullName` and upper-case roles; map to the UI shape.
-      setUsers(((res.data.data || []) as ApiAdmin[]).map(toAdminUser))
-    } catch {
-      toast.error('Failed to load admin users')
+      const [res, rolesRes] = await Promise.all([
+        adminUsersApi.list({ limit: 100 }),
+        // Role names for the badges/filter; admins without roles:view still see role keys.
+        adminRolesApi.list().catch(() => null),
+      ])
+      const serverRoles = rolesRes?.data.data ?? []
+      setRoles(serverRoles)
+      const names = new Map(serverRoles.map((r) => [r.key, r.name]))
+      setUsers(((res.data.data || []) as ApiAdmin[]).map((a) => toAdminUser(a, names)))
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load admin users'))
     } finally {
       setLoading(false)
     }
@@ -50,22 +57,19 @@ export default function AdminUsersPage() {
 
   const roleFilterOptions = [
     { value: '', label: 'All Roles' },
-    { value: 'super_admin', label: 'Super Admin' },
-    { value: 'content_manager', label: 'Content Manager' },
-    { value: 'membership_manager', label: 'Membership Manager' },
-    { value: 'moderator', label: 'Moderator' },
+    ...roles.map((r) => ({ value: r.key, label: r.name })),
   ]
 
   const stats = useMemo(() => ({
     total: users.length,
     active: users.filter((u) => u.isActive).length,
     inactive: users.filter((u) => !u.isActive).length,
-    superAdmins: users.filter((u) => u.role === 'super_admin').length,
+    superAdmins: users.filter((u) => u.roleInfo?.key === SUPER_ADMIN_ROLE).length,
   }), [users])
 
   const filtered = useMemo(() => users.filter((u) => {
     const matchesSearch = !search || u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase())
-    const matchesRole = !roleFilter || u.role === roleFilter
+    const matchesRole = !roleFilter || u.roleInfo?.key === roleFilter
     return matchesSearch && matchesRole
   }), [users, search, roleFilter])
 
@@ -109,9 +113,11 @@ export default function AdminUsersPage() {
         title="Admin Users"
         description={`${users.length} admin users`}
         actions={
-          <Button leftIcon={<PlusCircle size={16} />} onClick={() => navigate('/admin-users/new')}>
-            Add User
-          </Button>
+          <RoleGate permission="admin_users:create">
+            <Button leftIcon={<PlusCircle size={16} />} onClick={() => navigate('/admin-users/new')}>
+              Add User
+            </Button>
+          </RoleGate>
         }
       />
 
@@ -140,7 +146,7 @@ export default function AdminUsersPage() {
             icon={<ShieldCheck size={40} />}
             title="No admin users"
             description={search || roleFilter ? 'No users match your filters. Try adjusting your search.' : 'Add your first admin user to manage the platform.'}
-            action={!search && !roleFilter ? <Button leftIcon={<PlusCircle size={16} />} onClick={() => navigate('/admin-users/new')}>Add User</Button> : undefined}
+            action={!search && !roleFilter ? <RoleGate permission="admin_users:create"><Button leftIcon={<PlusCircle size={16} />} onClick={() => navigate('/admin-users/new')}>Add User</Button></RoleGate> : undefined}
           />
         ) : (
           <div className="overflow-x-auto">
@@ -177,7 +183,7 @@ export default function AdminUsersPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant={user.role as Role} label={ROLES[user.role]} />
+                        <Badge variant={user.roleInfo?.key === SUPER_ADMIN_ROLE ? 'super_admin' : 'default'} label={user.roleInfo?.name ?? '—'} />
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
@@ -191,6 +197,7 @@ export default function AdminUsersPage() {
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{formatDate(user.createdAt)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
+                          <RoleGate permission="admin_users:edit">
                           <button
                             onClick={() => navigate(`/admin-users/${user.id}/edit`)}
                             className="rounded-lg p-1.5 text-gray-500 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:text-brand-600 transition-colors"
@@ -198,8 +205,10 @@ export default function AdminUsersPage() {
                           >
                             <Pencil size={15} />
                           </button>
+                          </RoleGate>
                           {!isSelf && (
                             <>
+                              <RoleGate permission="admin_users:edit">
                               <button
                                 onClick={() => setDeactivateTarget(user)}
                                 className={`rounded-lg p-1.5 transition-colors ${user.isActive ? 'text-gray-500 hover:bg-yellow-50 hover:text-yellow-600' : 'text-gray-500 hover:bg-green-50 hover:text-green-600'}`}
@@ -207,6 +216,8 @@ export default function AdminUsersPage() {
                               >
                                 {user.isActive ? <UserX size={15} /> : <UserCheck size={15} />}
                               </button>
+                              </RoleGate>
+                              <RoleGate permission="admin_users:delete">
                               <button
                                 onClick={() => setDeleteTarget(user)}
                                 className="rounded-lg p-1.5 text-gray-500 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-colors"
@@ -214,6 +225,7 @@ export default function AdminUsersPage() {
                               >
                                 <Trash2 size={15} />
                               </button>
+                              </RoleGate>
                             </>
                           )}
                         </div>

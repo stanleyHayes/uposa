@@ -80,8 +80,8 @@ export default function ExecutiveFormPage() {
         isActive: exec.isActive ? 'true' : 'false',
         order: exec.order,
       })
-    } catch {
-      toast.error('Executive not found')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Executive not found'))
       navigate('/executives')
     } finally {
       setLoadingExisting(false)

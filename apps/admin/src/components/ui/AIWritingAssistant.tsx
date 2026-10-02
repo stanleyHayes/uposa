@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { ArrowDownToLine, Check, Clipboard, Copy, Sparkles, Trash2 } from 'lucide-react'
 import { adminAiApi, type AIWritingAction } from '../../api/services'
 import { cn } from '../../utils/cn'
+import { usePermission } from '../../hooks/usePermission'
 
 export interface TextSelection {
   start: number
@@ -80,6 +81,7 @@ export default function AIWritingAssistant({
   const [resultSelection, setResultSelection] = useState<TextSelection | null>(null)
 
   const selectedAction = useMemo(() => actions.find((item) => item.value === action) ?? actions[0], [action])
+  const { can } = usePermission()
 
   const currentSelection = () => {
     const selection = getSelection?.()
@@ -153,6 +155,9 @@ export default function AIWritingAssistant({
       setError('Could not copy the suggestion.')
     }
   }
+
+  // The API requires ai:create for the writing assistant.
+  if (!can('ai:create')) return null
 
   return (
     <div className={cn('border border-brand-950/10 bg-cream-50/70 dark:border-white/10 dark:bg-white/[0.03]', className)}>

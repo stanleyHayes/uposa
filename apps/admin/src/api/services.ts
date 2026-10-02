@@ -1,5 +1,5 @@
 import client from './client'
-import type { ApiJob, ResolveReportInput } from '../types'
+import type { AdminPermissionsDetail, AdminRole, ApiJob, PermissionCatalogEntry, ResolveReportInput } from '../types'
 
 // Generic response types
 interface ApiResponse<T = unknown> {
@@ -100,6 +100,31 @@ export const adminUsersApi = {
     client.put<ApiResponse>(`/admin/admins/${id}`, data),
   deactivate: (id: string) =>
     client.delete<ApiResponse>(`/admin/admins/${id}`),
+  /** Role + individual grants/revokes + the resulting effective permissions. */
+  getPermissions: (id: string) =>
+    client.get<ApiResponse<AdminPermissionsDetail>>(`/admin/admins/${id}/permissions`),
+  /** You can't edit your own (400); the last SUPER_ADMIN can't be demoted (409). */
+  updatePermissions: (id: string, data: { role?: string; grant?: string[]; revoke?: string[] }) =>
+    client.put<ApiResponse<AdminPermissionsDetail>>(`/admin/admins/${id}/permissions`, data),
+}
+
+// RBAC: permission catalog and roles
+export const adminPermissionsApi = {
+  catalog: () =>
+    client.get<ApiResponse<{ catalog: PermissionCatalogEntry[] }>>('/admin/permissions'),
+}
+
+export const adminRolesApi = {
+  list: () =>
+    client.get<ApiResponse<AdminRole[]>>('/admin/roles'),
+  create: (data: { name: string; description?: string; permissions: string[] }) =>
+    client.post<ApiResponse<AdminRole>>('/admin/roles', data),
+  /** SUPER_ADMIN is immutable. */
+  update: (key: string, data: { name?: string; description?: string; permissions?: string[] }) =>
+    client.put<ApiResponse<AdminRole>>(`/admin/roles/${key}`, data),
+  /** System roles can't be deleted; a role still assigned to admins returns 409. */
+  delete: (key: string) =>
+    client.delete<ApiResponse>(`/admin/roles/${key}`),
 }
 
 // Members / Alumni

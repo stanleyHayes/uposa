@@ -19,6 +19,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
 import type { News } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 export default function NewsPage() {
   const navigate = useNavigate()
@@ -39,8 +40,8 @@ export default function NewsPage() {
       setLoading(true)
       const res = await adminNewsApi.list({ limit: 100 })
       setArticles((res.data.data || []) as News[])
-    } catch {
-      toast.error('Failed to load articles')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load articles'))
     } finally {
       setLoading(false)
     }
@@ -95,8 +96,8 @@ export default function NewsPage() {
       toast.success('Article deleted')
       setDeleteTarget(null)
       fetchArticles()
-    } catch {
-      toast.error('Failed to delete article')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete article'))
     }
   }
 

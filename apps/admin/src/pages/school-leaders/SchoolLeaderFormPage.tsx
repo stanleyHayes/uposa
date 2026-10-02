@@ -105,8 +105,8 @@ export default function SchoolLeaderFormPage() {
         isActive: leader.isActive ? 'true' : 'false',
         order: leader.order,
       })
-    } catch {
-      toast.error('School leader not found')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'School leader not found'))
       navigate('/school-leaders')
     } finally {
       setLoadingExisting(false)

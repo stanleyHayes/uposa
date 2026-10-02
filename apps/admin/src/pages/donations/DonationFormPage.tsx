@@ -100,7 +100,7 @@ export default function DonationFormPage() {
   useEffect(() => {
     adminProjectsApi.list({ limit: 100 })
       .then((res) => setProjects((res.data.data || []) as Project[]))
-      .catch(() => toast.error('Failed to load projects'))
+      .catch((err) => toast.error(apiErrorMessage(err, 'Failed to load projects')))
   }, [toast])
 
   useEffect(() => {

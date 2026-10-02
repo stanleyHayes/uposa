@@ -19,6 +19,7 @@ import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
 import { exportToCSV } from '../../utils/export'
 import type { Donation } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 const statusFilterOptions = [
   { value: 'all', label: 'All Statuses' },
@@ -44,8 +45,8 @@ export default function DonationsPage() {
     try {
       const res = await adminDonationsApi.list({ limit: 100 })
       setDonations((res.data.data || []) as Donation[])
-    } catch {
-      toast.error('Failed to load donations')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load donations'))
     } finally {
       setLoading(false)
     }
@@ -87,8 +88,8 @@ export default function DonationsPage() {
       toast.success('Donation confirmed')
       setConfirmTarget(null)
       fetchDonations()
-    } catch {
-      toast.error('Failed to confirm donation')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to confirm donation'))
     }
   }
 
@@ -120,7 +121,7 @@ export default function DonationsPage() {
         description={`${donations.length} total records`}
         actions={
           <div className="flex items-center gap-2">
-            <RoleGate permission="donations:export">
+            <RoleGate permission="donations:view">
               <Button
                 variant="secondary"
                 leftIcon={<Download size={16} />}

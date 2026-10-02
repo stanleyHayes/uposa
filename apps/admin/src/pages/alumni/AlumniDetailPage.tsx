@@ -34,6 +34,7 @@ import { useToast } from '../../hooks/useToast'
 import { formatDate, formatDateTime, formatTimeAgo } from '../../utils/formatters'
 import { cn } from '../../utils/cn'
 import type { RegistrationStatus } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 function formatEnum(value?: string | null): string {
   if (!value) return ''
@@ -235,14 +236,17 @@ export default function AlumniDetailPage() {
   const StatusIcon = tone.icon
   const photoUrl = reg.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(reg.fullName)}&background=001B50&color=FFF8DC&size=160&font-size=0.34`
 
+  // Reinstating a suspended member uses the same approve endpoint but needs members:edit.
+  const isSuspended = reg.membershipStatus === 'SUSPENDED'
+
   const handleApprove = async () => {
     if (!currentUser) return
     try {
       await approveRegistration(reg.id, currentUser.id, currentUser.name)
-      addActivity({ action: 'approved alumni registration for', targetType: reg.fullName, targetId: reg.id, performedBy: currentUser.id, performedByName: currentUser.name })
-      toast.success('Registration approved', `${reg.fullName} has been approved.`)
-    } catch {
-      toast.error('Failed to approve registration')
+      addActivity({ action: isSuspended ? 'reinstated member' : 'approved alumni registration for', targetType: reg.fullName, targetId: reg.id, performedBy: currentUser.id, performedByName: currentUser.name })
+      toast.success(isSuspended ? 'Member reinstated' : 'Registration approved', `${reg.fullName} has been ${isSuspended ? 'reinstated' : 'approved'}.`)
+    } catch (err) {
+      toast.error(apiErrorMessage(err, isSuspended ? 'Failed to reinstate member' : 'Failed to approve registration'))
     }
   }
 
@@ -254,8 +258,8 @@ export default function AlumniDetailPage() {
       toast.success('Registration rejected', `${reg.fullName}'s registration has been rejected.`)
       setRejectModal(false)
       setRejectReason('')
-    } catch {
-      toast.error('Failed to reject registration')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to reject registration'))
     }
   }
 
@@ -318,9 +322,21 @@ export default function AlumniDetailPage() {
             <p className="mt-3 text-sm leading-6 opacity-80">
               Submitted {reg.submittedAt ? formatTimeAgo(reg.submittedAt) : 'recently'} with consent {reg.consentGiven ? 'confirmed' : 'not confirmed'}.
             </p>
+            {isSuspended && (
+              <div className="mt-5">
+                {/* The approve route needs registrations:edit; reinstating also needs members:edit. */}
+                <RoleGate permission="registrations:edit">
+                  <RoleGate permission="members:edit">
+                    <Button variant="accent" size="sm" leftIcon={<CheckCircle size={16} />} onClick={handleApprove} className="w-full">
+                      Reinstate member
+                    </Button>
+                  </RoleGate>
+                </RoleGate>
+              </div>
+            )}
             {reg.status === 'pending' && (
               <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                <RoleGate permission="alumni:approve">
+                <RoleGate permission="registrations:edit">
                   <Button
                     variant="accent"
                     size="sm"
@@ -331,7 +347,7 @@ export default function AlumniDetailPage() {
                     Approve
                   </Button>
                 </RoleGate>
-                <RoleGate permission="alumni:reject">
+                <RoleGate permission="registrations:edit">
                   <Button
                     variant="danger"
                     size="sm"

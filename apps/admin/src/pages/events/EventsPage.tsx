@@ -19,6 +19,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
 import type { Event } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
 
 const filterStatusOptions = [
   { value: 'all', label: 'All Statuses' },
@@ -46,8 +47,8 @@ export default function EventsPage() {
     try {
       const res = await adminEventsApi.list({ limit: 100 })
       setEvents((res.data.data || []) as Event[])
-    } catch {
-      toast.error('Failed to load events')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load events'))
     } finally {
       setLoading(false)
     }
@@ -94,8 +95,8 @@ export default function EventsPage() {
       toast.success('Event deleted')
       setDeleteTarget(null)
       fetchEvents()
-    } catch {
-      toast.error('Failed to delete event')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete event'))
     }
   }
 

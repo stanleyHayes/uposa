@@ -78,8 +78,8 @@ export default function NewsFormPage() {
       setArticle(data)
       reset(toFormValues(data))
       if (data.imageUrl) setImagePreview(data.imageUrl)
-    } catch {
-      toast.error('Article not found')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Article not found'))
       navigate('/news', { replace: true })
     } finally {
       setLoading(false)
