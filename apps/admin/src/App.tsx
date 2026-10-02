@@ -25,6 +25,7 @@ const ProjectFormPage = lazy(() => import('./pages/projects/ProjectFormPage'))
 const DonationsPage = lazy(() => import('./pages/donations/DonationsPage'))
 const DonationFormPage = lazy(() => import('./pages/donations/DonationFormPage'))
 const DonationDetailPage = lazy(() => import('./pages/donations/DonationDetailPage'))
+const DuesPage = lazy(() => import('./pages/dues/DuesPage'))
 const RolesPage = lazy(() => import('./pages/roles/RolesPage'))
 const AdminUsersPage = lazy(() => import('./pages/admin-users/AdminUsersPage'))
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
@@ -221,6 +222,14 @@ export default function App() {
               element={
                 <ProtectedRoute requiredPermission="donations:edit">
                   <DonationFormPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dues"
+              element={
+                <ProtectedRoute requiredPermission="donations:view">
+                  <DuesPage />
                 </ProtectedRoute>
               }
             />

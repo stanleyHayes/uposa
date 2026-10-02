@@ -1,4 +1,5 @@
 import client from './client'
+import type { ApiJob } from '../types'
 
 // Generic response types
 interface ApiResponse<T = unknown> {
@@ -56,6 +57,11 @@ export const adminAuthApi = {
     client.get<ApiResponse>('/auth/me'),
   logout: () =>
     client.post<ApiResponse>('/auth/logout'),
+  // Always 200 (no account enumeration); the email links to /reset-password?token=...
+  forgotPassword: (email: string) =>
+    client.post<ApiResponse>('/auth/admin/forgot-password', { email }),
+  resetPassword: (data: { token: string; password: string }) =>
+    client.post<ApiResponse>('/auth/admin/reset-password', data),
 }
 
 // Executives
@@ -106,8 +112,8 @@ export const adminMembersApi = {
     client.put<ApiResponse>(`/admin/members/${id}/approve`),
   suspend: (id: string) =>
     client.put<ApiResponse>(`/admin/members/${id}/suspend`),
-  changeStatus: (id: string, status: string) =>
-    client.put<ApiResponse>(`/admin/members/${id}/status`, { membershipStatus: status }),
+  changeStatus: (id: string, status: string, rejectionReason?: string) =>
+    client.put<ApiResponse>(`/admin/members/${id}/status`, { membershipStatus: status, rejectionReason }),
   delete: (id: string) =>
     client.delete<ApiResponse>(`/admin/members/${id}`),
   directory: (params?: Params) =>
@@ -176,6 +182,29 @@ export const adminDonationsApi = {
     client.get<PaginatedResponse>('/donations/admin', { params }),
   confirm: (id: string) =>
     client.put<ApiResponse>(`/donations/admin/${id}/confirm`),
+  getById: (id: string) =>
+    client.get<ApiResponse>(`/donations/admin/${id}`),
+  /** Record an offline donation. */
+  create: (data: AdminDonationInput) =>
+    client.post<ApiResponse>('/donations/admin', data),
+  /** amount/currency/projectId are only accepted while the donation isn't CONFIRMED; status may also be FAILED. */
+  update: (id: string, data: Partial<Omit<AdminDonationInput, 'status'>> & { status?: 'PENDING' | 'CONFIRMED' | 'FAILED' }) =>
+    client.put<ApiResponse>(`/donations/admin/${id}`, data),
+  delete: (id: string) =>
+    client.delete<ApiResponse>(`/donations/admin/${id}`),
+}
+
+export interface AdminDonationInput {
+  donorName: string
+  donorEmail: string
+  amount: number
+  currency: string
+  channel: string
+  status: 'PENDING' | 'CONFIRMED'
+  projectId?: string | null
+  purpose?: string
+  transactionRef?: string
+  notes?: string
 }
 
 // Dues
@@ -204,6 +233,32 @@ export const adminJobsApi = {
     client.get<PaginatedResponse>(`/jobs/admin/${jobId}/applications`, { params }),
   updateApplicationStatus: (applicationId: string, data: { status: string; notes?: string }) =>
     client.put<ApiResponse>(`/jobs/admin/applications/${applicationId}/status`, data),
+  /** Admin-posted jobs are approved immediately. */
+  create: (data: AdminJobInput) =>
+    client.post<ApiResponse>('/jobs/admin', data),
+  update: (id: string, data: Partial<AdminJobInput>) =>
+    client.put<ApiResponse>(`/jobs/admin/${id}`, data),
+}
+
+export interface AdminJobInput {
+  title: string
+  description: string
+  company: string
+  location?: string
+  jobType?: string
+  contactEmail?: string
+  externalUrl?: string
+  expiresAt?: string
+}
+
+/** There is no admin get-by-id (the public one hides unapproved jobs), so scan the admin list. */
+export async function findAdminJob(id: string): Promise<ApiJob | null> {
+  for (let page = 1; ; page++) {
+    const res = await adminJobsApi.listAll({ page, limit: 100 })
+    const found = ((res.data.data || []) as ApiJob[]).find((j) => j.id === id)
+    if (found) return found
+    if (page >= (res.data.pagination?.totalPages ?? 1)) return null
+  }
 }
 
 // Mentorship
@@ -341,6 +396,34 @@ export const adminContactApi = {
     client.get<PaginatedResponse>('/contact/admin', { params }),
   markRead: (id: string) =>
     client.put<ApiResponse>(`/contact/admin/${id}/read`),
+  setArchived: (id: string, archived: boolean) =>
+    client.put<ApiResponse>(`/contact/admin/${id}/archive`, { archived }),
+  markReplied: (id: string) =>
+    client.put<ApiResponse>(`/contact/admin/${id}/replied`),
   delete: (id: string) =>
     client.delete<ApiResponse>(`/contact/admin/${id}`),
+}
+
+// Announcements
+export const adminAnnouncementsApi = {
+  list: (params?: Params) =>
+    client.get<PaginatedResponse>('/announcements/admin', { params }),
+  getById: (id: string) =>
+    client.get<ApiResponse>(`/announcements/admin/${id}`),
+  create: (data: AdminAnnouncementInput) =>
+    client.post<ApiResponse>('/announcements/admin', data),
+  update: (id: string, data: Partial<AdminAnnouncementInput>) =>
+    client.put<ApiResponse>(`/announcements/admin/${id}`, data),
+  delete: (id: string) =>
+    client.delete<ApiResponse>(`/announcements/admin/${id}`),
+}
+
+export interface AdminAnnouncementInput {
+  title: string
+  body: string
+  type: 'INFO' | 'WARNING' | 'URGENT' | 'SUCCESS'
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+  audience: 'ALL' | 'MEMBERS' | 'EXECUTIVES'
+  /** ISO timestamp, or '' to clear. */
+  expiresAt: string
 }

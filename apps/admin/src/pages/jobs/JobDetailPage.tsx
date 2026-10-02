@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle, Trash2, Briefcase, MapPin, Mail, ExternalLink, User, Clock } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Pencil, Trash2, Briefcase, MapPin, Mail, ExternalLink, User, Clock } from 'lucide-react'
 import { createElement } from 'react'
 import MDEditorComponent from '@uiw/react-md-editor'
 import Button from '../../components/ui/Button'
@@ -8,48 +8,13 @@ import Badge, { type BadgeVariant } from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import Spinner from '../../components/ui/Spinner'
 import RoleGate from '../../components/auth/RoleGate'
-import { adminJobsApi } from '../../api/services'
+import { adminJobsApi, findAdminJob } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { apiErrorMessage } from '../../utils/apiError'
 import { formatDate } from '../../utils/formatters'
-import type { ApplicationStatus, JobType } from '../../types'
-
-/** Job as returned by /jobs/admin/all. */
-interface ApiJob {
-  id: string
-  title: string
-  description: string
-  company: string
-  location?: string | null
-  jobType: JobType
-  contactEmail?: string | null
-  externalUrl?: string | null
-  postedBy?: { id: string; fullName: string; email?: string } | null
-  isApproved: boolean
-  expiresAt?: string | null
-  createdAt: string
-  updatedAt: string
-}
-
-/** Application as returned by /jobs/admin/:id/applications. */
-interface ApiJobApplication {
-  id: string
-  status: ApplicationStatus
-  createdAt: string
-  applicant?: { id: string; fullName: string; email?: string } | null
-}
-
-/** There is no admin get-by-id (the public one hides unapproved jobs), so scan the admin list. */
-async function findJob(id: string): Promise<ApiJob | null> {
-  for (let page = 1; ; page++) {
-    const res = await adminJobsApi.listAll({ page, limit: 100 })
-    const found = ((res.data.data || []) as ApiJob[]).find((j) => j.id === id)
-    if (found) return found
-    if (page >= (res.data.pagination?.totalPages ?? 1)) return null
-  }
-}
+import type { ApiJob, ApiJobApplication } from '../../types'
 
 export default function JobDetailPage() {
   const navigate = useNavigate()
@@ -68,7 +33,7 @@ export default function JobDetailPage() {
   useEffect(() => {
     if (!id) return
     let cancelled = false
-    Promise.all([findJob(id), adminJobsApi.getApplications(id, { limit: 100 })])
+    Promise.all([findAdminJob(id), adminJobsApi.getApplications(id, { limit: 100 })])
       .then(([found, appsRes]) => {
         if (cancelled) return
         if (!found) throw new Error('not found')
@@ -166,6 +131,11 @@ export default function JobDetailPage() {
                   </Button>
                 </RoleGate>
               )}
+              <RoleGate permission="jobs:edit">
+                <Button size="sm" variant="secondary" leftIcon={<Pencil size={14} />} onClick={() => navigate(`/jobs/${job.id}/edit`)}>
+                  Edit
+                </Button>
+              </RoleGate>
               <RoleGate permission="jobs:delete">
                 <Button size="sm" variant="danger" leftIcon={<Trash2 size={14} />} onClick={() => setDeleteTarget(true)}>
                   Delete

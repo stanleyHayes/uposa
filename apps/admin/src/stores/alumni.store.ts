@@ -57,8 +57,9 @@ export const useAlumniStore = create<AlumniState>()((set) => ({
     }))
   },
 
-  rejectRegistration: async (id, _reviewerId, _reviewerName, _reason) => {
-    await adminMembersApi.changeStatus(id, 'INACTIVE')
+  rejectRegistration: async (id, _reviewerId, _reviewerName, reason) => {
+    // The API stores the reason on the member (rejectionReason).
+    await adminMembersApi.changeStatus(id, 'INACTIVE', reason)
     // Optimistic update
     set((s) => ({
       registrations: s.registrations.map((r) =>
@@ -68,7 +69,7 @@ export const useAlumniStore = create<AlumniState>()((set) => ({
               status: 'rejected' as const,
               membershipStatus: 'INACTIVE' as const,
               isApproved: false,
-              rejectionReason: _reason,
+              rejectionReason: reason,
               updatedAt: new Date().toISOString(),
             }
           : r
@@ -128,7 +129,7 @@ function mapMemberToRegistration(m: any): AlumniRegistration {
     submittedAt: m.createdAt ?? new Date().toISOString(),
     reviewedAt: m.approvedAt ?? '',
     reviewedBy: '',
-    rejectionReason: '',
+    rejectionReason: m.rejectionReason ?? '',
     approvedAt: m.approvedAt ?? '',
     createdAt: m.createdAt ?? new Date().toISOString(),
     updatedAt: m.updatedAt ?? new Date().toISOString(),

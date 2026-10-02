@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PlusCircle, Pencil, Trash2, Megaphone, CheckCircle, AlertTriangle, Archive } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
@@ -11,19 +11,36 @@ import Pagination from '../../components/ui/Pagination'
 import PageStats from '../../components/ui/PageStats'
 import SearchInput from '../../components/ui/SearchInput'
 import RoleGate from '../../components/auth/RoleGate'
-import { useAnnouncementsStore } from '../../stores/announcements.store'
+import { PageSkeleton } from '../../components/ui/Skeleton'
+import { adminAnnouncementsApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
-import type { AnnouncementType, AnnouncementStatus } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
+import { toAnnouncement, type Announcement, type ApiAnnouncement, type AnnouncementType, type AnnouncementStatus } from '../../types'
 
 export default function AnnouncementsPage() {
   const navigate = useNavigate()
-  const { announcements, deleteAnnouncement } = useAnnouncementsStore()
   const { addActivity } = useActivityStore()
   const { currentUser } = useAuth()
   const { toast } = useToast()
+
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchAnnouncements = useCallback(async () => {
+    try {
+      const res = await adminAnnouncementsApi.list({ limit: 100 })
+      setAnnouncements(((res.data.data || []) as ApiAnnouncement[]).map(toAnnouncement))
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load announcements'))
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
+
+  useEffect(() => { fetchAnnouncements() }, [fetchAnnouncements])
 
   const [currentPage, setCurrentPage] = useState(1)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null)
@@ -60,19 +77,26 @@ export default function AnnouncementsPage() {
     return matchesSearch && matchesStatus && matchesType
   }), [announcements, search, statusFilter, typeFilter])
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget || !currentUser) return
-    deleteAnnouncement(deleteTarget.id)
-    addActivity({
-      action: 'deleted announcement',
-      targetType: deleteTarget.title,
-      targetId: deleteTarget.id,
-      performedBy: currentUser.id,
-      performedByName: currentUser.name,
-    })
-    toast.success('Announcement deleted')
-    setDeleteTarget(null)
+    try {
+      await adminAnnouncementsApi.delete(deleteTarget.id)
+      addActivity({
+        action: 'deleted announcement',
+        targetType: deleteTarget.title,
+        targetId: deleteTarget.id,
+        performedBy: currentUser.id,
+        performedByName: currentUser.name,
+      })
+      toast.success('Announcement deleted')
+      setDeleteTarget(null)
+      fetchAnnouncements()
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete announcement'))
+    }
   }
+
+  if (loading) return <PageSkeleton cols={6} rows={5} />
 
   return (
     <div className="page-enter">
@@ -154,7 +178,7 @@ export default function AnnouncementsPage() {
                   >
                     <td className="px-5 py-3.5">
                       <p className="font-medium text-gray-900 dark:text-gray-100 line-clamp-1">{ann.title}</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">By {ann.createdBy}</p>
+                      {ann.createdBy && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">By {ann.createdBy}</p>}
                     </td>
                     <td className="px-5 py-3.5">
                       <Badge

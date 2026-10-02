@@ -30,3 +30,28 @@ export interface Job {
   createdAt: string
   updatedAt: string
 }
+
+/** Job as returned by the admin jobs API (/jobs/admin/all). */
+export interface ApiJob {
+  id: string
+  title: string
+  description: string
+  company: string
+  location?: string | null
+  jobType: JobType
+  contactEmail?: string | null
+  externalUrl?: string | null
+  postedBy?: { id: string; fullName: string; email?: string } | null
+  isApproved: boolean
+  expiresAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+/** Application as returned by /jobs/admin/:id/applications. */
+export interface ApiJobApplication {
+  id: string
+  status: ApplicationStatus
+  createdAt: string
+  applicant?: { id: string; fullName: string; email?: string } | null
+}

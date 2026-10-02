@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Mail, X, CheckCircle, Archive, MailOpen, Reply } from 'lucide-react'
+import { Mail, X, CheckCircle, Archive, ArchiveRestore, MailOpen, Reply } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
@@ -14,14 +14,17 @@ import { adminContactApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
+import { apiErrorMessage } from '../../utils/apiError'
 import { formatDate } from '../../utils/formatters'
-import type { ContactMessage } from '../../types'
+import type { ContactMessage, ContactMessageStatus } from '../../types'
 
-type ContactMessageStatus = NonNullable<ContactMessage['status']>
+type View = 'inbox' | 'archived'
 
-// The API only stores `isRead` / `repliedAt`; derive the UI status from them.
+// The API stores isRead / repliedAt / isArchived flags; derive the UI status from them.
 function getStatus(m: ContactMessage): ContactMessageStatus {
-  return m.status ?? (m.repliedAt ? 'replied' : m.isRead ? 'read' : 'new')
+  if (m.isArchived) return 'archived'
+  if (m.repliedAt) return 'replied'
+  return m.isRead ? 'read' : 'new'
 }
 
 function statusVariant(status: ContactMessageStatus): 'warning' | 'active' | 'success' | 'archived' {
@@ -33,28 +36,47 @@ function statusVariant(status: ContactMessageStatus): 'warning' | 'active' | 'su
   }
 }
 
+const viewOptions = [
+  { value: 'inbox', label: 'Inbox' },
+  { value: 'archived', label: 'Archived' },
+]
+
+const statusFilterOptions = [
+  { value: '', label: 'All Statuses' },
+  { value: 'new', label: 'New' },
+  { value: 'read', label: 'Read' },
+  { value: 'replied', label: 'Replied' },
+]
+
 export default function ContactMessagesPage() {
   const { addActivity } = useActivityStore()
   const { currentUser } = useAuth()
   const { toast } = useToast()
 
   const [messages, setMessages] = useState<ContactMessage[]>([])
+  const [archivedTotal, setArchivedTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [search, setSearch] = useState('')
+  const [view, setView] = useState<View>('inbox')
   const [filterStatus, setFilterStatus] = useState('')
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null)
+  const [busy, setBusy] = useState(false)
 
   const fetchMessages = useCallback(async () => {
     try {
-      const res = await adminContactApi.list({ limit: 100 })
+      const [res, archivedRes] = await Promise.all([
+        adminContactApi.list({ limit: 100, archived: view === 'archived' }),
+        adminContactApi.list({ limit: 1, archived: true }),
+      ])
       setMessages((res.data.data || []) as ContactMessage[])
-    } catch {
-      toast.error('Failed to load contact messages')
+      setArchivedTotal(archivedRes.data.pagination?.total ?? 0)
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to load contact messages'))
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [toast, view])
 
   useEffect(() => { fetchMessages() }, [fetchMessages])
 
@@ -62,16 +84,7 @@ export default function ContactMessagesPage() {
     total: messages.length,
     unread: messages.filter((m) => getStatus(m) === 'new').length,
     replied: messages.filter((m) => getStatus(m) === 'replied').length,
-    archived: messages.filter((m) => getStatus(m) === 'archived').length,
   }), [messages])
-
-  const statusFilterOptions = [
-    { value: '', label: 'All Statuses' },
-    { value: 'new', label: 'New' },
-    { value: 'read', label: 'Read' },
-    { value: 'replied', label: 'Replied' },
-    { value: 'archived', label: 'Archived' },
-  ]
 
   const unreadCount = stats.unread
 
@@ -85,22 +98,26 @@ export default function ContactMessagesPage() {
     return matchesSearch && matchesStatus
   }), [messages, search, filterStatus])
 
+  const logActivity = (action: string, msg: ContactMessage) => {
+    addActivity({
+      action,
+      targetType: msg.subject,
+      targetId: msg.id,
+      performedBy: currentUser?.id ?? '',
+      performedByName: currentUser?.name ?? '',
+    })
+  }
+
   const openMessage = async (msg: ContactMessage) => {
     setSelectedMessage(msg)
     if (getStatus(msg) === 'new') {
       try {
         await adminContactApi.markRead(msg.id)
-        addActivity({
-          action: 'read contact message',
-          targetType: msg.subject,
-          targetId: msg.id,
-          performedBy: currentUser?.id ?? '',
-          performedByName: currentUser?.name ?? '',
-        })
-        setSelectedMessage({ ...msg, status: 'read' })
+        logActivity('read contact message', msg)
+        setSelectedMessage({ ...msg, isRead: true })
         fetchMessages()
-      } catch {
-        toast.error('Failed to mark message as read')
+      } catch (err) {
+        toast.error(apiErrorMessage(err, 'Failed to mark message as read'))
       }
     }
   }
@@ -109,32 +126,57 @@ export default function ContactMessagesPage() {
     setSelectedMessage(null)
   }
 
-  const handleMarkStatus = async (status: ContactMessageStatus) => {
+  const handleMarkRead = async () => {
     if (!selectedMessage || !currentUser) return
+    setBusy(true)
     try {
       await adminContactApi.markRead(selectedMessage.id)
-      addActivity({
-        action: `marked message as ${status}`,
-        targetType: selectedMessage.subject,
-        targetId: selectedMessage.id,
-        performedBy: currentUser.id,
-        performedByName: currentUser.name,
-      })
-      toast.success(`Message marked as ${status}`)
-      setSelectedMessage({ ...selectedMessage, status })
+      logActivity('marked message as read', selectedMessage)
+      toast.success('Message marked as read')
+      setSelectedMessage({ ...selectedMessage, isRead: true })
       fetchMessages()
-    } catch {
-      toast.error(`Failed to mark message as ${status}`)
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to mark message as read'))
+    } finally {
+      setBusy(false)
     }
   }
 
-  const handleReplyEmail = () => {
-    if (!selectedMessage) return
+  const handleReplyEmail = async () => {
+    if (!selectedMessage || !currentUser) return
     window.open(
       `mailto:${selectedMessage.email}?subject=Re: ${encodeURIComponent(selectedMessage.subject)}`,
       '_blank'
     )
-    handleMarkStatus('replied')
+    setBusy(true)
+    try {
+      await adminContactApi.markReplied(selectedMessage.id)
+      logActivity('marked message as replied', selectedMessage)
+      toast.success('Message marked as replied')
+      setSelectedMessage({ ...selectedMessage, isRead: true, repliedAt: new Date().toISOString() })
+      fetchMessages()
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to mark message as replied'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleArchive = async (archived: boolean) => {
+    if (!selectedMessage || !currentUser) return
+    setBusy(true)
+    try {
+      await adminContactApi.setArchived(selectedMessage.id, archived)
+      logActivity(archived ? 'archived message' : 'restored message', selectedMessage)
+      toast.success(archived ? 'Message archived' : 'Message moved to inbox')
+      // It no longer belongs in the current view.
+      setSelectedMessage(null)
+      fetchMessages()
+    } catch (err) {
+      toast.error(apiErrorMessage(err, archived ? 'Failed to archive message' : 'Failed to restore message'))
+    } finally {
+      setBusy(false)
+    }
   }
 
   if (loading) return <PageSkeleton cols={4} rows={8} />
@@ -152,10 +194,10 @@ export default function ContactMessagesPage() {
 
       <PageStats
         stats={[
-          { label: 'Total Messages', value: stats.total, icon: Mail, color: 'text-brand-600', bg: 'bg-brand-50', border: 'border-brand-100' },
+          { label: view === 'archived' ? 'Archived Shown' : 'Inbox', value: stats.total, icon: Mail, color: 'text-brand-600', bg: 'bg-brand-50', border: 'border-brand-100' },
           { label: 'New', value: stats.unread, icon: MailOpen, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
           { label: 'Replied', value: stats.replied, icon: Reply, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100' },
-          { label: 'Archived', value: stats.archived, icon: Archive, color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' },
+          { label: 'Archived', value: archivedTotal, icon: Archive, color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' },
         ]}
       />
 
@@ -171,6 +213,12 @@ export default function ContactMessagesPage() {
               className="flex-1 max-w-xs"
             />
             <Select
+              options={viewOptions}
+              value={view}
+              onChange={(e) => { setView(e.target.value as View); setSelectedMessage(null); setCurrentPage(1) }}
+              className="w-36"
+            />
+            <Select
               options={statusFilterOptions}
               value={filterStatus}
               onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1) }}
@@ -182,8 +230,8 @@ export default function ContactMessagesPage() {
             {filtered.length === 0 ? (
               <EmptyState
                 icon={<Mail size={40} />}
-                title={search || filterStatus ? 'No matching messages' : 'No messages found'}
-                description={search || filterStatus ? 'Try adjusting your search or filters.' : 'Contact form submissions from the client website will appear here.'}
+                title={search || filterStatus ? 'No matching messages' : view === 'archived' ? 'No archived messages' : 'No messages found'}
+                description={search || filterStatus ? 'Try adjusting your search or filters.' : view === 'archived' ? 'Archived messages will appear here.' : 'Contact form submissions from the client website will appear here.'}
               />
             ) : (
               <div className="overflow-x-auto">
@@ -272,6 +320,8 @@ export default function ContactMessagesPage() {
               <div>
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Received</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(selectedMessage.createdAt)}</p>
+                {selectedMessage.repliedAt && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Replied {formatDate(selectedMessage.repliedAt)}</p>}
+                {selectedMessage.archivedAt && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Archived {formatDate(selectedMessage.archivedAt)}</p>}
               </div>
             </div>
 
@@ -282,30 +332,31 @@ export default function ContactMessagesPage() {
                   variant="secondary"
                   className="w-full justify-center"
                   leftIcon={<MailOpen size={14} />}
+                  disabled={busy}
                   onClick={handleReplyEmail}
                 >
                   Reply via Email
                 </Button>
-                {getStatus(selectedMessage) !== 'read' && (
+                {!selectedMessage.isRead && (
                   <Button
                     variant="secondary"
                     className="w-full justify-center"
                     leftIcon={<CheckCircle size={14} />}
-                    onClick={() => handleMarkStatus('read')}
+                    disabled={busy}
+                    onClick={handleMarkRead}
                   >
                     Mark as Read
                   </Button>
                 )}
-                {getStatus(selectedMessage) !== 'archived' && (
-                  <Button
-                    variant="secondary"
-                    className="w-full justify-center"
-                    leftIcon={<Archive size={14} />}
-                    onClick={() => handleMarkStatus('archived')}
-                  >
-                    Archive
-                  </Button>
-                )}
+                <Button
+                  variant="secondary"
+                  className="w-full justify-center"
+                  leftIcon={selectedMessage.isArchived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+                  disabled={busy}
+                  onClick={() => handleArchive(!selectedMessage.isArchived)}
+                >
+                  {selectedMessage.isArchived ? 'Move to Inbox' : 'Archive'}
+                </Button>
               </div>
             </RoleGate>
           </div>

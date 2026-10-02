@@ -22,6 +22,8 @@ import EmptyState from '../../components/ui/EmptyState'
 import Spinner from '../../components/ui/Spinner'
 import { adminPaymentMethodsApi } from '../../api/services'
 import { useToast } from '../../hooks/useToast'
+import { useAuth } from '../../hooks/useAuth'
+import { isModerator } from '../../utils/permissions'
 import type { PaymentMethod } from '../../types/donation.types'
 
 const providerMeta: Record<string, { icon: typeof CreditCard; color: string; bg: string; border: string; gradient: string }> = {
@@ -70,6 +72,9 @@ export default function PaymentMethodsPage() {
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState<string | null>(null)
   const { toast } = useToast()
+  const { currentUser } = useAuth()
+  // Credential edits and enable/disable are refused to moderators by the API.
+  const canManage = !isModerator(currentUser)
 
   const fetchMethods = () => {
     setLoading(true)
@@ -202,19 +207,21 @@ export default function PaymentMethodsPage() {
 
                     {/* Right: actions */}
                     <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        leftIcon={<Key size={14} />}
-                        onClick={() => navigate(`/payment-methods/${method.id}/edit`)}
-                      >
-                        {method.hasCredentials ? 'Update Keys' : 'Add Keys'}
-                      </Button>
+                      {canManage && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          leftIcon={<Key size={14} />}
+                          onClick={() => navigate(`/payment-methods/${method.id}/edit`)}
+                        >
+                          {method.hasCredentials ? 'Update Keys' : 'Add Keys'}
+                        </Button>
+                      )}
 
                       {/* Toggle switch */}
                       <button
                         onClick={() => handleToggle(method)}
-                        disabled={toggling === method.id}
+                        disabled={toggling === method.id || !canManage}
                         className="relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
                         style={{
                           backgroundColor: method.isEnabled ? '#16a34a' : '#d1d5db',

@@ -7,10 +7,11 @@ import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import RoleGate from '../../components/auth/RoleGate'
 import { PageSkeleton } from '../../components/ui/Skeleton'
-import client from '../../api/client'
+import { adminDonationsApi } from '../../api/services'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
+import { apiErrorMessage } from '../../utils/apiError'
 
 const channelLabels: Record<string, string> = {
   MOMO: 'Mobile Money (MoMo)',
@@ -32,10 +33,11 @@ export default function DonationDetailPage() {
   const [donation, setDonation] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (!id) return
-    client.get(`/donations/admin/${id}`)
+    adminDonationsApi.getById(id)
       .then((res) => setDonation(res.data.data || null))
       .catch(() => setDonation(null))
       .finally(() => setLoading(false))
@@ -66,12 +68,14 @@ export default function DonationDetailPage() {
 
   const handleDelete = async () => {
     if (!currentUser) return
+    setDeleting(true)
     try {
-      await client.delete(`/admin/donations/${donation.id}`)
+      await adminDonationsApi.delete(donation.id)
       toast.success('Donation deleted')
       navigate('/donations', { replace: true })
-    } catch {
-      toast.error('Failed to delete donation')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete donation'))
+      setDeleting(false)
     }
   }
 
@@ -230,6 +234,7 @@ export default function DonationDetailPage() {
         open={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDelete}
+        loading={deleting}
         title="Delete Donation Record"
         message={`Are you sure you want to delete this donation from "${donation.donorName}"? This cannot be undone.`}
         confirmLabel="Delete"

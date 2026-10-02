@@ -6,6 +6,8 @@ import { z } from 'zod'
 import { Eye, EyeOff, ArrowLeft, CheckCircle2, AlertCircle, Lock } from 'lucide-react'
 import AuthLayout from '../../components/layout/AuthLayout'
 import Button from '../../components/ui/Button'
+import { adminAuthApi } from '../../api/services'
+import { apiErrorMessage } from '../../utils/apiError'
 
 const resetSchema = z
   .object({
@@ -65,15 +67,14 @@ export default function ResetPasswordPage() {
     )
   }
 
-  const onSubmit = async (_data: ResetForm) => {
+  const onSubmit = async ({ password }: ResetForm) => {
     setResetError('')
     try {
-      // TODO: call API to reset password
-      // await api.post('/auth/admin/reset-password', { token, password })
+      await adminAuthApi.resetPassword({ token, password })
       setSuccess(true)
       setTimeout(() => navigate('/login'), 3000)
-    } catch {
-      setResetError('Failed to reset password. The link may have expired.')
+    } catch (err) {
+      setResetError(apiErrorMessage(err, 'Failed to reset password. The link may have expired.'))
     }
   }
 

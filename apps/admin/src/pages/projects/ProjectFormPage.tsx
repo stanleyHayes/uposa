@@ -84,7 +84,7 @@ export default function ProjectFormPage() {
 
   const editingProject = isEdit ? projects.find((p) => p.id === id) : undefined
 
-  const { register, handleSubmit, reset, control, watch, formState: { errors, isSubmitting } } = useForm<ProjectFormInput, unknown, ProjectForm>({
+  const { register, handleSubmit, reset, control, watch, formState: { errors, isSubmitting, dirtyFields } } = useForm<ProjectFormInput, unknown, ProjectForm>({
     resolver: zodResolver(projectSchema),
     defaultValues: toFormValues(),
   })
@@ -150,7 +150,9 @@ export default function ProjectFormPage() {
       fd.append('status', data.status)
       fd.append('isFeatured', String(data.isFeatured))
       fd.append('goalAmount', String(data.goalAmount ?? 0))
-      fd.append('raisedAmount', String(data.raisedAmount ?? 0))
+      // Only send raisedAmount if the admin edited it, so saving can't overwrite donations
+      // credited to the project while this form was open.
+      if (dirtyFields.raisedAmount) fd.append('raisedAmount', String(data.raisedAmount ?? 0))
 
       const gallery = (data.gallery || '').split('\n').map((u) => u.trim()).filter(Boolean)
       fd.append('gallery', JSON.stringify(gallery))

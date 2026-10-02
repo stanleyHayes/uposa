@@ -133,7 +133,8 @@ export default function EventFormPage() {
       fd.append('title', data.title)
       fd.append('description', data.description)
       fd.append('date', new Date(data.date).toISOString())
-      if (data.endDate) fd.append('endDate', new Date(data.endDate).toISOString())
+      // '' clears an end date the admin removed.
+      fd.append('endDate', data.endDate ? new Date(data.endDate).toISOString() : '')
       fd.append('location', data.location)
       fd.append('rsvpLink', data.rsvpLink)
       fd.append('status', data.status)

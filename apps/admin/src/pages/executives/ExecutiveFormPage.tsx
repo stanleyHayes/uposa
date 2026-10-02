@@ -114,9 +114,10 @@ export default function ExecutiveFormPage() {
     formData.append('name', data.name)
     formData.append('position', data.position)
     if (data.classOf) formData.append('classOf', data.classOf)
-    if (data.email) formData.append('email', data.email)
-    if (data.phone) formData.append('phone', data.phone)
-    if (data.bio) formData.append('bio', data.bio)
+    // Always send these: '' tells the API to clear a value the admin emptied.
+    formData.append('email', data.email ?? '')
+    formData.append('phone', data.phone ?? '')
+    formData.append('bio', data.bio ?? '')
     formData.append('order', String(data.order))
     formData.append('isActive', data.isActive)
     if (photoFile) formData.append('photo', await compressImage(photoFile))

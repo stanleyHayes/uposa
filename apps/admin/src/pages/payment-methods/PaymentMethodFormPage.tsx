@@ -7,6 +7,8 @@ import Input from '../../components/ui/Input'
 import Spinner from '../../components/ui/Spinner'
 import { adminPaymentMethodsApi } from '../../api/services'
 import { useToast } from '../../hooks/useToast'
+import { useAuth } from '../../hooks/useAuth'
+import { isModerator } from '../../utils/permissions'
 import { apiErrorMessage } from '../../utils/apiError'
 import type { PaymentMethod } from '../../types/donation.types'
 
@@ -31,6 +33,9 @@ export default function PaymentMethodFormPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const { toast } = useToast()
+  const { currentUser } = useAuth()
+  // The API returns 403 for moderators editing credentials.
+  const readOnly = isModerator(currentUser)
 
   const [method, setMethod] = useState<PaymentMethod | null>(null)
   const [loading, setLoading] = useState(true)
@@ -132,6 +137,12 @@ export default function PaymentMethodFormPage() {
             </div>
           </div>
 
+          {readOnly && (
+            <p className="rounded-xl bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-800/30 p-4 text-sm text-yellow-800 dark:text-yellow-300">
+              Moderators can't change payment credentials. Ask an admin or super admin to update them.
+            </p>
+          )}
+
           {/* Credential fields */}
           <div className="space-y-4">
             {fields.map((field) => (
@@ -141,6 +152,7 @@ export default function PaymentMethodFormPage() {
                   type={showSecrets[field.key] ? 'text' : 'password'}
                   placeholder={method.hasCredentials ? '••••••• (unchanged)' : field.placeholder}
                   value={credentials[field.key] || ''}
+                  disabled={readOnly}
                   onChange={(e) => setCredentials((prev) => ({ ...prev, [field.key]: e.target.value }))}
                 />
                 <button
@@ -158,6 +170,7 @@ export default function PaymentMethodFormPage() {
           <div className="flex items-center gap-3 pt-4 border-t border-gray-100 dark:border-dark-border">
             <Button
               loading={saving}
+              disabled={readOnly}
               leftIcon={<Save size={15} />}
               onClick={handleSave}
             >

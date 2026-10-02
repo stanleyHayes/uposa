@@ -1,28 +1,48 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Pencil, Trash2, Users, CalendarDays } from 'lucide-react'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
+import Spinner from '../../components/ui/Spinner'
 import RoleGate from '../../components/auth/RoleGate'
-import { useAnnouncementsStore } from '../../stores/announcements.store'
+import { adminAnnouncementsApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
-import type { AnnouncementType, AnnouncementStatus } from '../../types'
+import { apiErrorMessage } from '../../utils/apiError'
+import { toAnnouncement, type Announcement, type ApiAnnouncement, type AnnouncementType, type AnnouncementStatus } from '../../types'
 
 export default function AnnouncementDetailPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const { announcements, deleteAnnouncement } = useAnnouncementsStore()
   const { addActivity } = useActivityStore()
   const { currentUser } = useAuth()
   const { toast } = useToast()
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
 
-  const announcement = announcements.find((a) => a.id === id)
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    adminAnnouncementsApi.getById(id)
+      .then((res) => { if (!cancelled) setAnnouncement(toAnnouncement(res.data.data as ApiAnnouncement)) })
+      .catch(() => { if (!cancelled) setAnnouncement(null) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="page-enter flex items-center justify-center py-32">
+        <Spinner size="lg" />
+      </div>
+    )
+  }
 
   if (!announcement) {
     return (
@@ -39,18 +59,24 @@ export default function AnnouncementDetailPage() {
     )
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!currentUser) return
-    deleteAnnouncement(announcement.id)
-    addActivity({
-      action: 'deleted announcement',
-      targetType: announcement.title,
-      targetId: announcement.id,
-      performedBy: currentUser.id,
-      performedByName: currentUser.name,
-    })
-    toast.success('Announcement deleted')
-    navigate('/announcements')
+    setDeleting(true)
+    try {
+      await adminAnnouncementsApi.delete(announcement.id)
+      addActivity({
+        action: 'deleted announcement',
+        targetType: announcement.title,
+        targetId: announcement.id,
+        performedBy: currentUser.id,
+        performedByName: currentUser.name,
+      })
+      toast.success('Announcement deleted')
+      navigate('/announcements')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete announcement'))
+      setDeleting(false)
+    }
   }
 
   return (
@@ -112,7 +138,7 @@ export default function AnnouncementDetailPage() {
             )}
           </div>
 
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">By {announcement.createdBy}</p>
+          {announcement.createdBy && <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">By {announcement.createdBy}</p>}
 
           <div className="bg-gray-50 dark:bg-dark-hover rounded-lg p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
             {announcement.body}
@@ -129,6 +155,7 @@ export default function AnnouncementDetailPage() {
         open={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDelete}
+        loading={deleting}
         title="Delete Announcement"
         message={`Are you sure you want to delete "${announcement.title}"?`}
         confirmLabel="Delete"

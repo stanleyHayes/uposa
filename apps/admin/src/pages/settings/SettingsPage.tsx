@@ -19,7 +19,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useActivityStore } from '../../stores/activity.store'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
-import client from '../../api/client'
+import client, { ADMIN_REFRESH_TOKEN_KEY, ADMIN_TOKEN_KEY } from '../../api/client'
 
 type TabKey = 'profile' | 'organization' | 'notifications' | 'danger'
 
@@ -122,10 +122,15 @@ export default function SettingsPage() {
   const onPasswordSave = async (data: PasswordForm) => {
     if (!currentUser) return
     try {
-      await client.put('/admin/change-password', {
+      const res = await client.put('/admin/change-password', {
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
       })
+      // The change revokes every earlier session, including this one; keep the
+      // fresh tokens or the next refresh would log this admin out.
+      const tokens = res.data?.data as { token?: string; refreshToken?: string } | undefined
+      if (tokens?.token) localStorage.setItem(ADMIN_TOKEN_KEY, tokens.token)
+      if (tokens?.refreshToken) localStorage.setItem(ADMIN_REFRESH_TOKEN_KEY, tokens.refreshToken)
       resetPassword()
       toast.success('Password changed', 'Your password has been updated.')
     } catch (err: unknown) {
