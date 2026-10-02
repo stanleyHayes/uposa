@@ -39,21 +39,23 @@
     "concurrently": "^10.0.3"
   },
   "overrides": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-native": {
-      "react": "19.2.7",
-      "react-dom": "19.2.7"
+      "react": "19.2.3",
+      "react-dom": "19.2.3"
     },
     "expo-router": {
-      "react": "19.2.7",
-      "react-dom": "19.2.7"
+      "react": "19.2.3",
+      "react-dom": "19.2.3"
     },
     "expo": {
-      "react": "19.2.7",
-      "react-dom": "19.2.7"
+      "react": "19.2.3",
+      "react-dom": "19.2.3"
     },
     "react-native-web": {
-      "react": "19.2.7",
-      "react-dom": "19.2.7"
+      "react": "19.2.3",
+      "react-dom": "19.2.3"
     },
     "@babel/core": "7.29.7",
     "express": "5.2.1",
