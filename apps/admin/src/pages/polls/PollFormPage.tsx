@@ -8,9 +8,11 @@ import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Textarea from '../../components/ui/Textarea'
 import Select from '../../components/ui/Select'
-import client from '../../api/client'
+import { adminPollsApi } from '../../api/services'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
+import { apiErrorMessage } from '../../utils/apiError'
+import { toDateTimeLocal } from '../../utils/formatters'
 import type { Poll, PollStatus } from '../../types'
 
 const pollSchema = z.object({
@@ -41,7 +43,7 @@ function toFormValues(poll?: Poll): PollForm {
     description: poll.description,
     options: poll.options.map((o) => ({ text: o.text })),
     status: poll.status as PollForm['status'],
-    endsAt: poll.endsAt ? poll.endsAt.substring(0, 16) : '',
+    endsAt: toDateTimeLocal(poll.endsAt),
     allowMultiple: poll.allowMultiple ? 'true' : 'false',
   }
 }
@@ -79,12 +81,12 @@ export default function PollFormPage() {
 
   const { fields, append, remove } = useFieldArray({ control, name: 'options' })
 
-  // Fetch existing poll for editing
+  // Fetch existing poll for editing (the admin results endpoint doubles as get-by-id)
   useEffect(() => {
     if (!isEditing || !id) { setLoading(false); return }
-    client.get(`/admin/polls/${id}`)
+    adminPollsApi.getResults(id)
       .then((res) => {
-        const poll = res.data.data
+        const poll = res.data.data as Poll | undefined
         if (poll) {
           setExistingPoll(poll)
           reset(toFormValues(poll))
@@ -98,32 +100,30 @@ export default function PollFormPage() {
 
   const onSubmit = async (data: PollForm) => {
     if (!currentUser) return
-    const options = data.options.map((o, i) => ({
-      id: existingPoll?.options?.[i]?.id ?? (Date.now() + i),
-      text: o.text,
-      votes: existingPoll?.options?.[i]?.votes ?? 0,
-    }))
-    const payload = {
-      question: data.question,
-      description: data.description,
-      options,
-      allowMultiple: data.allowMultiple === 'true',
-      endsAt: data.endsAt,
-      status: data.status,
-    }
+    const endsAt = new Date(data.endsAt).toISOString()
 
     try {
       if (isEditing && existingPoll) {
-        await client.put(`/admin/polls/${existingPoll.id}`, payload)
+        // The API only updates question/description/end date; closing is a separate call.
+        await adminPollsApi.update(existingPoll.id, { question: data.question, description: data.description, endsAt })
+        if (data.status === 'CLOSED' && existingPoll.status !== 'CLOSED') {
+          await adminPollsApi.close(existingPoll.id)
+        }
         toast.success('Poll updated')
         navigate('/polls')
       } else {
-        await client.post('/admin/polls', payload)
+        await adminPollsApi.create({
+          question: data.question,
+          description: data.description,
+          options: data.options.map((o, i) => ({ id: i + 1, text: o.text })),
+          allowMultiple: data.allowMultiple === 'true',
+          endsAt,
+        })
         toast.success('Poll created')
         navigate('/polls')
       }
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to save poll')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to save poll'))
     }
   }
 
@@ -152,6 +152,7 @@ export default function PollFormPage() {
 
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Options</label>
+            {isEditing && <p className="text-xs text-gray-400 dark:text-gray-500">Options and choice type can't be changed after a poll is created.</p>}
             {typeof errors.options?.message === 'string' && (
               <p className="text-xs text-red-600">{errors.options.message}</p>
             )}
@@ -161,9 +162,10 @@ export default function PollFormPage() {
                   <input
                     {...register(`options.${index}.text`)}
                     placeholder={`Option ${index + 1}`}
+                    readOnly={isEditing}
                     className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-dark-hover dark:text-gray-100 dark:placeholder:text-gray-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
-                  {fields.length > 2 && (
+                  {!isEditing && fields.length > 2 && (
                     <button type="button" onClick={() => remove(index)} className="rounded-lg p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors">
                       <X size={15} />
                     </button>
@@ -171,18 +173,23 @@ export default function PollFormPage() {
                 </div>
               ))}
             </div>
-            <button type="button" onClick={() => append({ text: '' })} className="mt-1 flex items-center gap-1 text-sm text-brand-600 hover:text-brand-700 transition-colors w-fit">
-              <Plus size={14} />
-              Add Option
-            </button>
+            {!isEditing && (
+              <button type="button" onClick={() => append({ text: '' })} className="mt-1 flex items-center gap-1 text-sm text-brand-600 hover:text-brand-700 transition-colors w-fit">
+                <Plus size={14} />
+                Add Option
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Controller name="status" control={control} render={({ field }) => (
-              <Select label="Status" options={statusOptions} value={field.value} onChange={(e) => field.onChange(e.target.value)} />
-            )} />
+            {/* New polls always open as Active; a closed poll can't be reopened. */}
+            {isEditing && (
+              <Controller name="status" control={control} render={({ field }) => (
+                <Select label="Status" options={statusOptions} value={field.value} disabled={existingPoll?.status === 'CLOSED'} onChange={(e) => field.onChange(e.target.value)} />
+              )} />
+            )}
             <Controller name="allowMultiple" control={control} render={({ field }) => (
-              <Select label="Choice Type" options={allowMultipleOptions} value={field.value} onChange={(e) => field.onChange(e.target.value)} />
+              <Select label="Choice Type" options={allowMultipleOptions} value={field.value} disabled={isEditing} onChange={(e) => field.onChange(e.target.value)} />
             )} />
           </div>
           <Input label="Ends At" type="datetime-local" error={errors.endsAt?.message} {...register('endsAt')} />

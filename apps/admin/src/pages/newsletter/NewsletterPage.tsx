@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Mail, Trash2, UserX, CheckCircle, XCircle, Send } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
@@ -43,7 +42,7 @@ export default function NewsletterPage() {
       const params: Record<string, string | number> = { page, limit: 20 }
       if (statusFilter) params.status = statusFilter
       const res = await adminNewsletterApi.list(params)
-      setSubscribers(res.data.data || [])
+      setSubscribers((res.data.data || []) as Subscriber[])
       const p = res.data.pagination
       if (p) setPagination({ page: p.page, totalPages: p.totalPages, total: p.total })
     } catch {

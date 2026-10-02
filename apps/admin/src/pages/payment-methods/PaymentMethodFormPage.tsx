@@ -7,6 +7,7 @@ import Input from '../../components/ui/Input'
 import Spinner from '../../components/ui/Spinner'
 import { adminPaymentMethodsApi } from '../../api/services'
 import { useToast } from '../../hooks/useToast'
+import { apiErrorMessage } from '../../utils/apiError'
 import type { PaymentMethod } from '../../types/donation.types'
 
 const providerCredentialFields: Record<string, { key: string; label: string; placeholder: string }[]> = {
@@ -68,8 +69,8 @@ export default function PaymentMethodFormPage() {
       await adminPaymentMethodsApi.update(id, { credentials: creds })
       toast.success('Credentials saved and encrypted')
       navigate('/payment-methods')
-    } catch {
-      toast.error('Failed to save credentials')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to save credentials'))
     } finally {
       setSaving(false)
     }

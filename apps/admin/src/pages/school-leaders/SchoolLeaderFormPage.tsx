@@ -13,6 +13,8 @@ import { adminSchoolLeadersApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
+import { compressImage } from '../../lib/image'
+import { apiErrorMessage } from '../../utils/apiError'
 import type { SchoolLeader } from '../../types'
 
 const leaderSchema = z.object({
@@ -116,8 +118,8 @@ export default function SchoolLeaderFormPage() {
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Photo must be under 5MB')
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Photo must be under 10MB')
       return
     }
     setPhotoFile(file)
@@ -138,7 +140,7 @@ export default function SchoolLeaderFormPage() {
     formData.append('position', data.position)
     formData.append('order', String(data.order))
     formData.append('isActive', data.isActive)
-    if (photoFile) formData.append('photo', photoFile)
+    if (photoFile) formData.append('photo', await compressImage(photoFile))
 
     try {
       if (isEditing && existing) {
@@ -164,8 +166,8 @@ export default function SchoolLeaderFormPage() {
         toast.success('School leader added')
         navigate('/school-leaders')
       }
-    } catch {
-      toast.error('Failed to save school leader')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to save school leader'))
     }
   }
 
@@ -232,7 +234,7 @@ export default function SchoolLeaderFormPage() {
                 >
                   {photoPreview ? 'Change Photo' : 'Upload Photo'}
                 </Button>
-                <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF, WebP. Max 5MB.</p>
+                <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF, WebP. Max 10MB.</p>
               </div>
             </div>
           </div>

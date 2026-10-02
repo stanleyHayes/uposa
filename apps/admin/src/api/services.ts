@@ -107,7 +107,7 @@ export const adminMembersApi = {
   suspend: (id: string) =>
     client.put<ApiResponse>(`/admin/members/${id}/suspend`),
   changeStatus: (id: string, status: string) =>
-    client.put<ApiResponse>(`/admin/members/${id}/status`, { status }),
+    client.put<ApiResponse>(`/admin/members/${id}/status`, { membershipStatus: status }),
   delete: (id: string) =>
     client.delete<ApiResponse>(`/admin/members/${id}`),
   directory: (params?: Params) =>

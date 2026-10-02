@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
@@ -66,7 +65,7 @@ export default function ResetPasswordPage() {
     )
   }
 
-  const onSubmit = async ({ password }: ResetForm) => {
+  const onSubmit = async (_data: ResetForm) => {
     setResetError('')
     try {
       // TODO: call API to reset password

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -17,11 +16,6 @@ import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../../hooks/useAuth'
-import { useAdminUsersStore } from '../../stores/adminUsers.store'
-import { useAlumniStore } from '../../stores/alumni.store'
-import { useEventsStore } from '../../stores/events.store'
-import { useNewsStore } from '../../stores/news.store'
-import { useProjectsStore } from '../../stores/projects.store'
 import { useActivityStore } from '../../stores/activity.store'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
@@ -85,20 +79,11 @@ function ToggleSwitch({ label, description, checked, onChange }: {
 
 export default function SettingsPage() {
   const { currentUser, updateCurrentUser } = useAuth()
-  const { updateUser, resetToDefaults: resetUsers } = useAdminUsersStore()
-  const { resetToDefaults: resetAlumni } = useAlumniStore()
-  const { resetToDefaults: resetEvents } = useEventsStore()
-  const { resetToDefaults: resetNews } = useNewsStore()
-  const { fetchProjects: resetProjects } = useProjectsStore()
   const { clearActivity } = useActivityStore()
   const { toast } = useToast()
 
   const [activeTab, setActiveTab] = useState<TabKey>('profile')
-  const [resetDialogOpen, setResetDialogOpen] = useState(false)
-  const [resetAlumniOpen, setResetAlumniOpen] = useState(false)
-  const [resetEventsOpen, setResetEventsOpen] = useState(false)
-  const [resetNewsOpen, setResetNewsOpen] = useState(false)
-  const [resetProjectsOpen, setResetProjectsOpen] = useState(false)
+  const [clearActivityOpen, setClearActivityOpen] = useState(false)
 
   // Notification prefs
   const [notifRegistration, setNotifRegistration] = useState(() => getNotifDefault('registration', true))
@@ -149,15 +134,10 @@ export default function SettingsPage() {
     }
   }
 
-  const handleResetAll = () => {
-    resetUsers()
-    resetAlumni()
-    resetEvents()
-    resetNews()
-    resetProjects()
+  const handleClearActivity = () => {
     clearActivity()
-    setResetDialogOpen(false)
-    toast.success('Data reset', 'All data has been restored to defaults.')
+    setClearActivityOpen(false)
+    toast.success('Activity log cleared')
   }
 
   const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
@@ -362,98 +342,30 @@ export default function SettingsPage() {
                 <div>
                   <h3 className="font-bold text-gray-900 dark:text-gray-100">Danger Zone</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    These actions reset data to factory defaults and cannot be undone.
+                    These actions cannot be undone.
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-lg border border-red-100 dark:border-red-900/40 bg-red-50/50 dark:bg-red-900/10">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Reset Alumni Data</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Restore all alumni registrations to demo defaults</p>
-                  </div>
-                  <Button variant="danger" onClick={() => setResetAlumniOpen(true)}>Reset</Button>
+              <div className="flex items-center justify-between p-3 rounded-lg border border-red-100 dark:border-red-900/40 bg-red-50/50 dark:bg-red-900/10">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Clear Activity Log</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Remove the recent-activity history stored in this browser</p>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg border border-red-100 dark:border-red-900/40 bg-red-50/50 dark:bg-red-900/10">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Reset Events</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Restore all events to demo defaults</p>
-                  </div>
-                  <Button variant="danger" onClick={() => setResetEventsOpen(true)}>Reset</Button>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg border border-red-100 dark:border-red-900/40 bg-red-50/50 dark:bg-red-900/10">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Reset News</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Restore all news articles to demo defaults</p>
-                  </div>
-                  <Button variant="danger" onClick={() => setResetNewsOpen(true)}>Reset</Button>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg border border-red-100 dark:border-red-900/40 bg-red-50/50 dark:bg-red-900/10">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Reset Projects</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Restore all projects to demo defaults</p>
-                  </div>
-                  <Button variant="danger" onClick={() => setResetProjectsOpen(true)}>Reset</Button>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-900/50">
-                  <div className="flex items-center justify-between p-4 rounded-lg border-2 border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
-                    <div>
-                      <p className="text-sm font-bold text-red-700 dark:text-red-400">Reset All Data</p>
-                      <p className="text-xs text-red-600 dark:text-red-500 mt-0.5">Resets everything: alumni, events, news, projects, users, and activity logs</p>
-                    </div>
-                    <Button variant="danger" onClick={() => setResetDialogOpen(true)}>
-                      Reset Everything
-                    </Button>
-                  </div>
-                </div>
+                <Button variant="danger" onClick={() => setClearActivityOpen(true)}>Clear</Button>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Confirm Dialogs */}
       <ConfirmDialog
-        open={resetDialogOpen}
-        onClose={() => setResetDialogOpen(false)}
-        onConfirm={handleResetAll}
-        title="Reset All Data"
-        message="This will reset ALL data (alumni, events, news, projects, admin users) back to the demo defaults and clear all activity logs. This action cannot be undone. Are you sure?"
-        confirmLabel="Yes, Reset Everything"
-      />
-      <ConfirmDialog
-        open={resetAlumniOpen}
-        onClose={() => setResetAlumniOpen(false)}
-        onConfirm={() => { resetAlumni(); setResetAlumniOpen(false); toast.success('Alumni data reset') }}
-        title="Reset Alumni Data"
-        message="This will restore all alumni registrations to demo defaults. This cannot be undone."
-        confirmLabel="Reset Alumni"
-      />
-      <ConfirmDialog
-        open={resetEventsOpen}
-        onClose={() => setResetEventsOpen(false)}
-        onConfirm={() => { resetEvents(); setResetEventsOpen(false); toast.success('Events reset') }}
-        title="Reset Events"
-        message="This will restore all events to demo defaults. This cannot be undone."
-        confirmLabel="Reset Events"
-      />
-      <ConfirmDialog
-        open={resetNewsOpen}
-        onClose={() => setResetNewsOpen(false)}
-        onConfirm={() => { resetNews(); setResetNewsOpen(false); toast.success('News reset') }}
-        title="Reset News"
-        message="This will restore all news articles to demo defaults. This cannot be undone."
-        confirmLabel="Reset News"
-      />
-      <ConfirmDialog
-        open={resetProjectsOpen}
-        onClose={() => setResetProjectsOpen(false)}
-        onConfirm={() => { resetProjects(); setResetProjectsOpen(false); toast.success('Projects reset') }}
-        title="Reset Projects"
-        message="This will restore all projects to demo defaults. This cannot be undone."
-        confirmLabel="Reset Projects"
+        open={clearActivityOpen}
+        onClose={() => setClearActivityOpen(false)}
+        onConfirm={handleClearActivity}
+        title="Clear Activity Log"
+        message="This will remove the recent-activity history stored in this browser. This cannot be undone."
+        confirmLabel="Clear Log"
       />
     </div>
   )

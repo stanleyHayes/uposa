@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { create } from 'zustand'
 import type { AlumniRegistration } from '../types'
 import { adminMembersApi } from '../api/services'
+import { useUIStore } from './ui.store'
 
 interface AlumniState {
   registrations: AlumniRegistration[]
@@ -12,18 +12,27 @@ interface AlumniState {
   updateRegistration: (id: string, updates: Partial<AlumniRegistration>) => void
 }
 
-export const useAlumniStore = create<AlumniState>()((set, get) => ({
+export const useAlumniStore = create<AlumniState>()((set) => ({
   registrations: [],
   loading: false,
 
   fetchRegistrations: async () => {
     set({ loading: true })
     try {
-      const res = await adminMembersApi.list({ limit: 500 })
-      const data = (res.data.data || []).map(mapMemberToRegistration)
-      set({ registrations: data })
+      // The API caps `limit` at 100, so page through until every member is loaded.
+      const all: AlumniRegistration[] = []
+      let page = 1
+      let totalPages = 1
+      do {
+        const res = await adminMembersApi.list({ page, limit: 100 })
+        all.push(...(res.data.data || []).map(mapMemberToRegistration))
+        totalPages = res.data.pagination?.totalPages ?? 1
+        page++
+      } while (page <= totalPages)
+      set({ registrations: all })
     } catch {
-      // Keep existing data on error
+      // Keep existing data on error, but tell the admin the list may be stale/empty.
+      useUIStore.getState().addToast({ type: 'error', title: 'Failed to load alumni registrations' })
     } finally {
       set({ loading: false })
     }

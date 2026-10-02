@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Mail, X, CheckCircle, Archive, MailOpen, Reply } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
@@ -18,7 +17,12 @@ import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
 import type { ContactMessage } from '../../types'
 
-type ContactMessageStatus = ContactMessage['status']
+type ContactMessageStatus = NonNullable<ContactMessage['status']>
+
+// The API only stores `isRead` / `repliedAt`; derive the UI status from them.
+function getStatus(m: ContactMessage): ContactMessageStatus {
+  return m.status ?? (m.repliedAt ? 'replied' : m.isRead ? 'read' : 'new')
+}
 
 function statusVariant(status: ContactMessageStatus): 'warning' | 'active' | 'success' | 'archived' {
   switch (status) {
@@ -44,7 +48,7 @@ export default function ContactMessagesPage() {
   const fetchMessages = useCallback(async () => {
     try {
       const res = await adminContactApi.list({ limit: 100 })
-      setMessages((res.data.data || []) as any)
+      setMessages((res.data.data || []) as ContactMessage[])
     } catch {
       toast.error('Failed to load contact messages')
     } finally {
@@ -56,9 +60,9 @@ export default function ContactMessagesPage() {
 
   const stats = useMemo(() => ({
     total: messages.length,
-    unread: messages.filter((m) => m.status === 'new').length,
-    replied: messages.filter((m) => m.status === 'replied').length,
-    archived: messages.filter((m) => m.status === 'archived').length,
+    unread: messages.filter((m) => getStatus(m) === 'new').length,
+    replied: messages.filter((m) => getStatus(m) === 'replied').length,
+    archived: messages.filter((m) => getStatus(m) === 'archived').length,
   }), [messages])
 
   const statusFilterOptions = [
@@ -77,13 +81,13 @@ export default function ContactMessagesPage() {
       m.name.toLowerCase().includes(search.toLowerCase()) ||
       m.subject.toLowerCase().includes(search.toLowerCase()) ||
       m.email.toLowerCase().includes(search.toLowerCase())
-    const matchesStatus = !filterStatus || m.status === filterStatus
+    const matchesStatus = !filterStatus || getStatus(m) === filterStatus
     return matchesSearch && matchesStatus
   }), [messages, search, filterStatus])
 
   const openMessage = async (msg: ContactMessage) => {
     setSelectedMessage(msg)
-    if (msg.status === 'new') {
+    if (getStatus(msg) === 'new') {
       try {
         await adminContactApi.markRead(msg.id)
         addActivity({
@@ -198,24 +202,24 @@ export default function ContactMessagesPage() {
                         key={msg.id}
                         onClick={() => openMessage(msg)}
                         className={`border-b border-gray-50 dark:border-dark-border cursor-pointer ${
-                          msg.status === 'new' ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''
+                          getStatus(msg) === 'new' ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''
                         } ${selectedMessage?.id === msg.id ? 'bg-brand-50 dark:bg-brand-900/20' : ''}`}
                       >
                         <td className="px-5 py-3.5">
-                          <p className={`text-gray-900 dark:text-gray-100 ${msg.status === 'new' ? 'font-semibold' : 'font-medium'}`}>
+                          <p className={`text-gray-900 dark:text-gray-100 ${getStatus(msg) === 'new' ? 'font-semibold' : 'font-medium'}`}>
                             {msg.name}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">{msg.email}</p>
                         </td>
                         <td className="px-5 py-3.5">
-                          <p className={`line-clamp-1 ${msg.status === 'new' ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300'}`}>
+                          <p className={`line-clamp-1 ${getStatus(msg) === 'new' ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300'}`}>
                             {msg.subject}
                           </p>
                         </td>
                         <td className="px-5 py-3.5">
                           <Badge
-                            variant={statusVariant(msg.status || (msg.isRead ? 'read' : 'new'))}
-                            label={(msg.status || (msg.isRead ? 'read' : 'new')).charAt(0).toUpperCase() + (msg.status || (msg.isRead ? 'read' : 'new')).slice(1)}
+                            variant={statusVariant(getStatus(msg))}
+                            label={getStatus(msg).charAt(0).toUpperCase() + getStatus(msg).slice(1)}
                           />
                         </td>
                         <td className="px-5 py-3.5 text-gray-500 dark:text-gray-400 text-xs">
@@ -282,7 +286,7 @@ export default function ContactMessagesPage() {
                 >
                   Reply via Email
                 </Button>
-                {selectedMessage.status !== 'read' && (
+                {getStatus(selectedMessage) !== 'read' && (
                   <Button
                     variant="secondary"
                     className="w-full justify-center"
@@ -292,7 +296,7 @@ export default function ContactMessagesPage() {
                     Mark as Read
                   </Button>
                 )}
-                {selectedMessage.status !== 'archived' && (
+                {getStatus(selectedMessage) !== 'archived' && (
                   <Button
                     variant="secondary"
                     className="w-full justify-center"

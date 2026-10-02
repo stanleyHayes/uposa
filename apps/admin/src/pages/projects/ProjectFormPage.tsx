@@ -1,9 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react'
+import { ArrowLeft, PlusCircle, Trash2, Upload, X } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
@@ -14,6 +14,8 @@ import { useProjectsStore } from '../../stores/projects.store'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
+import { compressImage } from '../../lib/image'
+import { apiErrorMessage } from '../../utils/apiError'
 import type { Project, ProjectStatus } from '../../types'
 
 const milestoneSchema = z.object({
@@ -76,10 +78,13 @@ export default function ProjectFormPage() {
   const { addActivity } = useActivityStore()
   const { currentUser } = useAuth()
   const { toast } = useToast()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [filePreview, setFilePreview] = useState('')
 
   const editingProject = isEdit ? projects.find((p) => p.id === id) : undefined
 
-  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<ProjectFormInput, unknown, ProjectForm>({
+  const { register, handleSubmit, reset, control, watch, formState: { errors, isSubmitting } } = useForm<ProjectFormInput, unknown, ProjectForm>({
     resolver: zodResolver(projectSchema),
     defaultValues: toFormValues(),
   })
@@ -103,6 +108,32 @@ export default function ProjectFormPage() {
     }
   }, [isEdit, editingProject, reset])
 
+  // Release the previous object URL whenever the preview changes, and on unmount.
+  useEffect(() => () => { if (filePreview) URL.revokeObjectURL(filePreview) }, [filePreview])
+
+  const previewSrc = filePreview || watch('imageUrl')
+
+  const handleImageSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
+      toast.error('Only JPEG, PNG, GIF, WEBP allowed')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Max 10MB')
+      return
+    }
+    setImageFile(file)
+    setFilePreview(URL.createObjectURL(file))
+  }
+
+  const clearImageFile = () => {
+    setImageFile(null)
+    setFilePreview('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const onSubmit = async (data: ProjectForm) => {
     if (!currentUser) return
     try {
@@ -111,7 +142,9 @@ export default function ProjectFormPage() {
       fd.append('slug', data.slug)
       fd.append('description', data.description)
       if (data.content) fd.append('content', data.content)
-      if (data.imageUrl) fd.append('imageUrl', data.imageUrl)
+      // An uploaded file wins over the URL field.
+      if (imageFile) fd.append('image', await compressImage(imageFile))
+      else if (data.imageUrl) fd.append('imageUrl', data.imageUrl)
       if (data.startDate) fd.append('startDate', data.startDate)
       if (data.endDate) fd.append('endDate', data.endDate)
       fd.append('status', data.status)
@@ -135,8 +168,8 @@ export default function ProjectFormPage() {
         toast.success('Project created')
       }
       navigate('/projects')
-    } catch {
-      toast.error('Failed to save project')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to save project'))
     }
   }
 
@@ -193,7 +226,48 @@ export default function ProjectFormPage() {
             <Input label="Goal Amount (GHS)" type="number" placeholder="0" {...register('goalAmount')} />
             <Input label="Raised Amount (GHS)" type="number" placeholder="0" {...register('raisedAmount')} />
           </div>
-          <Input label="Image URL" placeholder="https://..." {...register('imageUrl')} />
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Cover Image</label>
+            {previewSrc ? (
+              <div className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-dark-border mb-3">
+                <img src={previewSrc} alt="Preview" className="w-full h-48 object-cover" />
+                {imageFile && (
+                  <button
+                    type="button"
+                    onClick={clearImageFile}
+                    title="Discard selected file"
+                    className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full flex flex-col items-center gap-2 p-6 mb-3 border-2 border-dashed border-gray-300 dark:border-dark-border rounded-xl hover:border-brand-400 hover:bg-brand-50/50 dark:hover:bg-brand-900/10 transition-colors cursor-pointer"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-dark-hover flex items-center justify-center">
+                <Upload size={18} className="text-gray-400" />
+              </div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{imageFile ? 'Replace Image' : 'Upload Image'}</p>
+              <p className="text-xs text-gray-400">JPEG, PNG, GIF, WEBP — max 10MB</p>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              className="hidden"
+              onChange={handleImageSelected}
+            />
+            <Input
+              label="Or Image URL"
+              placeholder="https://..."
+              helperText={imageFile ? 'The uploaded file will be used instead of this URL.' : undefined}
+              {...register('imageUrl')}
+            />
+          </div>
           <Controller
             name="gallery"
             control={control}

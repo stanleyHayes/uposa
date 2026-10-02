@@ -2,42 +2,66 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Pencil, Trash2, Calendar, MapPin, ExternalLink } from 'lucide-react'
 import Button from '../../components/ui/Button'
-import Badge from '../../components/ui/Badge'
+import Badge, { type BadgeVariant } from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
+import Spinner from '../../components/ui/Spinner'
 import RoleGate from '../../components/auth/RoleGate'
-import { useEventsStore } from '../../stores/events.store'
+import { adminEventsApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
+import { apiErrorMessage } from '../../utils/apiError'
+import type { Event } from '../../types'
 
 export default function EventDetailPage() {
   const navigate = useNavigate()
-  const { id } = useParams<{ id: string }>()
-  const { events, deleteEvent } = useEventsStore()
+  const { slug } = useParams<{ slug: string }>()
   const { addActivity } = useActivityStore()
   const { currentUser } = useAuth()
   const { toast } = useToast()
 
+  const [event, setEvent] = useState<Event | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-  const event = events.find((e) => e.id === id)
-
   useEffect(() => {
-    if (!event) {
-      toast.error('Event not found')
-      navigate('/events', { replace: true })
-    }
-  }, [event, navigate, toast])
+    if (!slug) return
+    let cancelled = false
+    adminEventsApi.getBySlug(slug)
+      .then((res) => { if (!cancelled) setEvent(res.data.data as Event) })
+      .catch(() => {
+        if (cancelled) return
+        toast.error('Event not found')
+        navigate('/events', { replace: true })
+      })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [slug, navigate, toast])
+
+  if (loading) {
+    return (
+      <div className="page-enter flex items-center justify-center py-32">
+        <Spinner size="lg" />
+      </div>
+    )
+  }
 
   if (!event) return null
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!currentUser) return
-    deleteEvent(event.id)
-    addActivity({ action: 'deleted event', targetType: event.title, targetId: event.id, performedBy: currentUser.id, performedByName: currentUser.name })
-    toast.success('Event deleted')
-    navigate('/events')
+    setDeleting(true)
+    try {
+      await adminEventsApi.delete(event.id)
+      addActivity({ action: 'deleted event', targetType: event.title, targetId: event.id, performedBy: currentUser.id, performedByName: currentUser.name })
+      toast.success('Event deleted')
+      navigate('/events')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete event'))
+      setDeleting(false)
+    }
   }
 
   return (
@@ -61,7 +85,7 @@ export default function EventDetailPage() {
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <Badge variant={event.status.toLowerCase() as any} label={event.status.charAt(0) + event.status.slice(1).toLowerCase()} />
+                <Badge variant={event.status.toLowerCase() as BadgeVariant} label={event.status.charAt(0) + event.status.slice(1).toLowerCase()} />
                 {event.isFeatured && (
                   <Badge variant="warning" label="Featured" />
                 )}
@@ -70,7 +94,7 @@ export default function EventDetailPage() {
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <RoleGate permission="events:edit">
-                <Button size="sm" variant="secondary" leftIcon={<Pencil size={14} />} onClick={() => navigate(`/events/${event.id}/edit`)}>
+                <Button size="sm" variant="secondary" leftIcon={<Pencil size={14} />} onClick={() => navigate(`/events/${event.slug}/edit`)}>
                   Edit
                 </Button>
               </RoleGate>
@@ -87,13 +111,15 @@ export default function EventDetailPage() {
               <Calendar size={16} className="text-gray-400 shrink-0" />
               <div>
                 <p>{formatDate(event.date)}</p>
-                <p className="text-gray-400 dark:text-gray-500">to {formatDate(event.endDate)}</p>
+                {event.endDate && <p className="text-gray-400 dark:text-gray-500">to {formatDate(event.endDate)}</p>}
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <MapPin size={16} className="text-gray-400 shrink-0" />
-              <span>{event.location}</span>
-            </div>
+            {event.location && (
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <MapPin size={16} className="text-gray-400 shrink-0" />
+                <span>{event.location}</span>
+              </div>
+            )}
           </div>
 
           {event.rsvpLink && (
@@ -125,6 +151,7 @@ export default function EventDetailPage() {
         open={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
+        loading={deleting}
         title="Delete Event"
         message={`Are you sure you want to delete "${event.title}"? This action cannot be undone.`}
         confirmLabel="Delete"

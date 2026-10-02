@@ -1,10 +1,9 @@
-// @ts-nocheck
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PlusCircle, Pencil, Trash2, FolderKanban, Zap, CheckCircle2, Lightbulb } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import Button from '../../components/ui/Button'
-import Badge from '../../components/ui/Badge'
+import Badge, { type BadgeVariant } from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import EmptyState from '../../components/ui/EmptyState'
 import Pagination from '../../components/ui/Pagination'
@@ -18,7 +17,7 @@ import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { formatDate } from '../../utils/formatters'
-import type { Project, ProjectStatus } from '../../types'
+import type { Project } from '../../types'
 
 const statusFilterOptions = [
   { value: 'all', label: 'All Statuses' },
@@ -208,7 +207,7 @@ export default function ProjectsPage() {
                   )}
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <Badge variant={project.status.toLowerCase()} label={project.status} />
+                      <Badge variant={project.status.toLowerCase() as BadgeVariant} label={project.status} />
                       <span className="text-xs font-bold text-brand-600">{progress}%</span>
                     </div>
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1 line-clamp-1">{project.title}</h3>

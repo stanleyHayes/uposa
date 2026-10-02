@@ -1,133 +1,78 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { ArrowLeft, PlusCircle, Pencil, Trash2, Users } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Users } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import Button from '../../components/ui/Button'
-import Badge from '../../components/ui/Badge'
+import Badge, { type BadgeVariant } from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
-import Input from '../../components/ui/Input'
-import Textarea from '../../components/ui/Textarea'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import EmptyState from '../../components/ui/EmptyState'
+import Spinner from '../../components/ui/Spinner'
 import RoleGate from '../../components/auth/RoleGate'
-import { useElectionsStore } from '../../stores/elections.store'
+import { adminElectionsApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
+import { apiErrorMessage } from '../../utils/apiError'
 import { formatDate } from '../../utils/formatters'
-import type { ElectionCandidate } from '../../types'
-
-const candidateSchema = z.object({
-  name: z.string().min(2, 'Name is required'),
-  photoUrl: z.string().url('Must be a valid URL').or(z.string().length(0)),
-  manifesto: z.string().min(10, 'Manifesto is required'),
-})
-type CandidateForm = z.infer<typeof candidateSchema>
-
-function toCandidateForm(candidate?: ElectionCandidate): CandidateForm {
-  if (!candidate)
-    return { name: '', photoUrl: '', manifesto: '' }
-  return {
-    name: candidate.name,
-    photoUrl: candidate.photoUrl,
-    manifesto: candidate.manifesto,
-  }
-}
+import type { Election, ElectionCandidate } from '../../types'
 
 export default function ElectionDetailPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const { elections, deleteElection, addCandidate, updateCandidate, deleteCandidate } = useElectionsStore()
   const { addActivity } = useActivityStore()
   const { currentUser } = useAuth()
   const { toast } = useToast()
 
+  const [election, setElection] = useState<Election | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
   const [deleteElectionTarget, setDeleteElectionTarget] = useState(false)
-  const [candidateModalOpen, setCandidateModalOpen] = useState(false)
-  const [editingCandidate, setEditingCandidate] = useState<ElectionCandidate | null>(null)
-  const [deleteCandidateTarget, setDeleteCandidateTarget] = useState<ElectionCandidate | null>(null)
   const [viewingCandidate, setViewingCandidate] = useState<ElectionCandidate | null>(null)
 
-  const candidateForm = useForm<CandidateForm>({
-    resolver: zodResolver(candidateSchema),
-    defaultValues: toCandidateForm(),
-  })
-
-  const election = elections.find((e) => e.id === id)
-
-  if (!election) {
-    navigate('/elections', { replace: true })
-    return null
-  }
-
-  const handleDeleteElection = () => {
-    if (!currentUser) return
-    deleteElection(election.id)
-    addActivity({
-      action: 'deleted election',
-      targetType: election.title,
-      targetId: election.id,
-      performedBy: currentUser.id,
-      performedByName: currentUser.name,
-    })
-    toast.success('Election deleted')
-    navigate('/elections')
-  }
-
-  const openAddCandidate = () => {
-    setEditingCandidate(null)
-    candidateForm.reset(toCandidateForm())
-    setCandidateModalOpen(true)
-  }
-
-  const openEditCandidate = (candidate: ElectionCandidate) => {
-    setEditingCandidate(candidate)
-    candidateForm.reset(toCandidateForm(candidate))
-    setCandidateModalOpen(true)
-  }
-
-  const onCandidateSubmit = async (data: CandidateForm) => {
-    if (!currentUser) return
-    const payload = { ...data, photoUrl: data.photoUrl || '', votes: 0 }
-    if (editingCandidate) {
-      updateCandidate(election.id, editingCandidate.id, payload)
-      addActivity({
-        action: 'updated candidate',
-        targetType: data.name,
-        targetId: editingCandidate.id,
-        performedBy: currentUser.id,
-        performedByName: currentUser.name,
+  // The admin results endpoint returns the election with per-candidate votes.
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    adminElectionsApi.getResults(id)
+      .then((res) => { if (!cancelled) setElection(res.data.data as Election) })
+      .catch(() => {
+        if (cancelled) return
+        toast.error('Election not found')
+        navigate('/elections', { replace: true })
       })
-      toast.success('Candidate updated')
-    } else {
-      addCandidate(election.id, payload)
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [id, navigate, toast])
+
+  if (loading) {
+    return (
+      <div className="page-enter flex items-center justify-center py-32">
+        <Spinner size="lg" />
+      </div>
+    )
+  }
+
+  if (!election) return null
+
+  const handleDeleteElection = async () => {
+    if (!currentUser) return
+    setDeleting(true)
+    try {
+      await adminElectionsApi.delete(election.id)
       addActivity({
-        action: 'added candidate',
-        targetType: data.name,
+        action: 'deleted election',
+        targetType: election.title,
         targetId: election.id,
         performedBy: currentUser.id,
         performedByName: currentUser.name,
       })
-      toast.success('Candidate added')
+      toast.success('Election deleted')
+      navigate('/elections')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete election'))
+      setDeleting(false)
     }
-    setCandidateModalOpen(false)
-  }
-
-  const handleDeleteCandidate = () => {
-    if (!deleteCandidateTarget || !currentUser) return
-    deleteCandidate(election.id, deleteCandidateTarget.id)
-    addActivity({
-      action: 'removed candidate',
-      targetType: deleteCandidateTarget.name,
-      targetId: deleteCandidateTarget.id,
-      performedBy: currentUser.id,
-      performedByName: currentUser.name,
-    })
-    toast.success('Candidate removed')
-    setDeleteCandidateTarget(null)
   }
 
   return (
@@ -157,28 +102,28 @@ export default function ElectionDetailPage() {
                 Delete
               </Button>
             </RoleGate>
-            <RoleGate permission="elections:edit">
-              <Button leftIcon={<PlusCircle size={16} />} onClick={openAddCandidate}>
-                Add Candidate
-              </Button>
-            </RoleGate>
           </div>
         }
       />
 
-      <div className="mb-4">
+      <div className="mb-4 flex items-center gap-3">
         <Badge
-          variant={election.status.toLowerCase() as any}
+          variant={election.status.toLowerCase() as BadgeVariant}
           label={election.status.charAt(0) + election.status.slice(1).toLowerCase()}
         />
+        <span className="text-xs text-gray-500 dark:text-gray-400">{(election.totalVotes ?? 0).toLocaleString()} votes cast</span>
       </div>
+
+      {election.description && (
+        <p className="mb-6 text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{election.description}</p>
+      )}
 
       {election.candidates.length === 0 ? (
         <div className="admin-card-surface overflow-hidden">
           <EmptyState
             icon={<Users size={32} />}
-            title="No candidates yet"
-            description="Add the first candidate for this election."
+            title="No candidates"
+            description="This election has no candidates."
           />
         </div>
       ) : (
@@ -200,28 +145,14 @@ export default function ElectionDetailPage() {
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{candidate.name}</p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {candidate.votes} votes
+                    {candidate.votes} votes{candidate.percentage ? ` · ${candidate.percentage}%` : ''}
                   </p>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-3">{candidate.manifesto}</p>
-              <div className="flex items-center justify-between">
-                <button className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium transition-colors">
-                  View Manifesto
-                </button>
-                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  <RoleGate permission="elections:edit">
-                    <button onClick={() => openEditCandidate(candidate)} className="rounded-lg p-1 text-gray-400 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:text-brand-600 transition-colors">
-                      <Pencil size={14} />
-                    </button>
-                  </RoleGate>
-                  <RoleGate permission="elections:delete">
-                    <button onClick={() => setDeleteCandidateTarget(candidate)} className="rounded-lg p-1 text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 transition-colors">
-                      <Trash2 size={14} />
-                    </button>
-                  </RoleGate>
-                </div>
-              </div>
+              {candidate.bio && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-3">{candidate.bio}</p>}
+              <button className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium transition-colors">
+                View Manifesto
+              </button>
             </div>
           ))}
         </div>
@@ -253,51 +184,21 @@ export default function ElectionDetailPage() {
             <div>
               <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1.5">Manifesto</h4>
               <div className="bg-gray-50 dark:bg-dark-hover rounded-lg p-4">
-                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{viewingCandidate.manifesto}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{viewingCandidate.bio || 'No manifesto provided.'}</p>
               </div>
             </div>
           </div>
         )}
       </Modal>
 
-      {/* Candidate Create/Edit Modal */}
-      <Modal
-        open={candidateModalOpen}
-        onClose={() => setCandidateModalOpen(false)}
-        title={editingCandidate ? 'Edit Candidate' : 'Add Candidate'}
-        size="lg"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setCandidateModalOpen(false)}>Cancel</Button>
-            <Button loading={candidateForm.formState.isSubmitting} onClick={candidateForm.handleSubmit(onCandidateSubmit)}>
-              {editingCandidate ? 'Save Changes' : 'Add Candidate'}
-            </Button>
-          </>
-        }
-      >
-        <form className="space-y-4">
-          <Input label="Name" error={candidateForm.formState.errors.name?.message} {...candidateForm.register('name')} />
-          <Input label="Photo URL" placeholder="https://..." error={candidateForm.formState.errors.photoUrl?.message} {...candidateForm.register('photoUrl')} />
-          <Textarea label="Manifesto" rows={4} error={candidateForm.formState.errors.manifesto?.message} {...candidateForm.register('manifesto')} />
-        </form>
-      </Modal>
-
       <ConfirmDialog
         open={deleteElectionTarget}
         onClose={() => setDeleteElectionTarget(false)}
         onConfirm={handleDeleteElection}
+        loading={deleting}
         title="Delete Election"
         message={`Are you sure you want to delete "${election.title}"? All candidates will also be removed.`}
         confirmLabel="Delete"
-      />
-
-      <ConfirmDialog
-        open={!!deleteCandidateTarget}
-        onClose={() => setDeleteCandidateTarget(null)}
-        onConfirm={handleDeleteCandidate}
-        title="Remove Candidate"
-        message={`Are you sure you want to remove "${deleteCandidateTarget?.name}" from this election?`}
-        confirmLabel="Remove"
       />
     </div>
   )

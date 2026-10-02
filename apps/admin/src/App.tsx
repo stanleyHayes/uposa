@@ -1,3 +1,4 @@
+import { lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import ErrorBoundary from './components/ErrorBoundary'
 import DashboardLayout from './components/layout/DashboardLayout'
@@ -5,55 +6,57 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import LoginPage from './pages/auth/LoginPage'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from './pages/auth/ResetPasswordPage'
-import DashboardPage from './pages/dashboard/DashboardPage'
-import AlumniRegistrationsPage from './pages/alumni/AlumniRegistrationsPage'
-import MembersDirectoryPage from './pages/members/MembersDirectoryPage'
-import EventsPage from './pages/events/EventsPage'
-import EventFormPage from './pages/events/EventFormPage'
-import EventDetailPage from './pages/events/EventDetailPage'
-import NewsPage from './pages/news/NewsPage'
-import NewsDetailPage from './pages/news/NewsDetailPage'
-import NewsFormPage from './pages/news/NewsFormPage'
-import ProjectsPage from './pages/projects/ProjectsPage'
-import ProjectDetailPage from './pages/projects/ProjectDetailPage'
-import ProjectFormPage from './pages/projects/ProjectFormPage'
-import DonationsPage from './pages/donations/DonationsPage'
-import DonationFormPage from './pages/donations/DonationFormPage'
-import DonationDetailPage from './pages/donations/DonationDetailPage'
-import RolesPage from './pages/roles/RolesPage'
-import AdminUsersPage from './pages/admin-users/AdminUsersPage'
-import SettingsPage from './pages/settings/SettingsPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ToastContainer from './components/ui/ToastContainer'
-import AboutContentPage from './pages/about-content/AboutContentPage'
-import ExecutivesPage from './pages/executives/ExecutivesPage'
-import JobsPage from './pages/jobs/JobsPage'
-import JobFormPage from './pages/jobs/JobFormPage'
-import JobDetailPage from './pages/jobs/JobDetailPage'
-import ElectionsPage from './pages/elections/ElectionsPage'
-import ElectionFormPage from './pages/elections/ElectionFormPage'
-import ElectionDetailPage from './pages/elections/ElectionDetailPage'
-import PollsPage from './pages/polls/PollsPage'
-import PollFormPage from './pages/polls/PollFormPage'
-import PollDetailPage from './pages/polls/PollDetailPage'
-import ForumPage from './pages/forum/ForumPage'
-import AnnouncementsPage from './pages/announcements/AnnouncementsPage'
-import AnnouncementFormPage from './pages/announcements/AnnouncementFormPage'
-import AnnouncementDetailPage from './pages/announcements/AnnouncementDetailPage'
-import ExecutiveFormPage from './pages/executives/ExecutiveFormPage'
-import ExecutiveDetailPage from './pages/executives/ExecutiveDetailPage'
-import AlumniDetailPage from './pages/alumni/AlumniDetailPage'
-import AdminUserFormPage from './pages/admin-users/AdminUserFormPage'
-import ContactMessagesPage from './pages/contact-messages/ContactMessagesPage'
-import SiteConfigPage from './pages/site-config/SiteConfigPage'
-import PaymentMethodsPage from './pages/payment-methods/PaymentMethodsPage'
-import PaymentMethodFormPage from './pages/payment-methods/PaymentMethodFormPage'
-import GalleryPage from './pages/gallery/GalleryPage'
-import GalleryCategoryPage from './pages/gallery/GalleryCategoryPage'
-import SchoolLeadersPage from './pages/school-leaders/SchoolLeadersPage'
-import SchoolLeaderFormPage from './pages/school-leaders/SchoolLeaderFormPage'
-import NewsletterPage from './pages/newsletter/NewsletterPage'
-import HelpPage from './pages/help/HelpPage'
+
+// Route pages are code-split; the auth pages and layout shell stay in the main bundle.
+const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'))
+const AlumniRegistrationsPage = lazy(() => import('./pages/alumni/AlumniRegistrationsPage'))
+const MembersDirectoryPage = lazy(() => import('./pages/members/MembersDirectoryPage'))
+const EventsPage = lazy(() => import('./pages/events/EventsPage'))
+const EventFormPage = lazy(() => import('./pages/events/EventFormPage'))
+const EventDetailPage = lazy(() => import('./pages/events/EventDetailPage'))
+const NewsPage = lazy(() => import('./pages/news/NewsPage'))
+const NewsDetailPage = lazy(() => import('./pages/news/NewsDetailPage'))
+const NewsFormPage = lazy(() => import('./pages/news/NewsFormPage'))
+const ProjectsPage = lazy(() => import('./pages/projects/ProjectsPage'))
+const ProjectDetailPage = lazy(() => import('./pages/projects/ProjectDetailPage'))
+const ProjectFormPage = lazy(() => import('./pages/projects/ProjectFormPage'))
+const DonationsPage = lazy(() => import('./pages/donations/DonationsPage'))
+const DonationFormPage = lazy(() => import('./pages/donations/DonationFormPage'))
+const DonationDetailPage = lazy(() => import('./pages/donations/DonationDetailPage'))
+const RolesPage = lazy(() => import('./pages/roles/RolesPage'))
+const AdminUsersPage = lazy(() => import('./pages/admin-users/AdminUsersPage'))
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
+const AboutContentPage = lazy(() => import('./pages/about-content/AboutContentPage'))
+const ExecutivesPage = lazy(() => import('./pages/executives/ExecutivesPage'))
+const JobsPage = lazy(() => import('./pages/jobs/JobsPage'))
+const JobFormPage = lazy(() => import('./pages/jobs/JobFormPage'))
+const JobDetailPage = lazy(() => import('./pages/jobs/JobDetailPage'))
+const ElectionsPage = lazy(() => import('./pages/elections/ElectionsPage'))
+const ElectionFormPage = lazy(() => import('./pages/elections/ElectionFormPage'))
+const ElectionDetailPage = lazy(() => import('./pages/elections/ElectionDetailPage'))
+const PollsPage = lazy(() => import('./pages/polls/PollsPage'))
+const PollFormPage = lazy(() => import('./pages/polls/PollFormPage'))
+const PollDetailPage = lazy(() => import('./pages/polls/PollDetailPage'))
+const ForumPage = lazy(() => import('./pages/forum/ForumPage'))
+const AnnouncementsPage = lazy(() => import('./pages/announcements/AnnouncementsPage'))
+const AnnouncementFormPage = lazy(() => import('./pages/announcements/AnnouncementFormPage'))
+const AnnouncementDetailPage = lazy(() => import('./pages/announcements/AnnouncementDetailPage'))
+const ExecutiveFormPage = lazy(() => import('./pages/executives/ExecutiveFormPage'))
+const ExecutiveDetailPage = lazy(() => import('./pages/executives/ExecutiveDetailPage'))
+const AlumniDetailPage = lazy(() => import('./pages/alumni/AlumniDetailPage'))
+const AdminUserFormPage = lazy(() => import('./pages/admin-users/AdminUserFormPage'))
+const ContactMessagesPage = lazy(() => import('./pages/contact-messages/ContactMessagesPage'))
+const SiteConfigPage = lazy(() => import('./pages/site-config/SiteConfigPage'))
+const PaymentMethodsPage = lazy(() => import('./pages/payment-methods/PaymentMethodsPage'))
+const PaymentMethodFormPage = lazy(() => import('./pages/payment-methods/PaymentMethodFormPage'))
+const GalleryPage = lazy(() => import('./pages/gallery/GalleryPage'))
+const GalleryCategoryPage = lazy(() => import('./pages/gallery/GalleryCategoryPage'))
+const SchoolLeadersPage = lazy(() => import('./pages/school-leaders/SchoolLeadersPage'))
+const SchoolLeaderFormPage = lazy(() => import('./pages/school-leaders/SchoolLeaderFormPage'))
+const NewsletterPage = lazy(() => import('./pages/newsletter/NewsletterPage'))
+const HelpPage = lazy(() => import('./pages/help/HelpPage'))
 
 export default function App() {
   return (
@@ -110,7 +113,7 @@ export default function App() {
               }
             />
             <Route
-              path="/events/:id"
+              path="/events/:slug"
               element={
                 <ProtectedRoute requiredPermission="events:view">
                   <EventDetailPage />
@@ -118,7 +121,7 @@ export default function App() {
               }
             />
             <Route
-              path="/events/:id/edit"
+              path="/events/:slug/edit"
               element={
                 <ProtectedRoute requiredPermission="events:edit">
                   <EventFormPage />

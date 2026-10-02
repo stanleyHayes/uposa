@@ -40,3 +40,26 @@ export const API_ROLE_MAP: Record<ApiAdminRole, Role> = {
   ADMIN: 'content_manager',
   MODERATOR: 'moderator',
 }
+
+/** Admin record as returned by /admin/admins (password stripped). */
+export interface ApiAdmin {
+  id: string
+  fullName: string
+  email: string
+  role: ApiAdminRole
+  isActive: boolean
+  createdAt: string
+}
+
+export function toAdminUser(admin: ApiAdmin): AdminUser {
+  return {
+    id: admin.id,
+    name: admin.fullName,
+    email: admin.email,
+    password: '',
+    role: API_ROLE_MAP[admin.role] ?? 'moderator',
+    apiRole: admin.role,
+    createdAt: admin.createdAt,
+    isActive: admin.isActive,
+  }
+}

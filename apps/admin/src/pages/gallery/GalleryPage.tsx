@@ -13,6 +13,8 @@ import { adminGalleryApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
+import { compressImage } from '../../lib/image'
+import { apiErrorMessage } from '../../utils/apiError'
 import type { GalleryCategory } from '../../types'
 
 export default function GalleryPage() {
@@ -78,7 +80,7 @@ export default function GalleryPage() {
       const fd = new FormData()
       fd.append('name', createName.trim())
       if (createDesc.trim()) fd.append('description', createDesc.trim())
-      if (createImage) fd.append('coverImage', createImage)
+      if (createImage) fd.append('coverImage', await compressImage(createImage))
 
       await adminGalleryApi.createCategory(fd)
 
@@ -88,8 +90,8 @@ export default function GalleryPage() {
       toast.success('Category created')
       resetCreate()
       fetchCategories()
-    } catch {
-      toast.error('Failed to create category')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to create category'))
     } finally {
       setCreating(false)
     }

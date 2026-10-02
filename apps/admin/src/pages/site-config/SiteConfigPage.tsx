@@ -12,6 +12,7 @@ import Textarea from '../../components/ui/Textarea'
 import Card from '../../components/ui/Card'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { useToast } from '../../hooks/useToast'
+import { apiErrorMessage } from '../../utils/apiError'
 import client from '../../api/client'
 
 type TabKey = 'contact' | 'social' | 'payment' | 'dues' | 'mission' | 'stats' | 'history' | 'school' | 'stories'
@@ -94,8 +95,8 @@ export default function SiteConfigPage() {
     try {
       await client.put(`/admin/site/config/${key}`, { value })
       toast.success('Saved', `${key} config updated`)
-    } catch {
-      toast.error('Failed to save')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to save'))
     } finally {
       setSaving(false)
     }
@@ -110,8 +111,8 @@ export default function SiteConfigPage() {
         client.put('/admin/site/config/PAYMENT_PLATFORM_FEE_FIXED', { value: platformFee.fixed }),
       ])
       toast.success('Saved', 'Platform fee updated')
-    } catch {
-      toast.error('Failed to save')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to save'))
     } finally {
       setSaving(false)
     }

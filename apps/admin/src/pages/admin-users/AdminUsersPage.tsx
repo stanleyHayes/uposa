@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PlusCircle, Pencil, Trash2, ShieldCheck, UserX, UserCheck } from 'lucide-react'
@@ -16,9 +15,10 @@ import { adminUsersApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
+import { apiErrorMessage } from '../../utils/apiError'
 import { formatDate } from '../../utils/formatters'
 import { ROLES } from '../../constants/roles'
-import type { AdminUser, Role } from '../../types'
+import { toAdminUser, type AdminUser, type ApiAdmin, type Role } from '../../types'
 
 export default function AdminUsersPage() {
   const navigate = useNavigate()
@@ -37,7 +37,8 @@ export default function AdminUsersPage() {
   const fetchUsers = useCallback(async () => {
     try {
       const res = await adminUsersApi.list({ limit: 100 })
-      setUsers(res.data.data || [])
+      // The API returns `fullName` and upper-case roles; map to the UI shape.
+      setUsers(((res.data.data || []) as ApiAdmin[]).map(toAdminUser))
     } catch {
       toast.error('Failed to load admin users')
     } finally {
@@ -76,8 +77,8 @@ export default function AdminUsersPage() {
       toast.success('User deleted')
       setDeleteTarget(null)
       fetchUsers()
-    } catch {
-      toast.error('Failed to delete user')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete user'))
     }
   }
 
@@ -95,8 +96,8 @@ export default function AdminUsersPage() {
       }
       setDeactivateTarget(null)
       fetchUsers()
-    } catch {
-      toast.error('Failed to update user status')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to update user status'))
     }
   }
 

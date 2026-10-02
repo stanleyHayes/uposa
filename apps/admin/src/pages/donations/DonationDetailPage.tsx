@@ -35,7 +35,7 @@ export default function DonationDetailPage() {
 
   useEffect(() => {
     if (!id) return
-    client.get(`/admin/donations/${id}`)
+    client.get(`/donations/admin/${id}`)
       .then((res) => setDonation(res.data.data || null))
       .catch(() => setDonation(null))
       .finally(() => setLoading(false))

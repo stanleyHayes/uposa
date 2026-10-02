@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PlusCircle, Pencil, Trash2, Vote, Zap, Clock, Lock } from 'lucide-react'
@@ -12,6 +11,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import Pagination from '../../components/ui/Pagination'
 import PageStats from '../../components/ui/PageStats'
 import RoleGate from '../../components/auth/RoleGate'
+import { PageSkeleton } from '../../components/ui/Skeleton'
 import { adminElectionsApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
@@ -85,6 +85,8 @@ export default function ElectionsPage() {
       toast.error('Failed to delete election')
     }
   }
+
+  if (loading) return <PageSkeleton cols={6} rows={5} />
 
   return (
     <div className="page-enter">

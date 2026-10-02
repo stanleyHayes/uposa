@@ -1,6 +1,6 @@
 import { cn } from '../../utils/cn'
 
-type BadgeVariant =
+export type BadgeVariant =
   | 'pending' | 'approved' | 'rejected'
   | 'draft' | 'published' | 'archived'
   | 'active' | 'completed' | 'planning' | 'on_hold' | 'cancelled'

@@ -29,6 +29,7 @@ export interface AlumniRegistration {
   altPhoneNumber: string
   residentialAddress: string
   city: string
+  region: string
   country: string
 
   // Academic Information

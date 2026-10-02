@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PlusCircle, Pencil, Trash2, Crown, CheckCircle, History, Layers } from 'lucide-react'
@@ -41,7 +40,7 @@ export default function ExecutivesPage() {
   const fetchExecutives = useCallback(async () => {
     try {
       const res = await adminExecutivesApi.list({ limit: 100 })
-      setExecutives(res.data.data || [])
+      setExecutives((res.data.data || []) as Executive[])
     } catch {
       toast.error('Failed to load executives')
     } finally {

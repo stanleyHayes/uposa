@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PlusCircle, Pencil, Trash2, GraduationCap, CheckCircle, History, Layers } from 'lucide-react'
@@ -41,7 +40,7 @@ export default function SchoolLeadersPage() {
   const fetchLeaders = useCallback(async () => {
     try {
       const res = await adminSchoolLeadersApi.list({ limit: 100 })
-      setLeaders(res.data.data || [])
+      setLeaders((res.data.data || []) as SchoolLeader[])
     } catch {
       toast.error('Failed to load school leaders')
     } finally {

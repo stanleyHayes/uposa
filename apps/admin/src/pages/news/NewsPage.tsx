@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PlusCircle, Pencil, Trash2, Newspaper, CheckCircle, Archive } from 'lucide-react'
@@ -39,7 +38,7 @@ export default function NewsPage() {
     try {
       setLoading(true)
       const res = await adminNewsApi.list({ limit: 100 })
-      setArticles(res.data.data || [])
+      setArticles((res.data.data || []) as News[])
     } catch {
       toast.error('Failed to load articles')
     } finally {
@@ -62,7 +61,7 @@ export default function NewsPage() {
     let result = articles
     if (search) {
       const q = search.toLowerCase()
-      result = result.filter((a) => a.title.toLowerCase().includes(q) || a.excerpt.toLowerCase().includes(q) || a.authorName.toLowerCase().includes(q))
+      result = result.filter((a) => a.title.toLowerCase().includes(q) || (a.excerpt ?? '').toLowerCase().includes(q) || (a.authorName ?? '').toLowerCase().includes(q))
     }
     if (statusFilter === 'published') {
       result = result.filter((a) => a.isPublished)
@@ -77,7 +76,7 @@ export default function NewsPage() {
     setCurrentPage(1)
   }
 
-  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleStatusFilterChange = (e: { target: { value: string } }) => {
     setStatusFilter(e.target.value)
     setCurrentPage(1)
   }

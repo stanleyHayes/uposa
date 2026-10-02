@@ -1,10 +1,9 @@
-// @ts-nocheck
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft, Save, PlusCircle, Upload, X, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, Save, PlusCircle, Upload, X } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
@@ -15,6 +14,8 @@ import { adminNewsApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
+import { compressImage } from '../../lib/image'
+import { apiErrorMessage } from '../../utils/apiError'
 import type { News } from '../../types'
 
 const articleSchema = z.object({
@@ -40,10 +41,10 @@ function toFormValues(article?: News): ArticleForm {
   if (!article) return { title: '', excerpt: '', content: '', category: 'ANNOUNCEMENT', authorName: '', isFeatured: false, isPublished: false }
   return {
     title: article.title,
-    excerpt: article.excerpt,
+    excerpt: article.excerpt ?? '',
     content: article.content,
     category: article.category,
-    authorName: article.authorName,
+    authorName: article.authorName ?? '',
     isFeatured: article.isFeatured,
     isPublished: article.isPublished,
   }
@@ -96,8 +97,8 @@ export default function NewsFormPage() {
       toast.error('Only JPEG, PNG, GIF, WEBP allowed')
       return
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Max 5MB')
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Max 10MB')
       return
     }
     setImageFile(file)
@@ -122,7 +123,7 @@ export default function NewsFormPage() {
     formData.append('authorName', data.authorName)
     formData.append('isFeatured', String(data.isFeatured))
     formData.append('isPublished', String(data.isPublished))
-    if (imageFile) formData.append('image', imageFile)
+    if (imageFile) formData.append('image', await compressImage(imageFile))
 
     try {
       if (isEditing && article) {
@@ -138,8 +139,8 @@ export default function NewsFormPage() {
         toast.success('Article created')
         navigate(`/news/${created?.id || ''}`)
       }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to save article')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to save article'))
     }
   }
 
@@ -224,7 +225,7 @@ export default function NewsFormPage() {
                   <Upload size={18} className="text-gray-400" />
                 </div>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Upload Cover Image</p>
-                <p className="text-xs text-gray-400">JPEG, PNG, GIF, WEBP — max 5MB</p>
+                <p className="text-xs text-gray-400">JPEG, PNG, GIF, WEBP — max 10MB</p>
               </button>
             )}
             <input

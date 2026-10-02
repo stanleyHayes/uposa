@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useUIStore } from '../../stores/ui.store'
 import { useAuth } from '../../hooks/useAuth'
@@ -5,6 +6,7 @@ import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 import HelpExperience from '../help/HelpExperience'
 import { cn } from '../../utils/cn'
+import { PageSkeleton } from '../ui/Skeleton'
 
 export default function DashboardLayout() {
   const { sidebarCollapsed, mobileSidebarOpen, setMobileSidebarOpen } = useUIStore()
@@ -53,7 +55,9 @@ export default function DashboardLayout() {
         <Topbar />
         <main data-tour="main-content" className="relative z-10 flex-1 overflow-y-auto">
           <div className="mx-auto max-w-[1540px] px-4 py-6 md:px-6 lg:px-8">
-            <Outlet />
+            <Suspense fallback={<PageSkeleton />}>
+              <Outlet />
+            </Suspense>
           </div>
         </main>
         <HelpExperience userKey={currentUser?.id ?? currentUser?.email} />

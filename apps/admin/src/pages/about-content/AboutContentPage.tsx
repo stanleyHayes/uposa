@@ -12,6 +12,7 @@ import { useAboutContentStore } from '../../stores/aboutContent.store'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
+import { apiErrorMessage } from '../../utils/apiError'
 import { formatDate } from '../../utils/formatters'
 import api from '../../api/client'
 
@@ -101,8 +102,8 @@ export default function AboutContentPage() {
         setValue('constitutionUrl', url, { shouldDirty: true })
         toast.success('PDF uploaded successfully')
       }
-    } catch {
-      toast.error('Failed to upload PDF')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to upload PDF'))
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''

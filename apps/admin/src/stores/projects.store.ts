@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Project } from '../types'
 import client from '../api/client'
+import { useUIStore } from './ui.store'
 
 interface ProjectsState {
   projects: Project[]
@@ -17,10 +18,12 @@ export const useProjectsStore = create<ProjectsState>()((set) => ({
   fetchProjects: async () => {
     set({ loading: true })
     try {
-      const res = await client.get('/projects')
+      // The API defaults to 10 per page (max 100); without a limit only the newest 10 load.
+      const res = await client.get('/projects', { params: { limit: 100 } })
       set({ projects: res.data.data || [] })
     } catch {
       set({ projects: [] })
+      useUIStore.getState().addToast({ type: 'error', title: 'Failed to load projects' })
     } finally {
       set({ loading: false })
     }

@@ -1,10 +1,9 @@
-// @ts-nocheck
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PlusCircle, Pencil, Trash2, Calendar, MapPin, CheckCircle, Clock, XCircle } from 'lucide-react'
 import PageHeader from '../../components/layout/PageHeader'
 import Button from '../../components/ui/Button'
-import Badge from '../../components/ui/Badge'
+import Badge, { type BadgeVariant } from '../../components/ui/Badge'
 import SearchInput from '../../components/ui/SearchInput'
 import Select from '../../components/ui/Select'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
@@ -46,7 +45,7 @@ export default function EventsPage() {
   const fetchEvents = useCallback(async () => {
     try {
       const res = await adminEventsApi.list({ limit: 100 })
-      setEvents(res.data.data || [])
+      setEvents((res.data.data || []) as Event[])
     } catch {
       toast.error('Failed to load events')
     } finally {
@@ -69,7 +68,7 @@ export default function EventsPage() {
     let result = events
     if (search) {
       const q = search.toLowerCase()
-      result = result.filter((e) => e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q) || e.location.toLowerCase().includes(q))
+      result = result.filter((e) => e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q) || (e.location ?? '').toLowerCase().includes(q))
     }
     if (statusFilter !== 'all') {
       result = result.filter((e) => e.status === statusFilter)
@@ -82,7 +81,7 @@ export default function EventsPage() {
     setCurrentPage(1)
   }
 
-  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleStatusFilterChange = (e: { target: { value: string } }) => {
     setStatusFilter(e.target.value)
     setCurrentPage(1)
   }
@@ -167,15 +166,15 @@ export default function EventsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                {filteredEvents.slice((currentPage - 1) * (viewMode === 'grid' ? 12 : 10), currentPage * (viewMode === 'grid' ? 12 : 10)).map((ev) => (
-                  <tr key={ev.id} className="border-b border-gray-50 dark:border-dark-border cursor-pointer hover:bg-gray-50/80 dark:hover:bg-dark-hover/50 hover:-translate-y-px transition-all" onClick={() => navigate(`/events/${ev.id}`)}>
+                {filteredEvents.slice((currentPage - 1) * 10, currentPage * 10).map((ev) => (
+                  <tr key={ev.id} className="border-b border-gray-50 dark:border-dark-border cursor-pointer hover:bg-gray-50/80 dark:hover:bg-dark-hover/50 hover:-translate-y-px transition-all" onClick={() => navigate(`/events/${ev.slug}`)}>
                     <td className="px-5 py-3.5">
                       <p className="font-medium text-gray-900 dark:text-gray-100">{ev.title}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{ev.description}</p>
                     </td>
                     <td className="px-5 py-3.5 text-gray-600 dark:text-gray-400 text-xs">
                       <p>{formatDate(ev.date)}</p>
-                      <p className="text-gray-400 dark:text-gray-500">to {formatDate(ev.endDate)}</p>
+                      {ev.endDate && <p className="text-gray-400 dark:text-gray-500">to {formatDate(ev.endDate)}</p>}
                     </td>
                     <td className="px-5 py-3.5 text-gray-600 dark:text-gray-400">
                       <div className="flex items-center gap-1.5">
@@ -184,13 +183,13 @@ export default function EventsPage() {
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
-                      <Badge variant={ev.status.toLowerCase() as any} label={ev.status.charAt(0) + ev.status.slice(1).toLowerCase()} />
+                      <Badge variant={ev.status.toLowerCase() as BadgeVariant} label={ev.status.charAt(0) + ev.status.slice(1).toLowerCase()} />
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <RoleGate permission="events:edit">
                           <button
-                            onClick={() => navigate(`/events/${ev.id}/edit`)}
+                            onClick={() => navigate(`/events/${ev.slug}/edit`)}
                             className="rounded-lg p-1.5 text-gray-400 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:text-brand-600 transition-all duration-150"
                             title="Edit"
                           >
@@ -216,7 +215,7 @@ export default function EventsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
             {filteredEvents.slice((currentPage - 1) * 12, currentPage * 12).map((ev) => (
-              <div key={ev.id} onClick={() => navigate(`/events/${ev.id}`)} className="admin-card-surface overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group">
+              <div key={ev.id} onClick={() => navigate(`/events/${ev.slug}`)} className="admin-card-surface overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group">
                 {ev.imageUrl ? (
                   <img src={ev.imageUrl} alt={ev.title} className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
                 ) : (
@@ -226,7 +225,7 @@ export default function EventsPage() {
                 )}
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <Badge variant={ev.status.toLowerCase()} label={ev.status.charAt(0) + ev.status.slice(1).toLowerCase()} />
+                    <Badge variant={ev.status.toLowerCase() as BadgeVariant} label={ev.status.charAt(0) + ev.status.slice(1).toLowerCase()} />
                     <span className="text-xs text-gray-400">{formatDate(ev.date)}</span>
                   </div>
                   <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1 line-clamp-1">{ev.title}</h3>

@@ -14,6 +14,8 @@ import { adminExecutivesApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
+import { compressImage } from '../../lib/image'
+import { apiErrorMessage } from '../../utils/apiError'
 import type { Executive } from '../../types'
 
 const executiveSchema = z.object({
@@ -91,8 +93,8 @@ export default function ExecutiveFormPage() {
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Photo must be under 5MB')
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Photo must be under 10MB')
       return
     }
     setPhotoFile(file)
@@ -117,7 +119,7 @@ export default function ExecutiveFormPage() {
     if (data.bio) formData.append('bio', data.bio)
     formData.append('order', String(data.order))
     formData.append('isActive', data.isActive)
-    if (photoFile) formData.append('photo', photoFile)
+    if (photoFile) formData.append('photo', await compressImage(photoFile))
 
     try {
       if (isEditing && existing) {
@@ -143,8 +145,8 @@ export default function ExecutiveFormPage() {
         toast.success('Executive added')
         navigate('/executives')
       }
-    } catch {
-      toast.error('Failed to save executive')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to save executive'))
     }
   }
 
@@ -211,7 +213,7 @@ export default function ExecutiveFormPage() {
                 >
                   {photoPreview ? 'Change Photo' : 'Upload Photo'}
                 </Button>
-                <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF, WebP. Max 5MB.</p>
+                <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF, WebP. Max 10MB.</p>
               </div>
             </div>
           </div>

@@ -1,47 +1,138 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Pencil, Trash2, Briefcase, MapPin, Mail, ExternalLink, User, Clock } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Trash2, Briefcase, MapPin, Mail, ExternalLink, User, Clock } from 'lucide-react'
 import { createElement } from 'react'
 import MDEditorComponent from '@uiw/react-md-editor'
 import Button from '../../components/ui/Button'
-import Badge from '../../components/ui/Badge'
+import Badge, { type BadgeVariant } from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
+import Spinner from '../../components/ui/Spinner'
 import RoleGate from '../../components/auth/RoleGate'
-import { useJobsStore } from '../../stores/jobs.store'
+import { adminJobsApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
+import { apiErrorMessage } from '../../utils/apiError'
 import { formatDate } from '../../utils/formatters'
+import type { ApplicationStatus, JobType } from '../../types'
+
+/** Job as returned by /jobs/admin/all. */
+interface ApiJob {
+  id: string
+  title: string
+  description: string
+  company: string
+  location?: string | null
+  jobType: JobType
+  contactEmail?: string | null
+  externalUrl?: string | null
+  postedBy?: { id: string; fullName: string; email?: string } | null
+  isApproved: boolean
+  expiresAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+/** Application as returned by /jobs/admin/:id/applications. */
+interface ApiJobApplication {
+  id: string
+  status: ApplicationStatus
+  createdAt: string
+  applicant?: { id: string; fullName: string; email?: string } | null
+}
+
+/** There is no admin get-by-id (the public one hides unapproved jobs), so scan the admin list. */
+async function findJob(id: string): Promise<ApiJob | null> {
+  for (let page = 1; ; page++) {
+    const res = await adminJobsApi.listAll({ page, limit: 100 })
+    const found = ((res.data.data || []) as ApiJob[]).find((j) => j.id === id)
+    if (found) return found
+    if (page >= (res.data.pagination?.totalPages ?? 1)) return null
+  }
+}
 
 export default function JobDetailPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const { jobs, deleteJob } = useJobsStore()
   const { addActivity } = useActivityStore()
   const { currentUser } = useAuth()
   const { toast } = useToast()
 
+  const [job, setJob] = useState<ApiJob | null>(null)
+  const [applications, setApplications] = useState<ApiJobApplication[]>([])
+  const [loading, setLoading] = useState(true)
+  const [approving, setApproving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(false)
 
-  const job = jobs.find((j) => j.id === id)
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    Promise.all([findJob(id), adminJobsApi.getApplications(id, { limit: 100 })])
+      .then(([found, appsRes]) => {
+        if (cancelled) return
+        if (!found) throw new Error('not found')
+        setJob(found)
+        setApplications((appsRes.data.data || []) as ApiJobApplication[])
+      })
+      .catch(() => {
+        if (cancelled) return
+        toast.error('Job not found')
+        navigate('/jobs', { replace: true })
+      })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [id, navigate, toast])
 
-  if (!job) {
-    navigate('/jobs', { replace: true })
-    return null
+  if (loading) {
+    return (
+      <div className="page-enter flex items-center justify-center py-32">
+        <Spinner size="lg" />
+      </div>
+    )
   }
 
-  const handleDelete = () => {
+  if (!job) return null
+
+  const handleApprove = async () => {
     if (!currentUser) return
-    deleteJob(job.id)
-    addActivity({
-      action: 'deleted job posting',
-      targetType: job.title,
-      targetId: job.id,
-      performedBy: currentUser.id,
-      performedByName: currentUser.name,
-    })
-    toast.success('Job deleted')
-    navigate('/jobs')
+    setApproving(true)
+    try {
+      await adminJobsApi.approve(job.id)
+      setJob({ ...job, isApproved: true })
+      addActivity({
+        action: 'approved job posting',
+        targetType: job.title,
+        targetId: job.id,
+        performedBy: currentUser.id,
+        performedByName: currentUser.name,
+      })
+      toast.success('Job approved')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to approve job'))
+    } finally {
+      setApproving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!currentUser) return
+    setDeleting(true)
+    try {
+      await adminJobsApi.delete(job.id)
+      addActivity({
+        action: 'deleted job posting',
+        targetType: job.title,
+        targetId: job.id,
+        performedBy: currentUser.id,
+        performedByName: currentUser.name,
+      })
+      toast.success('Job deleted')
+      navigate('/jobs')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Failed to delete job'))
+      setDeleting(false)
+    }
   }
 
   return (
@@ -59,7 +150,7 @@ export default function JobDetailPage() {
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <Badge variant={job.jobType.toLowerCase() as any} label={job.jobType.replace('_', ' ')} />
+                <Badge variant={job.jobType.toLowerCase() as BadgeVariant} label={job.jobType.replace('_', ' ')} />
                 <Badge
                   variant={job.isApproved ? 'published' : 'draft'}
                   label={job.isApproved ? 'Approved' : 'Pending'}
@@ -68,11 +159,13 @@ export default function JobDetailPage() {
               <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{job.title}</h1>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <RoleGate permission="jobs:edit">
-                <Button size="sm" variant="secondary" leftIcon={<Pencil size={14} />} onClick={() => navigate(`/jobs/${job.id}/edit`)}>
-                  Edit
-                </Button>
-              </RoleGate>
+              {!job.isApproved && (
+                <RoleGate permission="jobs:edit">
+                  <Button size="sm" leftIcon={<CheckCircle size={14} />} loading={approving} onClick={handleApprove}>
+                    Approve
+                  </Button>
+                </RoleGate>
+              )}
               <RoleGate permission="jobs:delete">
                 <Button size="sm" variant="danger" leftIcon={<Trash2 size={14} />} onClick={() => setDeleteTarget(true)}>
                   Delete
@@ -86,14 +179,16 @@ export default function JobDetailPage() {
               <Briefcase size={14} className="text-gray-400" />
               <span>{job.company}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <MapPin size={14} className="text-gray-400" />
-              <span>{job.location}</span>
-            </div>
-            {job.postedByName && (
+            {job.location && (
+              <div className="flex items-center gap-1.5">
+                <MapPin size={14} className="text-gray-400" />
+                <span>{job.location}</span>
+              </div>
+            )}
+            {job.postedBy?.fullName && (
               <div className="flex items-center gap-1.5">
                 <User size={14} className="text-gray-400" />
-                <span>Posted by {job.postedByName}</span>
+                <span>Posted by {job.postedBy.fullName}</span>
               </div>
             )}
             {job.expiresAt && (
@@ -129,7 +224,7 @@ export default function JobDetailPage() {
 
           <div className="bg-gray-50 dark:bg-dark-hover rounded-lg p-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed" data-color-mode="light">
             <div className="prose prose-sm max-w-none dark:prose-invert">
-              {createElement((MDEditorComponent as any).Markdown, { source: job.description })}
+              {createElement((MDEditorComponent as unknown as { Markdown: React.ComponentType<{ source: string }> }).Markdown, { source: job.description })}
             </div>
           </div>
 
@@ -141,10 +236,10 @@ export default function JobDetailPage() {
       </div>
 
       {/* Applications section */}
-      {job.applications && job.applications.length > 0 && (
+      {applications.length > 0 && (
         <div className="mb-6">
           <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">
-            {job.applications.length} {job.applications.length === 1 ? 'Application' : 'Applications'}
+            {applications.length} {applications.length === 1 ? 'Application' : 'Applications'}
           </h2>
           <div className="admin-card-surface overflow-hidden">
             <div className="overflow-x-auto">
@@ -158,12 +253,12 @@ export default function JobDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                  {job.applications.map((app) => (
+                  {applications.map((app) => (
                     <tr key={app.id} className="border-b border-gray-50 dark:border-dark-border">
-                      <td className="px-5 py-3.5 font-medium text-gray-900 dark:text-gray-100">{app.applicantName}</td>
-                      <td className="px-5 py-3.5 text-gray-500 dark:text-gray-400 text-xs">{app.applicantEmail}</td>
+                      <td className="px-5 py-3.5 font-medium text-gray-900 dark:text-gray-100">{app.applicant?.fullName ?? 'Unknown member'}</td>
+                      <td className="px-5 py-3.5 text-gray-500 dark:text-gray-400 text-xs">{app.applicant?.email ?? '—'}</td>
                       <td className="px-5 py-3.5">
-                        <Badge variant={app.status.toLowerCase() as any} label={app.status.charAt(0).toUpperCase() + app.status.slice(1).toLowerCase()} />
+                        <Badge variant={app.status.toLowerCase() as BadgeVariant} label={app.status.charAt(0).toUpperCase() + app.status.slice(1).toLowerCase()} />
                       </td>
                       <td className="px-5 py-3.5 text-gray-500 dark:text-gray-400 text-xs">{formatDate(app.createdAt)}</td>
                     </tr>
@@ -179,6 +274,7 @@ export default function JobDetailPage() {
         open={deleteTarget}
         onClose={() => setDeleteTarget(false)}
         onConfirm={handleDelete}
+        loading={deleting}
         title="Delete Job"
         message={`Are you sure you want to delete "${job.title}"? This action cannot be undone.`}
         confirmLabel="Delete"

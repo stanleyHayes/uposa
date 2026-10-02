@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { AdminUser, ApiAdminRole } from '../types'
 import { API_ROLE_MAP } from '../types/auth.types'
+import { ADMIN_REFRESH_TOKEN_KEY, ADMIN_TOKEN_KEY, clearAdminSession, refreshAdminSession } from '../api/client'
 
 interface AuthState {
   currentUser: AdminUser | null
@@ -36,8 +37,9 @@ export const useAuthStore = create<AuthState>()(
             return { success: false, error: data.message || 'Invalid email or password.' }
           }
 
-          const { token, admin } = data.data
-          localStorage.setItem('uposa_admin_token', token)
+          const { token, refreshToken, admin } = data.data
+          localStorage.setItem(ADMIN_TOKEN_KEY, token)
+          if (refreshToken) localStorage.setItem(ADMIN_REFRESH_TOKEN_KEY, refreshToken)
 
           const frontendRole = API_ROLE_MAP[admin.role as ApiAdminRole] || 'moderator'
 
@@ -61,7 +63,7 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       logout: () => {
-        localStorage.removeItem('uposa_admin_token')
+        clearAdminSession()
         fetch(`${API_BASE}/auth/logout`, { method: 'POST' }).catch(() => {})
         set({ currentUser: null, isAuthenticated: false })
       },
@@ -70,17 +72,22 @@ export const useAuthStore = create<AuthState>()(
           currentUser: s.currentUser ? { ...s.currentUser, ...updates } : null,
         })),
       fetchMe: async () => {
-        const token = localStorage.getItem('uposa_admin_token')
+        const token = localStorage.getItem(ADMIN_TOKEN_KEY)
         if (!token) return
 
         try {
-          const res = await fetch(`${API_BASE}/auth/me`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
+          const getMe = (accessToken: string) =>
+            fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${accessToken}` } })
+          let res = await getMe(token)
+          // The 15-minute access token has usually expired by the next visit; renew it first.
+          if (res.status === 401) {
+            const renewed = await refreshAdminSession()
+            if (renewed) res = await getMe(renewed)
+          }
           const data = await res.json()
 
           if (!res.ok || !data.success) {
-            localStorage.removeItem('uposa_admin_token')
+            clearAdminSession()
             set({ currentUser: null, isAuthenticated: false })
             return
           }

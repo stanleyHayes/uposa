@@ -12,6 +12,8 @@ import { adminGalleryApi } from '../../api/services'
 import { useActivityStore } from '../../stores/activity.store'
 import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
+import { compressImage } from '../../lib/image'
+import { apiErrorMessage } from '../../utils/apiError'
 import type { GalleryCategory, GalleryItem } from '../../types'
 
 export default function GalleryCategoryPage() {
@@ -67,8 +69,8 @@ export default function GalleryCategoryPage() {
         toast.error(`${f.name}: Only JPEG, PNG, GIF, WEBP allowed`)
         return false
       }
-      if (f.size > 5 * 1024 * 1024) {
-        toast.error(`${f.name}: Max 5MB`)
+      if (f.size > 10 * 1024 * 1024) {
+        toast.error(`${f.name}: Max 10MB`)
         return false
       }
       return true
@@ -92,7 +94,8 @@ export default function GalleryCategoryPage() {
     setUploading(true)
     try {
       const formData = new FormData()
-      uploadFiles.forEach(f => formData.append('images', f))
+      const compressed = await Promise.all(uploadFiles.map(compressImage))
+      compressed.forEach(f => formData.append('images', f))
       formData.append('categoryId', id)
       if (category) formData.append('category', category.name)
 
@@ -107,8 +110,8 @@ export default function GalleryCategoryPage() {
       uploadPreviews.forEach(url => URL.revokeObjectURL(url))
       setUploadPreviews([])
       fetchData()
-    } catch {
-      toast.error('Upload failed')
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Upload failed'))
     } finally {
       setUploading(false)
     }
@@ -239,7 +242,7 @@ export default function GalleryCategoryPage() {
             <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-gray-300 dark:border-dark-border rounded-xl p-8 text-center cursor-pointer hover:border-brand-400 hover:bg-brand-50/30 dark:hover:bg-brand-900/10 transition-all">
               <ImagePlus size={32} className="mx-auto text-gray-400 mb-2" />
               <p className="text-sm text-gray-500 dark:text-gray-400">Click to select images or drag and drop</p>
-              <p className="text-xs text-gray-400 mt-1">JPEG, PNG, GIF, WEBP — max 5MB each — up to 20 at a time</p>
+              <p className="text-xs text-gray-400 mt-1">JPEG, PNG, GIF, WEBP — max 10MB each — up to 20 at a time</p>
             </div>
           )}
         </div>
