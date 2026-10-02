@@ -43,6 +43,7 @@ import galleryRoutes, { adminGalleryRouter } from './modules/gallery/gallery.rou
 import schoolLeadersRoutes, { adminSchoolLeadersRouter } from './modules/school-leaders/school-leaders.routes';
 import aiRoutes from './modules/ai/ai.routes';
 import announcementsRoutes from './modules/announcements/announcements.routes';
+import reportsRoutes, { adminReportsRouter } from './modules/reports/reports.routes';
 import { parseQueryFirstValue } from './utils/query-parser.utils';
 
 const app = express();
@@ -75,6 +76,8 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  // Lets browsers read the data-export filename (GET /api/members/me/export).
+  exposedHeaders: ['Content-Disposition'],
 }));
 
 // Stripe webhook needs raw body for signature verification
@@ -162,6 +165,8 @@ app.use('/api/admin/gallery', adminGalleryRouter);
 app.use('/api/school-leaders', schoolLeadersRoutes);
 app.use('/api/admin/school-leaders', adminSchoolLeadersRouter);
 app.use('/api/announcements', announcementsRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/admin/reports', adminReportsRouter);
 
 // 404 handler
 app.use(notFoundMiddleware);

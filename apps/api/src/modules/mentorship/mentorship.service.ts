@@ -2,8 +2,12 @@ import { escapeRegex } from '../../utils/search.utils';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { SendMentorshipRequestInput, RespondToRequestInput, ToggleMentorAvailabilityInput } from './mentorship.validation';
+import { excludeIds } from '../../utils/moderation.utils';
+import { getMutuallyHiddenIds, isBlockedEitherWay } from '../blocks/blocks.service';
 
-export async function listMentors(query: Record<string, string | undefined>) {
+const BLOCKED_MESSAGE = 'Mentorship is not available between these members';
+
+export async function listMentors(query: Record<string, string | undefined>, viewerId?: string) {
   const { page, limit, skip } = getPaginationParams(query);
   const { areaOfExpertise, search } = query;
   const { members } = getRepos();
@@ -12,6 +16,7 @@ export async function listMentors(query: Record<string, string | undefined>) {
     membershipStatus: 'ACTIVE',
     isApproved: true,
     isAvailableAsMentor: true,
+    ...excludeIds('_id', await getMutuallyHiddenIds(viewerId)),
   };
 
   if (areaOfExpertise) where.areaOfExpertise = areaOfExpertise;
@@ -74,6 +79,9 @@ export async function sendMentorshipRequest(menteeId: string, data: SendMentorsh
 
   const mentor = await members.findById(data.mentorId);
   if (!mentor) throw Object.assign(new Error('Mentor not found'), { statusCode: 404 });
+  if (await isBlockedEitherWay(menteeId, data.mentorId)) {
+    throw Object.assign(new Error(BLOCKED_MESSAGE), { statusCode: 403 });
+  }
   if (!(mentor as any).isAvailableAsMentor) {
     throw Object.assign(new Error('This member is not currently available as a mentor'), { statusCode: 400 });
   }
@@ -144,6 +152,9 @@ export async function respondToRequest(requestId: string, mentorId: string, data
   }
   if ((request as any).status !== 'PENDING') {
     throw Object.assign(new Error('Request has already been responded to'), { statusCode: 400 });
+  }
+  if (await isBlockedEitherWay(mentorId, String(request.menteeId))) {
+    throw Object.assign(new Error(BLOCKED_MESSAGE), { statusCode: 403 });
   }
 
   const result = await mentorshipRequests.updateById(requestId, {

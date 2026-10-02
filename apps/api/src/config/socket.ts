@@ -55,6 +55,9 @@ export function initSocket(httpServer: HttpServer): Server {
   io.on('connection', (socket: Socket) => {
     console.log(`Socket connected: ${socket.id}`);
 
+    // Personal room, so forum pushes can skip members who blocked the author.
+    if (socket.data.user?.id) socket.join(`member:${socket.data.user.id}`);
+
     // Join rooms for specific content
     socket.on('join:poll', (pollId: string) => {
       socket.join(`poll:${pollId}`);
@@ -112,12 +115,13 @@ export function emitElectionStatus(electionId: string, data: any) {
   if (io) io.to(`election:${electionId}`).emit('election:status', data);
 }
 
-export function emitForumNewPost(data: any) {
-  if (io) io.to('forum').emit('forum:newPost', data);
+/** `exceptMemberIds`: members who blocked the author — they must not receive it live either. */
+export function emitForumNewPost(data: any, exceptMemberIds: string[] = []) {
+  if (io) io.to('forum').except(exceptMemberIds.map((id) => `member:${id}`)).emit('forum:newPost', data);
 }
 
-export function emitForumNewComment(postId: string, data: any) {
-  if (io) io.to(`forum:${postId}`).emit('forum:newComment', data);
+export function emitForumNewComment(postId: string, data: any, exceptMemberIds: string[] = []) {
+  if (io) io.to(`forum:${postId}`).except(exceptMemberIds.map((id) => `member:${id}`)).emit('forum:newComment', data);
 }
 
 export function emitForumPostUpdated(postId: string, data: any) {

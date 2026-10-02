@@ -28,13 +28,13 @@ import { uploadToCloudinary } from '../../utils/cloudinary.utils';
 
 export async function listMembersHandler(req: RouteRequest, res: Response): Promise<void> {
   const parsed = listMembersQuerySchema.parse({ query: req.query });
-  const result = await listMembers(parsed.query as Record<string, string | undefined>);
+  const result = await listMembers(parsed.query as Record<string, string | undefined>, req.user?.id);
   successResponse(res, 'Members retrieved', result.data, 200, result.meta);
 }
 
 export async function getMemberDirectoryHandler(req: RouteRequest, res: Response): Promise<void> {
   const parsed = listMembersQuerySchema.parse({ query: req.query });
-  const result = await getMemberDirectory(parsed.query as Record<string, string | undefined>);
+  const result = await getMemberDirectory(parsed.query as Record<string, string | undefined>, req.user?.id);
   successResponse(res, 'Member directory retrieved', result.data, 200, result.meta);
 }
 

@@ -18,6 +18,7 @@ import {
   deleteMyAccountHandler,
 } from './members.controller';
 import { authMiddleware, memberOrAdminMiddleware } from '../../middleware/auth.middleware';
+import { blockMemberHandler, unblockMemberHandler, listBlocksHandler } from '../blocks/blocks.controller';
 import { adminMiddleware, requireAdminRole } from '../../middleware/admin.middleware';
 import { uploadSingle } from '../../middleware/upload.middleware';
 import { uploadLimiter, dataExportLimiter, accountDeletionLimiter } from '../../middleware/ratelimit.middleware';
@@ -33,6 +34,11 @@ router.get('/my/dues', authMiddleware, getMyDuesHandler);
 router.get('/my/donations', authMiddleware, getMyDonationsHandler);
 router.put('/profile', authMiddleware, updateProfileHandler);
 router.post('/profile/photo', authMiddleware, uploadLimiter, uploadSingle('photo'), uploadProfilePhotoHandler);
+// Blocking (UGC safety) — before '/:id'
+router.get('/blocks', authMiddleware, listBlocksHandler);
+router.post('/blocks', authMiddleware, blockMemberHandler);
+router.delete('/blocks/:memberId', authMiddleware, unblockMemberHandler);
+
 // Privacy self-service (Ghana Data Protection Act 2012 / app-store account deletion)
 router.put('/me/preferences', authMiddleware, updatePreferencesHandler);
 router.get('/me/export', authMiddleware, dataExportLimiter, exportMyDataHandler);

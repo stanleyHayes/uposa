@@ -17,7 +17,7 @@ import { successResponse, errorResponse } from '../../utils/response.utils';
 
 // Member handlers
 export async function listMentorsHandler(req: RouteRequest, res: Response): Promise<void> {
-  const result = await listMentors(req.query as Record<string, string | undefined>);
+  const result = await listMentors(req.query as Record<string, string | undefined>, req.user?.id);
   successResponse(res, 'Mentors retrieved', result.data, 200, result.meta);
 }
 

@@ -5,6 +5,8 @@ import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination
 import { sendApprovalEmail } from '../../utils/email.utils';
 import { DIRECTORY_VISIBLE_FILTER, SAFE_MEMBER_PROJECTION, toMemberView } from '../../utils/privacy.utils';
 import { invalidateMemberSession } from '../../utils/session-state.utils';
+import { excludeIds } from '../../utils/moderation.utils';
+import { getMutuallyHiddenIds, getBlockedIds } from '../blocks/blocks.service';
 import { UpdateProfileInput } from './members.validation';
 
 // Listed to other members only if active, approved and opted in to the
@@ -31,10 +33,11 @@ function buildMemberFilter(query: Record<string, string | undefined>, base: Reco
   return where;
 }
 
-export async function listMembers(query: Record<string, string | undefined>) {
+export async function listMembers(query: Record<string, string | undefined>, viewerId?: string) {
   const { members } = getRepos();
   const { page, limit, skip } = getPaginationParams(query);
-  const where = buildMemberFilter(query, DIRECTORY_BASE);
+  // Blocks hide the two members from each other in search.
+  const where = buildMemberFilter(query, { ...DIRECTORY_BASE, ...excludeIds('_id', await getMutuallyHiddenIds(viewerId)) });
 
   const [data, total] = await Promise.all([
     members.findMany(where, { projection: DIRECTORY_PROJECTION, sort: { fullName: 1 }, skip, limit }),
@@ -44,11 +47,12 @@ export async function listMembers(query: Record<string, string | undefined>) {
   return { data, meta: buildPaginationMeta(page, limit, total) };
 }
 
-export async function getMemberDirectory(query: Record<string, string | undefined>) {
+export async function getMemberDirectory(query: Record<string, string | undefined>, viewerId?: string) {
   const { members } = getRepos();
   const { page, limit, skip } = getPaginationParams(query);
   const { search } = query;
-  const where: Record<string, unknown> = { ...DIRECTORY_BASE };
+  // Blocks hide the two members from each other (admins have no viewerId: unaffected).
+  const where: Record<string, unknown> = { ...DIRECTORY_BASE, ...excludeIds('_id', await getMutuallyHiddenIds(viewerId)) };
   const { yearGroup, house, programme, country } = query;
 
   if (yearGroup) where.yearGroup = parseInt(yearGroup, 10);
@@ -80,6 +84,11 @@ export async function getMemberById(id: string, requesterId?: string) {
     const self = await members.findById(id, { projection: SAFE_MEMBER_PROJECTION });
     if (!self) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
     return toMemberView(self);
+  }
+
+  // Someone this member has blocked can't open their profile.
+  if (requesterId && (await getBlockedIds(id)).includes(String(requesterId))) {
+    throw Object.assign(new Error('Member not found'), { statusCode: 404 });
   }
 
   const member = await members.findOne(

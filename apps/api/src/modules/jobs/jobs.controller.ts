@@ -25,13 +25,13 @@ import { successResponse, errorResponse } from '../../utils/response.utils';
 
 // Public
 export async function listJobsHandler(req: RouteRequest, res: Response): Promise<void> {
-  const result = await listJobs(req.query as Record<string, string | undefined>);
+  const result = await listJobs(req.query as Record<string, string | undefined>, req.user?.id);
   successResponse(res, 'Jobs retrieved', result.data, 200, result.meta);
 }
 
 export async function getJobByIdHandler(req: RouteRequest, res: Response): Promise<void> {
   const { id } = req.params;
-  const job = await getJobById(id);
+  const job = await getJobById(id, req.user?.id);
   successResponse(res, 'Job retrieved', job);
 }
 

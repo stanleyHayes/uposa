@@ -19,13 +19,14 @@ import {
   adminCreateJobHandler,
   adminUpdateJobHandler,
 } from './jobs.controller';
-import { authMiddleware } from '../../middleware/auth.middleware';
+import { authMiddleware, optionalAuthMiddleware } from '../../middleware/auth.middleware';
 import { adminMiddleware } from '../../middleware/admin.middleware';
 
 const router = Router();
 
 // Public routes
-router.get('/', listJobsHandler);
+// Public; a signed-in member's blocks also apply.
+router.get('/', optionalAuthMiddleware, listJobsHandler);
 router.get('/my/postings', authMiddleware, getMyPostingsHandler);
 router.get('/my/applications', authMiddleware, getMyApplicationsHandler);
 
@@ -48,6 +49,6 @@ router.get('/admin/:id/applications', adminMiddleware, adminGetJobApplicationsHa
 router.put('/admin/applications/:id/status', adminMiddleware, adminUpdateApplicationStatusHandler);
 
 // Public - must be last (catch-all param route)
-router.get('/:id', getJobByIdHandler);
+router.get('/:id', optionalAuthMiddleware, getJobByIdHandler);
 
 export default router;

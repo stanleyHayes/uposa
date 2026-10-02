@@ -19,13 +19,13 @@ import {
 import { successResponse, errorResponse } from '../../utils/response.utils';
 
 export async function listPostsHandler(req: RouteRequest, res: Response): Promise<void> {
-  const result = await listPosts(req.query as Record<string, string | undefined>);
+  const result = await listPosts(req.query as Record<string, string | undefined>, req.user?.id);
   successResponse(res, 'Posts retrieved', result.data, 200, result.meta);
 }
 
 export async function getPostBySlugHandler(req: RouteRequest, res: Response): Promise<void> {
   const { slug } = req.params;
-  const post = await getPostBySlug(slug);
+  const post = await getPostBySlug(slug, req.user?.id);
   successResponse(res, 'Post retrieved', post);
 }
 

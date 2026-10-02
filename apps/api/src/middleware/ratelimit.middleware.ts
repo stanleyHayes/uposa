@@ -129,3 +129,5 @@ function perMemberLimiter(max: number) {
 
 export const dataExportLimiter = perMemberLimiter(5);
 export const accountDeletionLimiter = perMemberLimiter(5);
+/** Content reports: 20 per hour per member. */
+export const reportLimiter = perMemberLimiter(20);

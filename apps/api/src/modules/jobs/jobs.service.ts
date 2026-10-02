@@ -2,6 +2,9 @@ import { escapeRegex } from '../../utils/search.utils';
 import mongoose from 'mongoose';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
+import { assertCleanContent } from '../../utils/content-filter';
+import { excludeIds } from '../../utils/moderation.utils';
+import { getBlockedIds } from '../blocks/blocks.service';
 import { CreateJobInput, UpdateJobInput, ApplyToJobInput, UpdateApplicationStatusInput } from './jobs.validation';
 
 // The poster's email is only for admins: the public job board (/api/jobs, /api/jobs/:id)
@@ -49,7 +52,7 @@ async function attachAppCount(docs: Record<string, any>[]) {
   return docs.map(d => ({ ...d, _count: { applications: countMap.get(String(d.id)) || 0 } }));
 }
 
-export async function listJobs(query: Record<string, string | undefined>) {
+export async function listJobs(query: Record<string, string | undefined>, viewerId?: string) {
   const { page, limit, skip } = getPaginationParams(query);
   const { jobType, search } = query;
   const repos = getRepos();
@@ -58,6 +61,8 @@ export async function listJobs(query: Record<string, string | undefined>) {
   const where: Record<string, unknown> = {
     isApproved: true,
     $or: [{ expiresAt: null }, { expiresAt: { $gte: now } }],
+    // A signed-in member doesn't see jobs posted by members they blocked.
+    ...excludeIds('postedById', await getBlockedIds(viewerId)),
   };
   if (jobType) where.jobType = jobType.toUpperCase();
   if (search) {
@@ -80,10 +85,10 @@ export async function listJobs(query: Record<string, string | undefined>) {
   return { data: withCounts, meta: buildPaginationMeta(page, limit, total) };
 }
 
-export async function getJobById(id: string) {
+export async function getJobById(id: string, viewerId?: string) {
   const repos = getRepos();
 
-  const job = await repos.jobs.findOne({ _id: id, isApproved: true } as any);
+  const job = await repos.jobs.findOne({ _id: id, isApproved: true, ...excludeIds('postedById', await getBlockedIds(viewerId)) } as any);
   if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });
 
   const appCount = await repos.jobApplications.count({ jobId: id });
@@ -92,6 +97,7 @@ export async function getJobById(id: string) {
 }
 
 export async function postJob(memberId: string, data: CreateJobInput) {
+  assertCleanContent(data.title, data.description, data.company, data.location);
   const repos = getRepos();
 
   const job = await repos.jobs.create({
@@ -124,6 +130,7 @@ export async function getMyPostings(memberId: string, query: Record<string, stri
 }
 
 export async function updateMyJob(jobId: string, memberId: string, data: UpdateJobInput) {
+  assertCleanContent(data.title, data.description, data.company, data.location);
   const repos = getRepos();
 
   const job = await repos.jobs.findById(jobId);
@@ -327,6 +334,7 @@ export async function approveJob(id: string) {
 
 /** Admin-created jobs are published immediately (no approval queue). */
 export async function adminCreateJob(adminId: string, data: CreateJobInput) {
+  assertCleanContent(data.title, data.description, data.company, data.location);
   const repos = getRepos();
   const job = await repos.jobs.create({
     title: data.title,
@@ -344,6 +352,7 @@ export async function adminCreateJob(adminId: string, data: CreateJobInput) {
 }
 
 export async function adminUpdateJob(id: string, data: UpdateJobInput) {
+  assertCleanContent(data.title, data.description, data.company, data.location);
   const repos = getRepos();
   const job = await repos.jobs.findById(id);
   if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });

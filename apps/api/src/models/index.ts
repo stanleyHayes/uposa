@@ -261,6 +261,10 @@ export interface IForumPost { id: string;
   viewCount: number;
   isPinned: boolean;
   isLocked: boolean;
+  /** Hidden by moderation: excluded from member-facing views, still visible to admins. */
+  isHidden: boolean;
+  /** True when hidden automatically by reports (a dismissal un-hides it); false when hidden by a moderator. */
+  autoHidden?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -270,6 +274,8 @@ export interface IForumComment { id: string;
   authorId: mongoose.Types.ObjectId;
   content: string;
   parentId?: string;
+  isHidden: boolean;
+  autoHidden?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -711,6 +717,8 @@ const ForumPostSchema = new Schema<IForumPost>(
     viewCount: { type: Number, default: 0 },
     isPinned: { type: Boolean, default: false },
     isLocked: { type: Boolean, default: false },
+    isHidden: { type: Boolean, default: false },
+    autoHidden: { type: Boolean, default: false },
   },
   { timestamps: true, collection: 'forum_posts', toJSON: toJSONOptions },
 );
@@ -724,6 +732,8 @@ const ForumCommentSchema = new Schema<IForumComment>(
     authorId: { type: Schema.Types.ObjectId, ref: 'Member', required: true },
     content: { type: String, required: true },
     parentId: { type: String },
+    isHidden: { type: Boolean, default: false },
+    autoHidden: { type: Boolean, default: false },
   },
   { timestamps: true, collection: 'forum_comments', toJSON: toJSONOptions },
 );
@@ -988,7 +998,7 @@ export type AdminNotificationType =
   | 'NEW_REGISTRATION' | 'NEW_CONTACT_MESSAGE' | 'NEW_DONATION'
   | 'NEW_TRANSCRIPT_REQUEST' | 'PENDING_JOB' | 'NEW_FORUM_POST'
   | 'NEW_MENTORSHIP_REQUEST' | 'NEW_RSVP' | 'ELECTION_STARTED'
-  | 'POLL_ENDED' | 'GENERAL';
+  | 'POLL_ENDED' | 'CONTENT_REPORT' | 'GENERAL';
 
 export interface IAdminNotification { id: string;
   type: AdminNotificationType;
@@ -1050,3 +1060,70 @@ const AnnouncementSchema = new Schema<IAnnouncement>(
 AnnouncementSchema.index({ status: 1, audience: 1, publishedAt: -1 });
 
 export const Announcement: Model<IAnnouncement> = mongoose.models.Announcement || mongoose.model<IAnnouncement>('Announcement', AnnouncementSchema);
+
+// ── ContentReport (UGC moderation: Apple guideline 1.2 / Google Play UGC policy) ──
+export const ReportTargetType = ['FORUM_POST', 'FORUM_COMMENT', 'JOB', 'MEMBER'] as const;
+export const ReportReason = ['SPAM', 'HARASSMENT', 'HATE', 'SEXUAL', 'VIOLENCE', 'MISLEADING', 'OTHER'] as const;
+export const ReportStatus = ['OPEN', 'ACTIONED', 'DISMISSED'] as const;
+export const ReportAction = ['NONE', 'HIDE_CONTENT', 'DELETE_CONTENT', 'SUSPEND_AUTHOR'] as const;
+
+export interface IContentReport { id: string;
+  reporterId: mongoose.Types.ObjectId;
+  targetType: (typeof ReportTargetType)[number];
+  targetId: mongoose.Types.ObjectId;
+  reason: (typeof ReportReason)[number];
+  details?: string | null;
+  status: (typeof ReportStatus)[number];
+  action?: (typeof ReportAction)[number] | null;
+  resolutionNote?: string | null;
+  resolvedById?: mongoose.Types.ObjectId | null;
+  resolvedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const ContentReportSchema = new Schema<IContentReport>(
+  {
+    reporterId: { type: Schema.Types.ObjectId, ref: 'Member', required: true },
+    targetType: { type: String, enum: ReportTargetType, required: true },
+    targetId: { type: Schema.Types.ObjectId, required: true },
+    reason: { type: String, enum: ReportReason, required: true },
+    details: { type: String, maxlength: 1000 },
+    status: { type: String, enum: ReportStatus, default: 'OPEN' },
+    action: { type: String, enum: ReportAction },
+    resolutionNote: { type: String },
+    resolvedById: { type: Schema.Types.ObjectId, ref: 'Admin' },
+    resolvedAt: { type: Date },
+  },
+  { timestamps: true, collection: 'content_reports', toJSON: toJSONOptions },
+);
+
+ContentReportSchema.index({ status: 1, createdAt: -1 });
+ContentReportSchema.index({ targetType: 1, targetId: 1, status: 1 });
+// One OPEN report per reporter per target (makes POST /api/reports idempotent under races).
+ContentReportSchema.index(
+  { reporterId: 1, targetType: 1, targetId: 1 },
+  { unique: true, partialFilterExpression: { status: 'OPEN' }, name: 'one_open_report_per_reporter' },
+);
+
+export const ContentReport: Model<IContentReport> = mongoose.models.ContentReport || mongoose.model<IContentReport>('ContentReport', ContentReportSchema);
+
+// ── MemberBlock ──
+export interface IMemberBlock { id: string;
+  blockerId: mongoose.Types.ObjectId;
+  blockedId: mongoose.Types.ObjectId;
+  createdAt: Date;
+}
+
+const MemberBlockSchema = new Schema<IMemberBlock>(
+  {
+    blockerId: { type: Schema.Types.ObjectId, ref: 'Member', required: true },
+    blockedId: { type: Schema.Types.ObjectId, ref: 'Member', required: true },
+  },
+  { timestamps: { createdAt: true, updatedAt: false }, collection: 'member_blocks', toJSON: toJSONOptions },
+);
+
+MemberBlockSchema.index({ blockerId: 1, blockedId: 1 }, { unique: true });
+MemberBlockSchema.index({ blockedId: 1 });
+
+export const MemberBlock: Model<IMemberBlock> = mongoose.models.MemberBlock || mongoose.model<IMemberBlock>('MemberBlock', MemberBlockSchema);
