@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyMemberToken, verifyAdminToken, MemberTokenPayload, AdminTokenPayload } from '../utils/jwt.utils';
-import { isMemberTokenLive, isAdminTokenLive } from '../utils/session-state.utils';
+import { isMemberTokenLive, liveAdminPermissions } from '../utils/session-state.utils';
 import { errorResponse } from '../utils/response.utils';
 
 declare global {
@@ -34,7 +34,11 @@ export async function resolveMember(token: string | undefined): Promise<MemberTo
   return (await isMemberTokenLive(payload)) ? payload : null;
 }
 
-/** Verified admin access token whose account is still active (see resolveMember). */
+/**
+ * Verified admin access token whose account is still active and whose role
+ * still exists (see resolveMember), with the admin's effective permissions
+ * attached from the live session state.
+ */
 export async function resolveAdmin(token: string | undefined): Promise<AdminTokenPayload | null> {
   if (!token) return null;
   let payload: AdminTokenPayload;
@@ -43,7 +47,8 @@ export async function resolveAdmin(token: string | undefined): Promise<AdminToke
   } catch {
     return null;
   }
-  return (await isAdminTokenLive(payload)) ? payload : null;
+  const permissions = await liveAdminPermissions(payload);
+  return permissions ? { ...payload, permissions } : null;
 }
 
 export async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {

@@ -210,11 +210,15 @@ function assertNotDeleted(member: { membershipStatus?: string }) {
   }
 }
 
-export async function approveMember(id: string) {
+export async function approveMember(id: string, options: { canReinstate: boolean }) {
   const { members } = getRepos();
   const member = await members.findById(id);
   if (!member) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
   assertNotDeleted(member);
+  // Approving is a registrations task; un-suspending someone is a members:edit decision.
+  if ((member as any).membershipStatus === 'SUSPENDED' && !options.canReinstate) {
+    throw Object.assign(new Error("You don't have permission to reinstate a suspended member"), { statusCode: 403 });
+  }
 
   const result = await members.updateById(id, {
     isApproved: true,

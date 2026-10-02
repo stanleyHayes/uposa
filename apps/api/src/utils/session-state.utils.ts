@@ -8,6 +8,7 @@
  */
 import { getRepos } from '../repositories';
 import { issuedBeforePasswordChange } from './jwt.utils';
+import { resolveAdminAccess } from '../modules/roles/roles.access';
 
 const TTL_MS = 30_000;
 const MAX_ENTRIES = 5_000;
@@ -21,6 +22,11 @@ export interface AdminSessionState {
   isActive?: boolean;
   role?: string;
   passwordChangedAt?: Date | null;
+  /** False when the admin's role key no longer exists in the roles collection. */
+  roleExists?: boolean;
+  roleName?: string;
+  /** Effective permissions (role ∪ grant − revoke; everything for SUPER_ADMIN). */
+  permissions?: string[];
 }
 
 type Entry = { state: MemberSessionState | AdminSessionState | null; expiresAt: number };
@@ -41,7 +47,7 @@ export function isMemberSessionValid(state: MemberSessionState | null, iat: numb
  * now; a refresh mints a token with the new role).
  */
 export function isAdminSessionValid(state: AdminSessionState | null, iat: number | undefined, role?: string): boolean {
-  if (!state || !state.isActive) return false;
+  if (!state || !state.isActive || state.roleExists === false) return false;
   if (role !== undefined && state.role !== undefined && role !== state.role) return false;
   return !issuedBeforePasswordChange(iat, state.passwordChangedAt);
 }
@@ -78,8 +84,19 @@ export async function getAdminSessionState(id: string, now = Date.now()): Promis
   const key = `admin:${id}`;
   const cached = readCache<AdminSessionState>(key, now);
   if (cached !== undefined) return cached;
-  const admin = await getRepos().admins.findById(id, { projection: 'isActive role passwordChangedAt' });
-  const state = admin ? { isActive: admin.isActive, role: admin.role, passwordChangedAt: admin.passwordChangedAt ?? null } : null;
+  const admin = await getRepos().admins.findById(id, { projection: 'isActive role passwordChangedAt permissionOverrides' });
+  let state: AdminSessionState | null = null;
+  if (admin) {
+    const access = await resolveAdminAccess(admin);
+    state = {
+      isActive: admin.isActive,
+      role: admin.role,
+      passwordChangedAt: admin.passwordChangedAt ?? null,
+      roleExists: !!access,
+      roleName: access?.roleInfo.name,
+      permissions: access?.permissions ?? [],
+    };
+  }
   writeCache(key, state, now);
   return state;
 }
@@ -89,7 +106,13 @@ export async function isMemberTokenLive(payload: { id: string; iat?: number }): 
 }
 
 export async function isAdminTokenLive(payload: { id: string; iat?: number; role?: string }): Promise<boolean> {
-  return isAdminSessionValid(await getAdminSessionState(payload.id), payload.iat, payload.role);
+  return (await liveAdminPermissions(payload)) !== null;
+}
+
+/** Effective permissions for a live admin session, or null when the session is no longer valid. */
+export async function liveAdminPermissions(payload: { id: string; iat?: number; role?: string }): Promise<string[] | null> {
+  const state = await getAdminSessionState(payload.id);
+  return isAdminSessionValid(state, payload.iat, payload.role) ? state?.permissions ?? [] : null;
 }
 
 /** Drop the cached state so the next request re-reads the account (suspension, password change, deletion…). */
@@ -99,6 +122,12 @@ export function invalidateMemberSession(id: string): void {
 
 export function invalidateAdminSession(id: string): void {
   cache.delete(`admin:${String(id)}`);
+}
+
+/** After a role's permissions change: drop every admin holding it. */
+export async function invalidateAdminsWithRole(roleKey: string): Promise<void> {
+  const holders = await getRepos().admins.findMany({ role: roleKey }, { projection: '_id' });
+  for (const admin of holders) invalidateAdminSession(String(admin.id));
 }
 
 /** Test helper. */

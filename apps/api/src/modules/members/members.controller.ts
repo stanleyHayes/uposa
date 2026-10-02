@@ -24,6 +24,13 @@ import {
   deleteMember,
 } from './members.service';
 import { successResponse, errorResponse } from '../../utils/response.utils';
+import { hasPermission, ensurePermission } from '../../middleware/admin.middleware';
+import { forbiddenMessage } from '../../config/permissions';
+
+/** PENDING → INACTIVE is rejecting a registration (registrations:edit), not a member-status change. */
+export function isRegistrationRejection(currentStatus: string | undefined, newStatus: string): boolean {
+  return currentStatus === 'PENDING' && newStatus === 'INACTIVE';
+}
 import { uploadToCloudinary } from '../../utils/cloudinary.utils';
 
 export async function listMembersHandler(req: RouteRequest, res: Response): Promise<void> {
@@ -92,19 +99,26 @@ export async function getMyDonationsHandler(req: RouteRequest, res: Response): P
 
 // Admin handlers
 export async function adminListMembersHandler(req: RouteRequest, res: Response): Promise<void> {
-  const result = await adminListMembers(req.query as Record<string, string | undefined>);
+  const query = req.query as Record<string, string | undefined>;
+  // Registrations-only reviewers (no members:view) see pending registrations only.
+  const scoped = hasPermission(req, 'members:view') ? query : { ...query, status: 'PENDING' };
+  const result = await adminListMembers(scoped);
   successResponse(res, 'Members retrieved', result.data, 200, result.meta);
 }
 
 export async function adminGetMemberByIdHandler(req: RouteRequest, res: Response): Promise<void> {
   const { id } = req.params;
   const member = await adminGetMemberById(id);
+  if (!hasPermission(req, 'members:view') && member.membershipStatus !== 'PENDING') {
+    errorResponse(res, forbiddenMessage('members:view'), 403);
+    return;
+  }
   successResponse(res, 'Member retrieved', member);
 }
 
 export async function approveMemberHandler(req: RouteRequest, res: Response): Promise<void> {
   const { id } = req.params;
-  const member = await approveMember(id);
+  const member = await approveMember(id, { canReinstate: hasPermission(req, 'members:edit') });
   successResponse(res, 'Member approved successfully', member);
 }
 
@@ -117,6 +131,8 @@ export async function suspendMemberHandler(req: RouteRequest, res: Response): Pr
 export async function changeMemberStatusHandler(req: RouteRequest, res: Response): Promise<void> {
   const { id } = req.params;
   const parsed = adminUpdateMemberStatusSchema.parse({ body: req.body });
+  const current = await adminGetMemberById(id);
+  ensurePermission(req, isRegistrationRejection(current.membershipStatus, parsed.body.membershipStatus) ? 'registrations:edit' : 'members:edit');
   const member = await changeMemberStatus(id, parsed.body.membershipStatus, parsed.body.rejectionReason || parsed.body.reason);
   successResponse(res, 'Member status updated', member);
 }

@@ -10,7 +10,7 @@ import {
   adminListPaymentsHandler,
 } from './payments.controller';
 import { optionalAuthMiddleware } from '../../middleware/auth.middleware';
-import { adminMiddleware } from '../../middleware/admin.middleware';
+import { adminMiddleware, requirePermission } from '../../middleware/admin.middleware';
 import { paymentLimiter, webhookLimiter } from '../../middleware/ratelimit.middleware';
 
 const router = Router();
@@ -36,6 +36,6 @@ router.post('/webhooks/stripe', webhookLimiter, stripeWebhookHandler);
 router.post('/webhooks/crypto', webhookLimiter, cryptoWebhookHandler);
 
 // Admin
-router.get('/admin', adminMiddleware, adminListPaymentsHandler);
+router.get('/admin', adminMiddleware, requirePermission('payments:view'), adminListPaymentsHandler);
 
 export default router;

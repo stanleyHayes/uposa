@@ -11,7 +11,7 @@ import {
   adminDeleteDonationHandler,
 } from './donations.controller';
 import { authMiddleware, optionalAuthMiddleware } from '../../middleware/auth.middleware';
-import { adminMiddleware, requireAdminRole } from '../../middleware/admin.middleware';
+import { adminMiddleware, requirePermission } from '../../middleware/admin.middleware';
 import { donationLimiter } from '../../middleware/ratelimit.middleware';
 
 const router = Router();
@@ -23,13 +23,13 @@ router.post('/', donationLimiter, optionalAuthMiddleware, submitDonationHandler)
 router.get('/my', authMiddleware, getMyDonationsHandler);
 
 // Admin routes
-router.get('/admin/summary', adminMiddleware, getDonationSummaryHandler);
-router.get('/admin', adminMiddleware, adminListDonationsHandler);
-router.get('/admin/:id', adminMiddleware, getDonationByIdHandler);
-// Financial records: ADMIN / SUPER_ADMIN only (not moderators)
-router.post('/admin', adminMiddleware, requireAdminRole, adminCreateDonationHandler);
-router.put('/admin/:id/confirm', adminMiddleware, requireAdminRole, confirmDonationHandler);
-router.put('/admin/:id', adminMiddleware, requireAdminRole, adminUpdateDonationHandler);
-router.delete('/admin/:id', adminMiddleware, requireAdminRole, adminDeleteDonationHandler);
+router.get('/admin/summary', adminMiddleware, requirePermission('donations:view'), getDonationSummaryHandler);
+router.get('/admin', adminMiddleware, requirePermission('donations:view'), adminListDonationsHandler);
+router.get('/admin/:id', adminMiddleware, requirePermission('donations:view'), getDonationByIdHandler);
+// Financial records: donations:* (not in the MODERATOR defaults)
+router.post('/admin', adminMiddleware, requirePermission('donations:create'), adminCreateDonationHandler);
+router.put('/admin/:id/confirm', adminMiddleware, requirePermission('donations:edit'), confirmDonationHandler);
+router.put('/admin/:id', adminMiddleware, requirePermission('donations:edit'), adminUpdateDonationHandler);
+router.delete('/admin/:id', adminMiddleware, requirePermission('donations:delete'), adminDeleteDonationHandler);
 
 export default router;

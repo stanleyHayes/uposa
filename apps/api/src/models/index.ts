@@ -23,6 +23,7 @@ export const EmploymentType = ['RETIRED', 'STUDENT', 'UNEMPLOYED', 'SELF_EMPLOYE
 export const WillingnessToVolunteer = ['YES', 'NO', 'MAYBE'] as const;
 // DELETED = self-service account deletion (record anonymised, kept for accounting).
 export const MembershipStatus = ['PENDING', 'ACTIVE', 'SUSPENDED', 'INACTIVE', 'DELETED'] as const;
+/** Built-in (system) admin role keys. Admin.role may also hold a custom role key (see Role). */
 export const AdminRole = ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] as const;
 export const EventStatus = ['UPCOMING', 'ONGOING', 'PAST', 'CANCELLED'] as const;
 export const ProjectStatus = ['ONGOING', 'COMPLETED', 'PAUSED'] as const;
@@ -111,7 +112,10 @@ export interface IAdmin { id: string;
   fullName: string;
   email: string;
   password: string;
+  /** Role key (SUPER_ADMIN / ADMIN / MODERATOR or a custom role). */
   role: string;
+  /** Per-admin adjustments on top of the role: effective = (role ∪ grant) − revoke. */
+  permissionOverrides?: { grant: string[]; revoke: string[] } | null;
   isActive: boolean;
   passwordChangedAt?: Date | null;
   resetTokenHash?: string | null;
@@ -516,7 +520,12 @@ const AdminSchema = new Schema<IAdmin>(
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { type: String, enum: AdminRole, default: 'ADMIN' },
+    // Validated against the roles collection (system + custom roles), not a fixed enum.
+    role: { type: String, default: 'ADMIN' },
+    permissionOverrides: {
+      grant: { type: [String], default: [] },
+      revoke: { type: [String], default: [] },
+    },
     isActive: { type: Boolean, default: true },
     passwordChangedAt: { type: Date },
     // Only the sha256 of the emailed reset token is stored.
@@ -1127,3 +1136,37 @@ MemberBlockSchema.index({ blockerId: 1, blockedId: 1 }, { unique: true });
 MemberBlockSchema.index({ blockedId: 1 });
 
 export const MemberBlock: Model<IMemberBlock> = mongoose.models.MemberBlock || mongoose.model<IMemberBlock>('MemberBlock', MemberBlockSchema);
+
+// ── Role (admin RBAC) ──
+export interface IRole { id: string;
+  /** Unique uppercase slug, e.g. SUPER_ADMIN, CONTENT_EDITOR. Stored on Admin.role. */
+  key: string;
+  name: string;
+  description?: string | null;
+  /** `${resource}:${action}` strings from config/permissions.ts. */
+  permissions: string[];
+  /** SUPER_ADMIN / ADMIN / MODERATOR: can't be deleted (SUPER_ADMIN can't be edited either). */
+  isSystem: boolean;
+  /**
+   * The catalog's permission list as of the last sync. Lets startup add
+   * permissions that are NEW to the catalog to system roles without ever
+   * re-adding ones an admin removed.
+   */
+  knownPermissions?: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const RoleSchema = new Schema<IRole>(
+  {
+    key: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    description: { type: String },
+    permissions: { type: [String], default: [] },
+    isSystem: { type: Boolean, default: false },
+    knownPermissions: { type: [String], default: undefined },
+  },
+  { timestamps: true, collection: 'roles', toJSON: toJSONOptions },
+);
+
+export const Role: Model<IRole> = mongoose.models.Role || mongoose.model<IRole>('Role', RoleSchema);

@@ -7,7 +7,7 @@ import {
   unsubscribePageHandler,
   unsubscribeOneClickHandler,
 } from './newsletter.controller';
-import { adminMiddleware, requireAdminRole } from '../../middleware/admin.middleware';
+import { adminMiddleware, requirePermission } from '../../middleware/admin.middleware';
 import { newsletterLimiter } from '../../middleware/ratelimit.middleware';
 
 const router = Router();
@@ -24,6 +24,6 @@ export default router;
 export const adminNewsletterRouter = Router();
 
 adminNewsletterRouter.use(adminMiddleware);
-adminNewsletterRouter.get('/', adminListSubscribersHandler);
-adminNewsletterRouter.put('/:id/unsubscribe', adminUnsubscribeHandler);
-adminNewsletterRouter.delete('/:id', requireAdminRole, adminDeleteSubscriberHandler);
+adminNewsletterRouter.get('/', requirePermission('newsletter:view'), adminListSubscribersHandler);
+adminNewsletterRouter.put('/:id/unsubscribe', requirePermission('newsletter:edit'), adminUnsubscribeHandler);
+adminNewsletterRouter.delete('/:id', requirePermission('newsletter:delete'), adminDeleteSubscriberHandler);

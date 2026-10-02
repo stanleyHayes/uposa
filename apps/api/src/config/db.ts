@@ -3,6 +3,7 @@ import { env } from './env';
 import { logger } from './logger';
 import { Member, Admin, EMAIL_CI_INDEX } from '../models';
 import { caseInsensitiveDuplicateEmailPipeline } from '../utils/search.utils';
+import { ensureSystemRoles } from '../modules/roles/roles.access';
 
 /**
  * Make sure the case-insensitive unique email indexes exist. Mongoose's
@@ -48,6 +49,10 @@ export async function connectDB(): Promise<void> {
       logger.info('MongoDB connected via Mongoose');
       // Background: never blocks startup and never throws.
       void ensureEmailIndexes();
+      // RBAC system roles (SUPER_ADMIN/ADMIN/MODERATOR) — seeded if missing, never overwritten.
+      // Awaited so they exist before the first request; loadRole() falls back to the
+      // code defaults if this ever fails, so admins are never locked out.
+      await ensureSystemRoles().catch((err) => logger.error({ err }, 'Could not seed system roles'));
 
       mongoose.connection.on('error', (err) => logger.error({ err }, 'MongoDB connection error'));
       mongoose.connection.on('disconnected', () => logger.warn('MongoDB disconnected'));

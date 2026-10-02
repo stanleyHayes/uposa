@@ -12,12 +12,22 @@ export interface MemberTokenPayload {
 export interface AdminTokenPayload {
   id: string;
   email: string;
-  role: 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR';
+  /** Role key (system or custom). Whether it still exists is checked live (session-state cache). */
+  role: string;
   /** Issued-at (seconds), present on verified tokens. */
   iat?: number;
+  /** Effective permissions, attached by adminMiddleware from the live session state (not a JWT claim). */
+  permissions?: string[];
 }
 
-const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'];
+/**
+ * Token-level shape check only: any non-empty role key except MEMBER (keeps
+ * member tokens out even if both secrets were configured the same). Whether the
+ * role exists is validated against the roles collection in session-state.
+ */
+function isAdminRoleClaim(role: unknown): boolean {
+  return typeof role === 'string' && role.length > 0 && role !== 'MEMBER';
+}
 
 // Access and refresh tokens share a secret, so they're told apart by `tokenType`:
 // a 7-day refresh token must not work as a bearer token, and a 15-minute access
@@ -69,7 +79,7 @@ function isLegacyRefresh(payload: TokenClaims): boolean {
 
 export function verifyAdminRefreshToken(token: string): AdminTokenPayload {
   const payload = jwt.verify(token, env.JWT_ADMIN_SECRET) as TokenClaims;
-  if (!ADMIN_ROLES.includes(String(payload.role)) || (payload.tokenType !== 'refresh' && !isLegacyRefresh(payload))) {
+  if (!isAdminRoleClaim(payload.role) || (payload.tokenType !== 'refresh' && !isLegacyRefresh(payload))) {
     reject('Invalid admin refresh token');
   }
   return payload as unknown as AdminTokenPayload;
@@ -78,7 +88,7 @@ export function verifyAdminRefreshToken(token: string): AdminTokenPayload {
 export function verifyAdminToken(token: string): AdminTokenPayload {
   const payload = jwt.verify(token, env.JWT_ADMIN_SECRET) as TokenClaims;
   // The role check also keeps member tokens out if both secrets were ever set to the same value.
-  if (!ADMIN_ROLES.includes(String(payload.role)) || payload.tokenType === 'refresh') reject('Invalid admin token');
+  if (!isAdminRoleClaim(payload.role) || payload.tokenType === 'refresh') reject('Invalid admin token');
   return payload as unknown as AdminTokenPayload;
 }
 

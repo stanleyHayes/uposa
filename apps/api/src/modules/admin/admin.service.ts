@@ -4,6 +4,9 @@ import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination
 import { emailMatch } from '../../utils/search.utils';
 import { signAdminToken, signAdminRefreshToken } from '../../utils/jwt.utils';
 import { invalidateAdminSession } from '../../utils/session-state.utils';
+import { loadRole } from '../roles/roles.access';
+import { Actor, assertAdminChangeAllowed, assertNoEscalation, activeSuperAdminCount } from '../roles/roles.service';
+import { SUPER_ADMIN_ROLE, forbiddenMessage } from '../../config/permissions';
 
 /** Admin record without credentials (password hash, reset-token hash). */
 export function toSafeAdmin<T extends object>(admin: T): Omit<T, 'password' | 'resetTokenHash' | 'resetTokenExpiry'> {
@@ -24,14 +27,21 @@ interface CreateAdminInput {
   fullName: string;
   email: string;
   password: string;
-  role?: 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR';
+  role?: string;
 }
 
 interface UpdateAdminInput {
   fullName?: string;
   email?: string;
-  role?: 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR';
+  role?: string;
   isActive?: boolean;
+}
+
+/** A role key that exists (system or custom); 404 otherwise. */
+async function requireRole(key: string) {
+  const role = await loadRole(key);
+  if (!role) throw Object.assign(new Error('Role not found'), { statusCode: 404 });
+  return role;
 }
 
 interface MonthlyAggregateRow {
@@ -326,35 +336,67 @@ export async function listAdmins(query: Record<string, string | undefined>) {
   const { admins } = getRepos();
   const { page, limit, skip } = getPaginationParams(query);
 
-  const [data, total] = await Promise.all([
+  const [rawData, total, roleDocs] = await Promise.all([
     admins.findMany({}, { projection: '-password -resetTokenHash -resetTokenExpiry', sort: { createdAt: -1 }, skip, limit }),
     admins.count(),
+    getRepos().roles.findMany({}, { projection: 'key name' }),
   ]);
+
+  // roleInfo resolves custom role keys to their display names.
+  const names = new Map(roleDocs.map((r) => [r.key, r.name]));
+  const data = await Promise.all(rawData.map(async (a) => {
+    const name = names.get(a.role) ?? (await loadRole(a.role))?.name ?? a.role;
+    return { ...a, roleInfo: { key: a.role, name } };
+  }));
 
   return { data, meta: buildPaginationMeta(page, limit, total) };
 }
 
-export async function createAdmin(data: CreateAdminInput) {
+export async function createAdmin(actor: Actor, data: CreateAdminInput) {
   const { admins } = getRepos();
   await assertEmailFree(data.email);
+
+  const role = await requireRole(data.role || 'ADMIN');
+  if (role.key === SUPER_ADMIN_ROLE && actor.role !== SUPER_ADMIN_ROLE) {
+    throw Object.assign(new Error('Only a SUPER_ADMIN can assign or remove the SUPER_ADMIN role'), { statusCode: 403 });
+  }
+  // A new account can't hold more than its creator (else: create a stronger login for yourself).
+  assertNoEscalation(actor, role.permissions);
 
   const hashedPassword = await bcrypt.hash(data.password, 12);
   const doc = await admins.create({
     fullName: data.fullName,
     email: data.email,
     password: hashedPassword,
-    role: data.role || 'ADMIN',
+    role: role.key,
     isActive: true,
   });
 
   return toSafeAdmin(doc);
 }
 
-export async function updateAdmin(id: string, data: UpdateAdminInput) {
+export async function updateAdmin(actor: Actor, id: string, data: UpdateAdminInput) {
   const { admins } = getRepos();
   const admin = await admins.findById(id);
   if (!admin) throw Object.assign(new Error('Admin not found'), { statusCode: 404 });
   if (data.email) await assertEmailFree(data.email, id);
+
+  const roleChanges = data.role !== undefined && data.role !== admin.role;
+  if (roleChanges) {
+    // Changing someone's role is a permissions change, not just an account edit.
+    if (!actor.permissions.includes('roles:edit')) {
+      throw Object.assign(new Error(forbiddenMessage('roles:edit')), { statusCode: 403 });
+    }
+    const role = await requireRole(data.role as string);
+    assertNoEscalation(actor, role.permissions);
+  }
+  assertAdminChangeAllowed({
+    actor,
+    target: { id: String(admin.id), role: admin.role, isActive: admin.isActive },
+    newRole: data.role,
+    deactivating: data.isActive === false && admin.isActive,
+    activeSuperAdminCount: await activeSuperAdminCount(),
+  });
 
   const result = await admins.updateById(id, data);
   invalidateAdminSession(id); // deactivation / role change applies on the next request
@@ -385,7 +427,7 @@ export async function changeAdminPassword(adminId: string, currentPassword: stri
   invalidateAdminSession(adminId);
 
   // Older refresh tokens are now revoked; hand this device a fresh session.
-  const tokenPayload = { id: String(admin.id), email: admin.email, role: admin.role as 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR' };
+  const tokenPayload = { id: String(admin.id), email: admin.email, role: admin.role };
   return {
     message: 'Password changed successfully',
     accessToken: signAdminToken(tokenPayload),
@@ -393,13 +435,19 @@ export async function changeAdminPassword(adminId: string, currentPassword: stri
   };
 }
 
-export async function deactivateAdmin(id: string, requesterId: string) {
+export async function deactivateAdmin(id: string, actor: Actor) {
   const { admins } = getRepos();
-  if (id === requesterId) {
+  if (id === actor.id) {
     throw Object.assign(new Error('You cannot deactivate your own account'), { statusCode: 400 });
   }
   const admin = await admins.findById(id);
   if (!admin) throw Object.assign(new Error('Admin not found'), { statusCode: 404 });
+  assertAdminChangeAllowed({
+    actor,
+    target: { id: String(admin.id), role: admin.role, isActive: admin.isActive },
+    deactivating: admin.isActive,
+    activeSuperAdminCount: await activeSuperAdminCount(),
+  });
 
   const result = await admins.updateById(id, { isActive: false });
   invalidateAdminSession(id);

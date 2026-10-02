@@ -6,13 +6,13 @@ import {
   ForumPost, ForumComment, Poll, PollVote,
   Election, ElectionVote, ContactMessage, GalleryCategory, GalleryItem,
   SchoolLeader, Executive, SiteConfig, YearGroupRep, PaymentMethod, Payment,
-  TranscriptRequest, NewsletterSubscription, AdminNotification, Announcement, ContentReport, MemberBlock,
+  TranscriptRequest, NewsletterSubscription, AdminNotification, Announcement, ContentReport, MemberBlock, Role,
   IMember, IAdmin, IEvent, IEventRsvp, IProject, INews,
   IDonation, IDue, IJob, IJobApplication, IMentorshipRequest,
   IForumPost, IForumComment, IPoll, IPollVote,
   IElection, IElectionVote, IContactMessage, IGalleryCategory, IGalleryItem,
   ISchoolLeader, IExecutive, ISiteConfig, IYearGroupRep, IPaymentMethod, IPayment,
-  ITranscriptRequest, INewsletterSubscription, IAdminNotification, IAnnouncement, IContentReport, IMemberBlock,
+  ITranscriptRequest, INewsletterSubscription, IAdminNotification, IAnnouncement, IContentReport, IMemberBlock, IRole,
 } from '../models';
 
 // ═══════════════════════════════════════════════════════════
@@ -52,6 +52,7 @@ export interface Repositories {
   announcements: IRepository<IAnnouncement>;
   contentReports: IRepository<IContentReport>;
   memberBlocks: IRepository<IMemberBlock>;
+  roles: IRepository<IRole>;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -94,6 +95,7 @@ function createMongooseRepositories(): Repositories {
     announcements: new MongooseRepository(Announcement),
     contentReports: new MongooseRepository(ContentReport),
     memberBlocks: new MongooseRepository(MemberBlock),
+    roles: new MongooseRepository(Role),
   };
 }
 

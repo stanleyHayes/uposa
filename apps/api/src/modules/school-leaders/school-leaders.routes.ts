@@ -7,7 +7,7 @@ import {
   adminUpdateSchoolLeaderHandler,
   adminDeleteSchoolLeaderHandler,
 } from './school-leaders.controller';
-import { adminMiddleware } from '../../middleware/admin.middleware';
+import { adminMiddleware, requirePermission } from '../../middleware/admin.middleware';
 import { uploadSingle } from '../../middleware/upload.middleware';
 import { uploadLimiter } from '../../middleware/ratelimit.middleware';
 
@@ -22,8 +22,8 @@ export default router;
 export const adminSchoolLeadersRouter = Router();
 
 adminSchoolLeadersRouter.use(adminMiddleware);
-adminSchoolLeadersRouter.get('/', adminListSchoolLeadersHandler);
-adminSchoolLeadersRouter.get('/:id', adminGetSchoolLeaderHandler);
-adminSchoolLeadersRouter.post('/', uploadLimiter, uploadSingle('photo'), adminCreateSchoolLeaderHandler);
-adminSchoolLeadersRouter.put('/:id', uploadLimiter, uploadSingle('photo'), adminUpdateSchoolLeaderHandler);
-adminSchoolLeadersRouter.delete('/:id', adminDeleteSchoolLeaderHandler);
+adminSchoolLeadersRouter.get('/', requirePermission('school_leaders:view'), adminListSchoolLeadersHandler);
+adminSchoolLeadersRouter.get('/:id', requirePermission('school_leaders:view'), adminGetSchoolLeaderHandler);
+adminSchoolLeadersRouter.post('/', requirePermission('school_leaders:create'), uploadLimiter, uploadSingle('photo'), adminCreateSchoolLeaderHandler);
+adminSchoolLeadersRouter.put('/:id', requirePermission('school_leaders:edit'), uploadLimiter, uploadSingle('photo'), adminUpdateSchoolLeaderHandler);
+adminSchoolLeadersRouter.delete('/:id', requirePermission('school_leaders:delete'), adminDeleteSchoolLeaderHandler);

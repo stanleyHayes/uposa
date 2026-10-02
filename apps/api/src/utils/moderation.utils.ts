@@ -27,8 +27,8 @@ export interface ResolutionPlan {
   suspendAuthor: boolean;
   /** Undo an automatic hide (DISMISSED). */
   unhideIfAutoHidden: boolean;
-  /** SUSPEND_AUTHOR is an account action: ADMIN/SUPER_ADMIN only. */
-  requiresAdminRole: boolean;
+  /** Extra permission beyond reports:edit (SUSPEND_AUTHOR is an account action → members:edit). */
+  extraPermission: string | null;
 }
 
 /**
@@ -47,7 +47,7 @@ export function planReportResolution(
     deleteContent: false,
     suspendAuthor: false,
     unhideIfAutoHidden: false,
-    requiresAdminRole: false,
+    extraPermission: null,
   };
   const invalid = (message: string) => Object.assign(new Error(message), { statusCode: 400 });
 
@@ -71,7 +71,7 @@ export function planReportResolution(
       break;
     case 'SUSPEND_AUTHOR':
       plan.suspendAuthor = true;
-      plan.requiresAdminRole = true;
+      plan.extraPermission = 'members:edit';
       break;
   }
   return plan;

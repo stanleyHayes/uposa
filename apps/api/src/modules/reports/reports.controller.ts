@@ -25,6 +25,6 @@ export async function adminGetReportHandler(req: RouteRequest, res: Response): P
 export async function adminResolveReportHandler(req: RouteRequest, res: Response): Promise<void> {
   if (!req.admin) { errorResponse(res, 'Unauthorized', 401); return; }
   const parsed = resolveReportSchema.parse({ body: req.body });
-  const report = await resolveReport(req.params.id, { id: req.admin.id, role: req.admin.role }, parsed.body);
+  const report = await resolveReport(req.params.id, { id: req.admin.id, permissions: req.admin.permissions ?? [] }, parsed.body);
   successResponse(res, 'Report resolved', report);
 }

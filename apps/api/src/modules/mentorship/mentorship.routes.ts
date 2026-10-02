@@ -12,7 +12,7 @@ import {
   adminDeleteMentorshipRequestHandler,
 } from './mentorship.controller';
 import { authMiddleware } from '../../middleware/auth.middleware';
-import { adminMiddleware } from '../../middleware/admin.middleware';
+import { adminMiddleware, requirePermission } from '../../middleware/admin.middleware';
 
 const router = Router();
 
@@ -26,8 +26,8 @@ router.get('/my/mentees', authMiddleware, getMyMentorRequestsHandler);
 router.put('/requests/:id/respond', authMiddleware, respondToRequestHandler);
 
 // Admin routes
-router.get('/admin/requests', adminMiddleware, adminListMentorshipRequestsHandler);
-router.get('/admin/mentors', adminMiddleware, adminListMentorsHandler);
-router.delete('/admin/requests/:id', adminMiddleware, adminDeleteMentorshipRequestHandler);
+router.get('/admin/requests', adminMiddleware, requirePermission('mentorship:view'), adminListMentorshipRequestsHandler);
+router.get('/admin/mentors', adminMiddleware, requirePermission('mentorship:view'), adminListMentorsHandler);
+router.delete('/admin/requests/:id', adminMiddleware, requirePermission('mentorship:delete'), adminDeleteMentorshipRequestHandler);
 
 export default router;

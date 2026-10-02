@@ -72,10 +72,10 @@ describe('report resolution action mapping', () => {
     expect(planReportResolution('JOB', 'ACTIONED', 'HIDE_CONTENT')).toMatchObject({ hide: false, unapproveJob: true });
   });
 
-  it('DELETE_CONTENT deletes; SUSPEND_AUTHOR suspends and needs ADMIN/SUPER_ADMIN', () => {
-    expect(planReportResolution('JOB', 'ACTIONED', 'DELETE_CONTENT')).toMatchObject({ deleteContent: true, requiresAdminRole: false });
-    expect(planReportResolution('FORUM_POST', 'ACTIONED', 'SUSPEND_AUTHOR')).toMatchObject({ suspendAuthor: true, requiresAdminRole: true });
-    expect(planReportResolution('MEMBER', 'ACTIONED', 'SUSPEND_AUTHOR')).toMatchObject({ suspendAuthor: true, requiresAdminRole: true });
+  it('DELETE_CONTENT deletes; SUSPEND_AUTHOR suspends and additionally needs members:edit', () => {
+    expect(planReportResolution('JOB', 'ACTIONED', 'DELETE_CONTENT')).toMatchObject({ deleteContent: true, extraPermission: null });
+    expect(planReportResolution('FORUM_POST', 'ACTIONED', 'SUSPEND_AUTHOR')).toMatchObject({ suspendAuthor: true, extraPermission: 'members:edit' });
+    expect(planReportResolution('MEMBER', 'ACTIONED', 'SUSPEND_AUTHOR')).toMatchObject({ suspendAuthor: true, extraPermission: 'members:edit' });
   });
 
   it('DISMISSED takes no action and un-hides auto-hidden forum content', () => {

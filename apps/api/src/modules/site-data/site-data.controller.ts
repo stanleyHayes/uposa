@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { RouteRequest } from '../../types/request.types';
 import * as siteDataService from './site-data.service';
 import { successResponse, errorResponse } from '../../utils/response.utils';
+import { ensurePermission, hasPermission } from '../../middleware/admin.middleware';
 import { uploadDocumentToCloudinary } from '../../utils/cloudinary.utils';
 
 // Public: Get all site data bundled
@@ -27,17 +28,23 @@ export async function getYearGroupReps(req: RouteRequest, res: Response) {
 // Admin: Upsert config
 export async function upsertConfig(req: RouteRequest, res: Response) {
   const { key } = req.params;
+  // About-page keys need about:edit; everything else site:edit.
+  ensurePermission(req, siteDataService.configKeyPermission(key, 'edit'));
   const { value } = req.body;
   // 0 / false / '' are legitimate values (e.g. a 0 platform fee) — only reject a missing one.
   if (value === undefined || value === null) return errorResponse(res, 'Value is required', 400);
-  const config = await siteDataService.upsertSiteConfig(key, value);
+  const config = await siteDataService.upsertSiteConfig(key, key === 'constitution' ? siteDataService.constitutionSchema.parse(value) : value);
   return successResponse(res, 'Config updated', config);
 }
 
 // Admin: Get all configs (for settings page)
 export async function getAllConfigs(req: RouteRequest, res: Response) {
   const configs = await siteDataService.getAllSiteConfig();
-  return successResponse(res, 'All configs retrieved', configs);
+  // Only the keys this admin may view (about:view for About-page keys, site:view for the rest).
+  const visible = Object.fromEntries(
+    Object.entries(configs).filter(([key]) => hasPermission(req, siteDataService.configKeyPermission(key, 'view'))),
+  );
+  return successResponse(res, 'All configs retrieved', visible);
 }
 
 // Admin: CRUD year group reps

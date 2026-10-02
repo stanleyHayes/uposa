@@ -30,18 +30,45 @@ export function fakeRepo(docs: Doc[]) {
     async findOne(filter: Record<string, unknown>) {
       return docs.find((d) => matches(d, filter)) ?? null;
     },
+    async findMany(filter: Record<string, unknown> = {}) {
+      return docs.filter((d) => matches(d, filter));
+    },
+    async count(filter: Record<string, unknown> = {}) {
+      return docs.filter((d) => matches(d, filter)).length;
+    },
     async updateById(id: string, data: Record<string, unknown>) {
       const doc = docs.find((d) => d.id === String(id));
       if (!doc) return null;
       Object.assign(doc, data);
       return doc;
     },
+    async updateOne(filter: Record<string, unknown>, data: Record<string, unknown>) {
+      const doc = docs.find((d) => matches(d, filter));
+      if (!doc) return null;
+      Object.assign(doc, data);
+      return doc;
+    },
+    async create(data: Record<string, unknown>) {
+      const doc = { id: String(docs.length + 1).padStart(24, '0'), ...data } as Doc;
+      docs.push(doc);
+      return doc;
+    },
+    async deleteOne(filter: Record<string, unknown>) {
+      const i = docs.findIndex((d) => matches(d, filter));
+      return i === -1 ? null : docs.splice(i, 1)[0];
+    },
+    async aggregate() {
+      return [];
+    },
   };
 }
 
-/** Swap in fake members/admins repos (everything else stays real). Returns them for assertions. */
-export function installFakeAccounts(members: Doc[] = [], admins: Doc[] = []) {
-  const fakes = { members: fakeRepo(members), admins: fakeRepo(admins) };
+/**
+ * Swap in fake members/admins/roles repos (everything else stays real). With no
+ * roles given, system roles resolve to their code defaults. Returns the fakes.
+ */
+export function installFakeAccounts(members: Doc[] = [], admins: Doc[] = [], roles: Doc[] = []) {
+  const fakes = { members: fakeRepo(members), admins: fakeRepo(admins), roles: fakeRepo(roles) };
   setRepos({ ...getRepos(), ...fakes } as never);
   clearSessionStateCache();
   return fakes;

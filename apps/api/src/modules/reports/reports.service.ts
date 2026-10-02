@@ -10,6 +10,7 @@ import { notify } from '../../utils/notify';
 import { excerpt, planReportResolution, shouldAutoHide, ReportTargetType } from '../../utils/moderation.utils';
 import { IContentReport, ReportStatus, ReportTargetType as TARGET_TYPES } from '../../models';
 import { suspendMember } from '../members/members.service';
+import { forbiddenMessage } from '../../config/permissions';
 import { CreateReportInput, ResolveReportInput } from './reports.validation';
 
 const TARGET_LABELS: Record<ReportTargetType, string> = {
@@ -202,7 +203,7 @@ export async function adminGetReport(id: string) {
  * Apply the moderator's decision to the reported content, then resolve every
  * OPEN report on the same target with the same outcome.
  */
-export async function resolveReport(id: string, admin: { id: string; role: string }, data: ResolveReportInput) {
+export async function resolveReport(id: string, admin: { id: string; permissions: string[] }, data: ResolveReportInput) {
   const repos = getRepos();
   const report = await repos.contentReports.findById(id);
   if (!report) throw Object.assign(new Error('Report not found'), { statusCode: 404 });
@@ -211,8 +212,8 @@ export async function resolveReport(id: string, admin: { id: string; role: strin
   const type = report.targetType as ReportTargetType;
   const targetId = String(report.targetId);
   const plan = planReportResolution(type, data.status, data.action);
-  if (plan.requiresAdminRole && admin.role !== 'ADMIN' && admin.role !== 'SUPER_ADMIN') {
-    throw Object.assign(new Error('Only an ADMIN or SUPER_ADMIN can suspend members'), { statusCode: 403 });
+  if (plan.extraPermission && !admin.permissions.includes(plan.extraPermission)) {
+    throw Object.assign(new Error(forbiddenMessage(plan.extraPermission)), { statusCode: 403 });
   }
 
   const { doc, authorId } = await loadTarget(type, targetId);

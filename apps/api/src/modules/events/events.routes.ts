@@ -11,7 +11,7 @@ import {
   getEventRsvpsHandler,
 } from './events.controller';
 import { optionalAuthMiddleware } from '../../middleware/auth.middleware';
-import { adminMiddleware } from '../../middleware/admin.middleware';
+import { adminMiddleware, requirePermission } from '../../middleware/admin.middleware';
 import { uploadSingle } from '../../middleware/upload.middleware';
 import { uploadLimiter, rsvpLimiter } from '../../middleware/ratelimit.middleware';
 
@@ -25,9 +25,9 @@ router.get('/:slug', getEventBySlugHandler);
 router.post('/:id/rsvp', rsvpLimiter, optionalAuthMiddleware, rsvpToEventHandler); // public RSVP (memberId optional)
 
 // Admin routes
-router.post('/admin', adminMiddleware, uploadLimiter, uploadSingle('image'), createEventHandler);
-router.put('/admin/:id', adminMiddleware, uploadLimiter, uploadSingle('image'), updateEventHandler);
-router.delete('/admin/:id', adminMiddleware, deleteEventHandler);
-router.get('/admin/:id/rsvps', adminMiddleware, getEventRsvpsHandler);
+router.post('/admin', adminMiddleware, requirePermission('events:create'), uploadLimiter, uploadSingle('image'), createEventHandler);
+router.put('/admin/:id', adminMiddleware, requirePermission('events:edit'), uploadLimiter, uploadSingle('image'), updateEventHandler);
+router.delete('/admin/:id', adminMiddleware, requirePermission('events:delete'), deleteEventHandler);
+router.get('/admin/:id/rsvps', adminMiddleware, requirePermission('events:view'), getEventRsvpsHandler);
 
 export default router;

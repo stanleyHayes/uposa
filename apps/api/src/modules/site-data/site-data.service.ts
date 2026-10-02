@@ -1,4 +1,23 @@
+import { z } from 'zod';
 import { getRepos } from '../../repositories';
+
+/**
+ * Site config keys that are About-page content (about:view / about:edit). Every
+ * other key — contact, social, payment details, dues, donation allocation,
+ * platform fee — is site config (site:view / site:edit).
+ */
+export const ABOUT_CONFIG_KEYS = ['mission', 'history', 'stats', 'schoolInfo', 'impactStories', 'constitution'] as const;
+
+/** The permission needed to read or write a site-config key. */
+export function configKeyPermission(key: string, action: 'view' | 'edit'): string {
+  return `${(ABOUT_CONFIG_KEYS as readonly string[]).includes(key) ? 'about' : 'site'}:${action}`;
+}
+
+/** `constitution`: link to the uploaded PDF (https, or '' for none) and a short summary. */
+export const constitutionSchema = z.object({
+  url: z.union([z.literal(''), z.string().url('Must be a valid URL').refine((u) => u.startsWith('https://'), 'Must be an https:// URL')]),
+  summary: z.string().max(5000),
+});
 
 // Get all site configs as a key-value map
 export async function getAllSiteConfig() {
@@ -75,7 +94,8 @@ export async function getPublicSiteData() {
   ]);
 
   return {
-    config: configs,
+    // constitution is always present for the marketing site (null until set).
+    config: { ...configs, constitution: configs.constitution ?? null },
     executives: execList,
     yearGroupReps: repsGrouped,
     upcomingEvents,

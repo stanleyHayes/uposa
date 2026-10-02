@@ -7,6 +7,16 @@ import { hashToken, tokenLookupFilters } from '../../utils/crypto.utils';
 import { buildRegistrationConsents, toMemberView } from '../../utils/privacy.utils';
 import { invalidateMemberSession, invalidateAdminSession } from '../../utils/session-state.utils';
 import { toSafeAdmin } from '../admin/admin.service';
+import { resolveAdminAccess } from '../roles/roles.access';
+
+/** Effective permissions + role info for the admin UI; 403 if their role was removed. */
+async function adminAccessOrFail(admin: { role: string; permissionOverrides?: { grant: string[]; revoke: string[] } | null }) {
+  const access = await resolveAdminAccess(admin);
+  if (!access) {
+    throw Object.assign(new Error('Your admin role no longer exists. Ask a super admin to assign you a role.'), { statusCode: 403 });
+  }
+  return access;
+}
 import {
   signMemberToken,
   signMemberRefreshToken,
@@ -187,12 +197,13 @@ export async function loginAdmin(email: string, password: string) {
   if (!admin.isActive) {
     throw Object.assign(new Error('Admin account is deactivated'), { statusCode: 403 });
   }
+  const access = await adminAccessOrFail(admin);
 
-  const tokenPayload = { id: (admin as any).id, email: admin.email, role: admin.role as 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR' };
+  const tokenPayload = { id: (admin as any).id, email: admin.email, role: admin.role };
   const accessToken = signAdminToken(tokenPayload);
   const refreshToken = signAdminRefreshToken(tokenPayload);
 
-  return { admin: toSafeAdmin(admin), accessToken, refreshToken };
+  return { admin: toSafeAdmin(admin), accessToken, refreshToken, ...access };
 }
 
 /**
@@ -218,8 +229,11 @@ export async function refreshAdminSession(refreshToken: string) {
     throw Object.assign(new Error('Session expired, please log in again'), { statusCode: 401 });
   }
 
-  const tokenPayload = { id: (admin as any).id, email: admin.email, role: admin.role as 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR' };
-  return { accessToken: signAdminToken(tokenPayload), refreshToken: signAdminRefreshToken(tokenPayload) };
+  const access = await resolveAdminAccess(admin);
+  if (!access) throw Object.assign(new Error('Invalid or expired refresh token'), { statusCode: 401 });
+
+  const tokenPayload = { id: (admin as any).id, email: admin.email, role: admin.role };
+  return { accessToken: signAdminToken(tokenPayload), refreshToken: signAdminRefreshToken(tokenPayload), ...access };
 }
 
 /** First match for an emailed token: by hash, then legacy plaintext (pre-hashing tokens). */
@@ -321,7 +335,8 @@ export async function getMe(userId: string, isAdmin: boolean) {
   if (isAdmin) {
     const admin = await admins.findById(userId);
     if (!admin) throw Object.assign(new Error('Admin not found'), { statusCode: 404 });
-    return { type: 'admin', data: toSafeAdmin(admin) };
+    const access = await adminAccessOrFail(admin);
+    return { type: 'admin', data: toSafeAdmin(admin), permissions: access.permissions, roleInfo: access.roleInfo };
   }
 
   const member = await members.findById(userId);

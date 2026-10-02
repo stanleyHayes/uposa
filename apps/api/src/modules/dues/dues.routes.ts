@@ -9,7 +9,7 @@ import {
   bulkCreateDuesHandler,
 } from './dues.controller';
 import { authMiddleware } from '../../middleware/auth.middleware';
-import { adminMiddleware, requireAdminRole } from '../../middleware/admin.middleware';
+import { adminMiddleware, requirePermission } from '../../middleware/admin.middleware';
 
 const router = Router();
 
@@ -19,10 +19,10 @@ router.get('/my/summary', authMiddleware, getMemberDueSummaryHandler);
 router.post('/my/:id/pay', authMiddleware, memberPayDueHandler);
 
 // Admin routes
-router.get('/admin', adminMiddleware, adminListDuesHandler);
-// Financial records: ADMIN / SUPER_ADMIN only (not moderators)
-router.post('/admin', adminMiddleware, requireAdminRole, createDueHandler);
-router.put('/admin/:id/mark-paid', adminMiddleware, requireAdminRole, markDuePaidHandler);
-router.post('/admin/bulk', adminMiddleware, requireAdminRole, bulkCreateDuesHandler);
+router.get('/admin', adminMiddleware, requirePermission('dues:view'), adminListDuesHandler);
+// Financial records: dues:create / dues:edit (not in the MODERATOR defaults)
+router.post('/admin', adminMiddleware, requirePermission('dues:create'), createDueHandler);
+router.put('/admin/:id/mark-paid', adminMiddleware, requirePermission('dues:edit'), markDuePaidHandler);
+router.post('/admin/bulk', adminMiddleware, requirePermission('dues:create'), bulkCreateDuesHandler);
 
 export default router;

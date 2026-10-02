@@ -11,13 +11,19 @@ import {
   changeAdminPassword,
 } from './admin.service';
 import { successResponse, errorResponse } from '../../utils/response.utils';
+import { Actor } from '../roles/roles.service';
+
+function actorOf(req: RouteRequest): Actor {
+  return { id: String(req.admin?.id), role: String(req.admin?.role), permissions: req.admin?.permissions ?? [] };
+}
 
 const createAdminSchema = z.object({
   body: z.object({
     fullName: z.string().min(2, 'Full name is required'),
     email: z.string().trim().toLowerCase().email('Invalid email'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
-    role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MODERATOR']).optional(),
+    // Any existing role key (system or custom) — validated against the roles collection.
+    role: z.string().trim().min(1).optional(),
   }),
 });
 
@@ -25,7 +31,7 @@ const updateAdminSchema = z.object({
   body: z.object({
     fullName: z.string().min(2).optional(),
     email: z.string().trim().toLowerCase().email().optional(),
-    role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MODERATOR']).optional(),
+    role: z.string().trim().min(1).optional(),
     isActive: z.boolean().optional(),
   }),
 });
@@ -49,14 +55,14 @@ export async function listAdminsHandler(req: RouteRequest, res: Response): Promi
 
 export async function createAdminHandler(req: RouteRequest, res: Response): Promise<void> {
   const parsed = createAdminSchema.parse({ body: req.body });
-  const admin = await createAdmin(parsed.body);
+  const admin = await createAdmin(actorOf(req), parsed.body);
   successResponse(res, 'Admin created successfully', admin, 201);
 }
 
 export async function updateAdminHandler(req: RouteRequest, res: Response): Promise<void> {
   const { id } = req.params;
   const parsed = updateAdminSchema.parse({ body: req.body });
-  const admin = await updateAdmin(id, parsed.body);
+  const admin = await updateAdmin(actorOf(req), id, parsed.body);
   successResponse(res, 'Admin updated', admin);
 }
 
@@ -66,7 +72,7 @@ export async function deactivateAdminHandler(req: RouteRequest, res: Response): 
     return;
   }
   const { id } = req.params;
-  const result = await deactivateAdmin(id, req.admin.id);
+  const result = await deactivateAdmin(id, actorOf(req));
   successResponse(res, 'Admin deactivated', result);
 }
 

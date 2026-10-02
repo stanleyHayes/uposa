@@ -107,6 +107,9 @@ export async function adminLogin(req: RouteRequest, res: Response): Promise<void
     token: result.accessToken,
     refreshToken: result.refreshToken,
     admin: result.admin,
+    // Effective permissions from the server, so the UI gates on server truth.
+    permissions: result.permissions,
+    roleInfo: result.roleInfo,
   });
 }
 
@@ -132,6 +135,8 @@ export async function adminRefreshTokenHandler(req: RouteRequest, res: Response)
   successResponse(res, 'Token refreshed', {
     token: result.accessToken,
     refreshToken: result.refreshToken,
+    permissions: result.permissions,
+    roleInfo: result.roleInfo,
   });
 }
 

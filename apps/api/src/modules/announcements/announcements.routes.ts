@@ -9,7 +9,7 @@ import {
   adminDeleteAnnouncementHandler,
 } from './announcements.controller';
 import { authMiddleware } from '../../middleware/auth.middleware';
-import { adminMiddleware } from '../../middleware/admin.middleware';
+import { adminMiddleware, requirePermission } from '../../middleware/admin.middleware';
 
 const router = Router();
 
@@ -20,10 +20,10 @@ router.get('/', listPublicAnnouncementsHandler);
 router.get('/members', authMiddleware, listMemberAnnouncementsHandler);
 
 // Admin
-router.get('/admin', adminMiddleware, adminListAnnouncementsHandler);
-router.get('/admin/:id', adminMiddleware, adminGetAnnouncementHandler);
-router.post('/admin', adminMiddleware, adminCreateAnnouncementHandler);
-router.put('/admin/:id', adminMiddleware, adminUpdateAnnouncementHandler);
-router.delete('/admin/:id', adminMiddleware, adminDeleteAnnouncementHandler);
+router.get('/admin', adminMiddleware, requirePermission('announcements:view'), adminListAnnouncementsHandler);
+router.get('/admin/:id', adminMiddleware, requirePermission('announcements:view'), adminGetAnnouncementHandler);
+router.post('/admin', adminMiddleware, requirePermission('announcements:create'), adminCreateAnnouncementHandler);
+router.put('/admin/:id', adminMiddleware, requirePermission('announcements:edit'), adminUpdateAnnouncementHandler);
+router.delete('/admin/:id', adminMiddleware, requirePermission('announcements:delete'), adminDeleteAnnouncementHandler);
 
 export default router;

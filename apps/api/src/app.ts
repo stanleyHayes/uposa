@@ -44,6 +44,7 @@ import schoolLeadersRoutes, { adminSchoolLeadersRouter } from './modules/school-
 import aiRoutes from './modules/ai/ai.routes';
 import announcementsRoutes from './modules/announcements/announcements.routes';
 import reportsRoutes, { adminReportsRouter } from './modules/reports/reports.routes';
+import rolesRoutes from './modules/roles/roles.routes';
 import { parseQueryFirstValue } from './utils/query-parser.utils';
 
 const app = express();
@@ -150,6 +151,7 @@ app.use('/api/elections', electionsRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/executives', executivesRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin', rolesRoutes);
 app.use('/api/admin/executives', adminExecutivesRouter);
 app.use('/api/public', siteDataRoutes);
 app.use('/api/admin/site', adminSiteDataRouter);
