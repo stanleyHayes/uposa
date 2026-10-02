@@ -12,12 +12,14 @@ async function attachAuthor(doc: Record<string, any>): Promise<Record<string, an
   return { ...doc, author: a ? { id: a.id, fullName: (a as any).fullName, photoUrl: (a as any).photoUrl } : null };
 }
 
-async function attachAuthorMany(docs: Record<string, any>[]): Promise<Record<string, any>[]> {
+// Author emails are admin-only: members see name + photo, matching the member
+// directory's privacy rules (no harvesting other members' addresses via the forum).
+async function attachAuthorMany(docs: Record<string, any>[], includeEmail = false): Promise<Record<string, any>[]> {
   const ids = [...new Set(docs.map(d => d.authorId).filter(Boolean))];
   if (ids.length === 0) return docs.map(d => ({ ...d, author: null }));
   const { members: memberRepo } = getRepos();
   const aDocs = await memberRepo.findMany({ _id: { $in: ids } }, { projection: 'fullName photoUrl email' });
-  const aMap = new Map(aDocs.map((a: any) => [String(a.id), { id: a.id, fullName: a.fullName, photoUrl: a.photoUrl, email: a.email }]));
+  const aMap = new Map(aDocs.map((a: any) => [String(a.id), { id: a.id, fullName: a.fullName, photoUrl: a.photoUrl, ...(includeEmail ? { email: a.email } : {}) }]));
   return docs.map(d => ({ ...d, author: d.authorId ? aMap.get(String(d.authorId)) || null : null }));
 }
 
@@ -185,7 +187,7 @@ export async function adminListPosts(query: Record<string, string | undefined>) 
     forumPosts.count(where),
   ]);
 
-  const withAuthors = await attachAuthorMany(data);
+  const withAuthors = await attachAuthorMany(data, true);
 
   const postIds = data.map((p: any) => p.id);
   const commentCounts = await forumComments.aggregate<{ _id: string; count: number }>([

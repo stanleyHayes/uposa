@@ -1,7 +1,7 @@
 import { escapeRegex } from '../../utils/search.utils';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
-import { sendEmail } from '../../utils/email.utils';
+import { sendEmail, escapeHtml } from '../../utils/email.utils';
 import { env } from '../../config/env';
 import { notify } from '../../utils/notify';
 import { CreateContactMessageInput } from './contact.validation';
@@ -24,10 +24,10 @@ export async function submitContactMessage(data: CreateContactMessageInput) {
       subject: `[UPOSA Contact] ${data.subject}`,
       html: `
         <h3>New Contact Message</h3>
-        <p><strong>From:</strong> ${data.name} (${data.email})</p>
-        <p><strong>Subject:</strong> ${data.subject}</p>
+        <p><strong>From:</strong> ${escapeHtml(data.name)} (${escapeHtml(data.email)})</p>
+        <p><strong>Subject:</strong> ${escapeHtml(data.subject)}</p>
         <p><strong>Message:</strong></p>
-        <p>${data.message.replace(/\n/g, '<br>')}</p>
+        <p>${escapeHtml(data.message).replace(/\n/g, '<br>')}</p>
       `,
     });
   } catch (err) {

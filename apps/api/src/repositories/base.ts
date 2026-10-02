@@ -19,6 +19,8 @@ export interface IRepository<T = Record<string, any>> {
   create(data: any, options?: FindOptions): Promise<T>;
   createMany(data: any[], options?: FindOptions): Promise<T[]>;
   updateById(id: string, data: any, options?: FindOptions): Promise<T | null>;
+  /** Atomic conditional update: returns the updated doc, or null when nothing matched the filter. */
+  updateOne(filter: Record<string, unknown>, data: Record<string, unknown>, options?: FindOptions): Promise<T | null>;
   incrementById(id: string, field: string, amount: number, options?: FindOptions): Promise<T | null>;
   upsert(filter: Record<string, unknown>, data: any, options?: FindOptions): Promise<T>;
   deleteById(id: string, options?: FindOptions): Promise<boolean>;
@@ -73,6 +75,11 @@ export class MongooseRepository<T> implements IRepository<T> {
 
   async updateById(id: string, data: any, options?: FindOptions): Promise<T | null> {
     const doc = await this.model.findByIdAndUpdate(id, data, { returnDocument: 'after', session: options?.session });
+    return doc ? (doc.toJSON() as T) : null;
+  }
+
+  async updateOne(filter: Record<string, unknown>, data: Record<string, unknown>, options?: FindOptions): Promise<T | null> {
+    const doc = await this.model.findOneAndUpdate(filter, data, { returnDocument: 'after', session: options?.session });
     return doc ? (doc.toJSON() as T) : null;
   }
 

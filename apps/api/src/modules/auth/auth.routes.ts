@@ -10,11 +10,12 @@ import {
   logout,
   changePasswordHandler,
   refreshTokenHandler,
+  adminRefreshTokenHandler,
 } from './auth.controller';
 import { authMiddleware } from '../../middleware/auth.middleware';
 import { adminMiddleware } from '../../middleware/admin.middleware';
 import { uploadSingle } from '../../middleware/upload.middleware';
-import { authLimiter } from '../../middleware/ratelimit.middleware';
+import { authLimiter, refreshLimiter } from '../../middleware/ratelimit.middleware';
 
 const router = Router();
 
@@ -24,7 +25,8 @@ router.post('/login', authLimiter, login);
 router.post('/admin/login', authLimiter, adminLogin);
 router.post('/forgot-password', authLimiter, forgotPasswordHandler);
 router.post('/reset-password', authLimiter, resetPasswordHandler);
-router.post('/refresh', authLimiter, refreshTokenHandler);
+router.post('/refresh', refreshLimiter, refreshTokenHandler);
+router.post('/admin/refresh', refreshLimiter, adminRefreshTokenHandler);
 router.get('/verify-email/:token', verifyEmail);
 router.post('/logout', logout);
 

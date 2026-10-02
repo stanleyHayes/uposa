@@ -134,11 +134,14 @@ export async function confirmDonation(id: string, data: ConfirmDonationInput) {
   const donation = await repos.donations.findById(id);
   if (!donation) throw Object.assign(new Error('Donation not found'), { statusCode: 404 });
 
-  const result = await repos.donations.updateById(id, {
+  // Conditional transition so a double-click (or a donation already confirmed by
+  // a payment webhook) can't add the amount to the project's raisedAmount twice.
+  const result = await repos.donations.updateOne({ _id: id, status: { $ne: 'CONFIRMED' } }, {
     status: 'CONFIRMED',
     transactionRef: data.transactionRef || (donation as any).transactionRef,
     notes: data.notes || (donation as any).notes,
   });
+  if (!result) throw Object.assign(new Error('Donation is already confirmed'), { statusCode: 409 });
 
   if ((donation as any).projectId) {
     await repos.projects.incrementById((donation as any).projectId, 'raisedAmount', (donation as any).amount);

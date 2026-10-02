@@ -19,6 +19,7 @@ import {
   getMe,
   changeMemberPassword,
   refreshMemberSession,
+  refreshAdminSession,
 } from './auth.service';
 import { successResponse, errorResponse } from '../../utils/response.utils';
 import { uploadToCloudinary } from '../../utils/cloudinary.utils';
@@ -102,6 +103,31 @@ export async function adminLogin(req: RouteRequest, res: Response): Promise<void
     token: result.accessToken,
     refreshToken: result.refreshToken,
     admin: result.admin,
+  });
+}
+
+export async function adminRefreshTokenHandler(req: RouteRequest, res: Response): Promise<void> {
+  const parsed = refreshTokenSchema.parse({ body: req.body });
+  let result;
+  try {
+    result = await refreshAdminSession(parsed.body.refreshToken);
+  } catch (err: any) {
+    errorResponse(res, err?.message || 'Invalid or expired refresh token', 401);
+    return;
+  }
+
+  res.cookie('adminToken', result.accessToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 15 * 60 * 1000,
+  });
+  res.cookie('adminRefreshToken', result.refreshToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  successResponse(res, 'Token refreshed', {
+    token: result.accessToken,
+    refreshToken: result.refreshToken,
   });
 }
 

@@ -4,19 +4,21 @@ import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { CreateJobInput, UpdateJobInput, ApplyToJobInput, UpdateApplicationStatusInput } from './jobs.validation';
 
-async function attachPostedBy(doc: Record<string, any>) {
+// The poster's email is only for admins: the public job board (/api/jobs, /api/jobs/:id)
+// must not expose members' personal addresses — jobs carry their own contactEmail.
+async function attachPostedBy(doc: Record<string, any>, includeEmail = false) {
   if (!doc.postedById) return { ...doc, postedBy: null };
   const repos = getRepos();
   const m = await repos.members.findById(doc.postedById, { projection: 'fullName email' });
-  return { ...doc, postedBy: m ? { id: (m as any).id, fullName: (m as any).fullName, email: (m as any).email } : null };
+  return { ...doc, postedBy: m ? { id: (m as any).id, fullName: (m as any).fullName, ...(includeEmail ? { email: (m as any).email } : {}) } : null };
 }
 
-async function attachPostedByMany(docs: Record<string, any>[]) {
+async function attachPostedByMany(docs: Record<string, any>[], includeEmail = false) {
   const ids = [...new Set(docs.map(d => d.postedById).filter(Boolean))];
   if (ids.length === 0) return docs.map(d => ({ ...d, postedBy: null }));
   const repos = getRepos();
   const mDocs = await repos.members.findMany({ _id: { $in: ids } }, { projection: 'fullName email' });
-  const mMap = new Map(mDocs.map((m: any) => [String(m.id), { id: m.id, fullName: m.fullName, email: m.email }]));
+  const mMap = new Map(mDocs.map((m: any) => [String(m.id), { id: m.id, fullName: m.fullName, ...(includeEmail ? { email: m.email } : {}) }]));
   return docs.map(d => ({ ...d, postedBy: d.postedById ? mMap.get(String(d.postedById)) || null : null }));
 }
 
@@ -278,7 +280,7 @@ export async function adminListAllJobs(query: Record<string, string | undefined>
     repos.jobs.count(where),
   ]);
 
-  const withPosted = await attachPostedByMany(rawData as Record<string, any>[]);
+  const withPosted = await attachPostedByMany(rawData as Record<string, any>[], true);
   const withCounts = await attachAppCount(withPosted);
   return { data: withCounts, meta: buildPaginationMeta(page, limit, total) };
 }
@@ -292,7 +294,7 @@ export async function adminListPendingJobs(query: Record<string, string | undefi
     repos.jobs.count({ isApproved: false }),
   ]);
 
-  const withPosted = await attachPostedByMany(rawData as Record<string, any>[]);
+  const withPosted = await attachPostedByMany(rawData as Record<string, any>[], true);
   return { data: withPosted, meta: buildPaginationMeta(page, limit, total) };
 }
 
@@ -303,7 +305,7 @@ export async function approveJob(id: string) {
   if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });
 
   const result = await repos.jobs.updateById(id, { isApproved: true });
-  const withPosted = await attachPostedBy(result as Record<string, any>);
+  const withPosted = await attachPostedBy(result as Record<string, any>, true);
   return withPosted;
 }
 

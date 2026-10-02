@@ -98,29 +98,30 @@ export async function castVote(pollId: string, memberId: string, data: CastVoteI
     throw Object.assign(new Error('You have already voted on this poll'), { statusCode: 409 });
   }
 
-  if (!(poll as any).allowMultiple && data.selectedOptions.length > 1) {
+  const selected = [...new Set(data.selectedOptions)];
+  if (!(poll as any).allowMultiple && selected.length > 1) {
     throw Object.assign(new Error('This poll does not allow multiple selections'), { statusCode: 400 });
   }
 
-  // Update vote counts in options JSON
   const options = (poll as any).options as PollOption[];
-  const updatedOptions = options.map((opt) => {
-    if (data.selectedOptions.includes(opt.id)) {
-      return { ...opt, votes: opt.votes + 1 };
-    }
-    return opt;
-  });
+  const indexes = selected.map((id) => options.findIndex((opt) => opt.id === id));
+  if (indexes.includes(-1)) {
+    throw Object.assign(new Error('Invalid poll option'), { statusCode: 400 });
+  }
 
-  // Use withTransaction for transactional behavior
-  await withTransaction(async (session) => {
+  // Atomic $inc per selected option. Writing back the whole options array
+  // computed from the read above silently dropped votes cast concurrently.
+  const inc = Object.fromEntries(indexes.map((i) => [`options.${i}.votes`, 1]));
+  const updated = await withTransaction(async (session) => {
     await pollVotes.create({
-      pollId, memberId, selectedOptions: data.selectedOptions, createdAt: new Date(),
+      pollId, memberId, selectedOptions: selected, createdAt: new Date(),
     }, { session });
-    await polls.updateById(pollId, { $set: { options: updatedOptions } }, { session });
+    return polls.updateById(pollId, { $inc: inc }, { session });
   });
 
   // Emit real-time update
-  const totalVotes = updatedOptions.reduce((sum: number, o: any) => sum + o.votes, 0);
+  const updatedOptions = ((updated?.options ?? options) as PollOption[]);
+  const totalVotes = updatedOptions.reduce((sum: number, o: any) => sum + (o.votes || 0), 0);
   emitPollVote(pollId, { pollId, options: updatedOptions, totalVotes });
 
   return { message: 'Vote cast successfully' };

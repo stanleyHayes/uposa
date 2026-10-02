@@ -3,6 +3,8 @@ import crypto from 'crypto';
 import mongoose from 'mongoose';
 import { getRepos } from '../../repositories';
 import { env } from '../../config/env';
+import { logger } from '../../config/logger';
+import { isCorsOriginAllowed } from '../../config/cors';
 import { getPaymentProvider } from '../../providers/payment.registry';
 import { WebhookEvent } from '../../providers/payment.types';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
@@ -17,6 +19,29 @@ function toSmallestUnit(amount: number, currency: string): number {
   const zeroDecimalCurrencies = ['JPY', 'KRW', 'VND'];
   if (zeroDecimalCurrencies.includes(currency.toUpperCase())) return Math.round(amount);
   return Math.round(amount * 100);
+}
+
+/**
+ * A provider-confirmed payment only counts if it charged at least what we asked
+ * for, in the same currency (">=" because some Paystack setups add the fee on top).
+ */
+export function isExpectedAmount(
+  payment: { totalAmount: number; currency: string },
+  paid: { amount: number; currency: string },
+): boolean {
+  return String(paid.currency).toUpperCase() === String(payment.currency).toUpperCase()
+    && Number(paid.amount) >= toSmallestUnit(payment.totalAmount, payment.currency);
+}
+
+// Clients hold our generated reference; legacy rows only have providerRef / _id.
+function referenceFilter(reference: string) {
+  return {
+    $or: [
+      { reference },
+      { providerRef: reference },
+      ...(mongoose.Types.ObjectId.isValid(reference) ? [{ _id: reference }] : []),
+    ],
+  };
 }
 
 // ── Platform Fee ───────────────────────────────────────────
@@ -83,6 +108,7 @@ export async function initializePayment(data: InitializePaymentInput, memberId?:
     if (donation.memberId && String(donation.memberId) !== memberId) {
       throw Object.assign(new Error('Not authorized to pay this donation'), { statusCode: memberId ? 403 : 401 });
     }
+    if (donation.status === 'CONFIRMED') throw Object.assign(new Error('This donation has already been paid'), { statusCode: 400 });
     if (Number(donation.amount) !== Number(data.amount) || String(donation.currency || 'GHS').toUpperCase() !== data.currency.toUpperCase()) {
       throw Object.assign(new Error('Payment amount does not match the linked donation'), { statusCode: 400 });
     }
@@ -101,6 +127,12 @@ export async function initializePayment(data: InitializePaymentInput, memberId?:
     }
   }
 
+  // The provider redirects the payer here after checkout — only our own sites,
+  // otherwise a crafted payment link becomes an open redirect to a phishing page.
+  if (data.callbackUrl && !isCorsOriginAllowed(new URL(data.callbackUrl).origin)) {
+    throw Object.assign(new Error('callbackUrl must point to a UPOSA site'), { statusCode: 400 });
+  }
+
   const reference = generateReference();
   const callbackUrl = data.callbackUrl || `${env.PAYMENT_CALLBACK_BASE_URL}/payment/callback`;
 
@@ -116,7 +148,9 @@ export async function initializePayment(data: InitializePaymentInput, memberId?:
     reference,
     callbackUrl,
     customerName: data.name,
+    // Client metadata first so it can't overwrite the server-set fields below.
     metadata: {
+      ...data.metadata,
       purpose: data.purpose,
       donationId: data.donationId,
       dueId: data.dueId,
@@ -124,7 +158,6 @@ export async function initializePayment(data: InitializePaymentInput, memberId?:
       originalAmount: data.amount,
       platformFee,
       totalAmount,
-      ...data.metadata,
     },
   });
 
@@ -137,6 +170,7 @@ export async function initializePayment(data: InitializePaymentInput, memberId?:
     totalAmount,
     currency: data.currency,
     status: 'PENDING',
+    reference,
     providerRef: result.providerRef || null,
     providerData: null,
     callbackUrl,
@@ -162,12 +196,7 @@ export async function initializePayment(data: InitializePaymentInput, memberId?:
 export async function verifyPayment(reference: string) {
   const { payments } = getRepos();
 
-  const payment = await payments.findOne({
-    $or: [
-      { providerRef: reference },
-      ...(mongoose.Types.ObjectId.isValid(reference) ? [{ _id: reference }] : []),
-    ],
-  });
+  const payment = await payments.findOne(referenceFilter(reference));
 
   if (!payment) {
     throw Object.assign(new Error('Payment not found'), { statusCode: 404 });
@@ -178,10 +207,13 @@ export async function verifyPayment(reference: string) {
   }
 
   const provider = getPaymentProvider(payment.provider);
-  const result = await provider.verify(reference);
+  // Paystack/Stripe look transactions up by our reference; Coinbase by its charge code.
+  const lookupRef = payment.provider === 'CRYPTO' ? payment.providerRef : payment.reference;
+  const result = await provider.verify(lookupRef || reference);
 
-  if (result.success) {
-    return finalizePayment(payment.id, result.providerRef, result.rawData);
+  if (result.success && isExpectedAmount(payment, result)) {
+    // null => a concurrent webhook/verify already finalized it.
+    return (await finalizePayment(payment.id, result.providerRef, result.rawData)) ?? payments.findById(payment.id);
   }
 
   // Update as failed
@@ -193,15 +225,25 @@ export async function handleWebhookEvent(providerName: string, event: WebhookEve
   if (!event.success) return;
   const { payments } = getRepos();
 
+  // Only truthy refs: an undefined value would serialize to null and match any
+  // legacy row that lacks the field.
+  const refs = [event.reference, event.providerRef].filter(Boolean);
+  if (refs.length === 0) return;
+
   const payment = await payments.findOne({
     provider: providerName,
     $or: [
-      { providerRef: event.providerRef },
-      { providerRef: event.reference },
+      { reference: { $in: refs } },
+      { providerRef: { $in: refs } },
     ],
   });
 
   if (!payment || payment.status === 'SUCCESS') return;
+
+  if (!isExpectedAmount(payment, event)) {
+    logger.warn({ paymentId: payment.id, expected: payment.totalAmount, currency: payment.currency, paid: event.amount, paidCurrency: event.currency }, 'Webhook amount/currency mismatch — payment not finalized');
+    return;
+  }
 
   await finalizePayment(payment.id, event.providerRef, event.rawData);
 }
@@ -213,12 +255,18 @@ async function finalizePayment(
 ) {
   const { payments, donations, projects, dues } = getRepos();
 
-  const payment = await payments.updateById(paymentId, { status: 'SUCCESS', providerRef, providerData: rawData });
+  // Conditional transition: only the call that actually flips the payment to
+  // SUCCESS applies the side effects, so the client's verify racing the webhook
+  // (or a webhook retry) can't credit the donation/project twice.
+  const payment = await payments.updateOne(
+    { _id: paymentId, status: { $ne: 'SUCCESS' } },
+    { status: 'SUCCESS', providerRef, providerData: rawData },
+  );
   if (!payment) return null;
 
-  // Update the linked donation
+  // Update the linked donation (skipped if an admin already confirmed it manually)
   if (payment.purpose === 'DONATION' && payment.donationId) {
-    const donation = await donations.updateById(String(payment.donationId), {
+    const donation = await donations.updateOne({ _id: String(payment.donationId), status: { $ne: 'CONFIRMED' } }, {
       status: 'CONFIRMED',
       transactionRef: providerRef,
       channel: payment.provider,
@@ -245,12 +293,7 @@ async function finalizePayment(
 export async function getPaymentByReference(reference: string) {
   const { payments, donations, dues } = getRepos();
 
-  const payment = await payments.findOne({
-    $or: [
-      { providerRef: reference },
-      ...(mongoose.Types.ObjectId.isValid(reference) ? [{ _id: reference }] : []),
-    ],
-  });
+  const payment = await payments.findOne(referenceFilter(reference));
 
   if (!payment) {
     throw Object.assign(new Error('Payment not found'), { statusCode: 404 });

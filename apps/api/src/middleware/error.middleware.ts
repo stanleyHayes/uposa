@@ -3,6 +3,25 @@ import { ZodError } from 'zod';
 import { env } from '../config/env';
 import { logger } from '../config/logger';
 
+/** Human-readable messages for multer's error codes (raw ones read like "Unexpected field"). */
+export function multerErrorMessage(code: string, field?: string, fallback = 'File upload failed'): string {
+  switch (code) {
+    case 'LIMIT_FILE_SIZE':
+      return field === 'document' ? 'File is too large (max 15MB)' : 'Image is too large (max 10MB)';
+    case 'LIMIT_FILE_COUNT':
+      return 'Too many files uploaded at once';
+    case 'LIMIT_UNEXPECTED_FILE':
+      return field ? `Unexpected file field "${field}"` : 'Unexpected file field';
+    case 'LIMIT_PART_COUNT':
+    case 'LIMIT_FIELD_COUNT':
+    case 'LIMIT_FIELD_KEY':
+    case 'LIMIT_FIELD_VALUE':
+      return 'Upload form is too large';
+    default:
+      return fallback;
+  }
+}
+
 export function errorMiddleware(
   err: Error,
   req: Request,
@@ -33,9 +52,10 @@ export function errorMiddleware(
 
   // Multer errors
   if (err.name === 'MulterError') {
+    const multerErr = err as Error & { code?: string; field?: string };
     res.status(400).json({
       success: false,
-      message: err.message,
+      message: multerErrorMessage(multerErr.code ?? '', multerErr.field, err.message),
     });
     return;
   }

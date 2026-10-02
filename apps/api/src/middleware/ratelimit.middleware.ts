@@ -27,6 +27,20 @@ export const authLimiter = rateLimit({
 });
 
 /**
+ * Limiter for `/auth/refresh`. Clients refresh every access-token lifetime
+ * (15 min), so sharing authLimiter's 10-request budget meant a handful of users
+ * behind one NAT/carrier IP got 429s on refresh — and then on login too.
+ * Refresh needs a valid signed token, so it isn't a brute-force target.
+ *
+ * 60 requests per 15 minutes per IP.
+ */
+export const refreshLimiter = rateLimit({
+  ...baseOptions,
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+});
+
+/**
  * Limiter for inbound payment webhooks (Paystack, Stripe, crypto).
  * Providers may burst when retrying, so the budget is generous.
  *
@@ -65,14 +79,16 @@ export const adminLimiter = rateLimit({
 
 /**
  * Limiter for file-upload endpoints — uploads are expensive (memory + Cloudinary)
- * and a natural abuse target.
+ * and a natural abuse target. It sits on admin create/update routes that also
+ * accept plain JSON edits, so only multipart requests (actual uploads) count.
  *
- * 30 uploads per 15 minutes per IP.
+ * 100 uploads per 15 minutes per IP.
  */
 export const uploadLimiter = rateLimit({
   ...baseOptions,
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: 100,
+  skip: (req) => !req.is('multipart/form-data'),
 });
 
 /**

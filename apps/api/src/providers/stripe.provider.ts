@@ -104,7 +104,9 @@ export class StripeProvider implements PaymentProviderInterface {
   }
 
   parseWebhookEvent(body: unknown): WebhookEvent | null {
-    const event = body as any;
+    // app.ts mounts express.raw() on this webhook (signature checks need the raw
+    // bytes), so the body arrives as a Buffer, not a parsed object.
+    const event = (Buffer.isBuffer(body) ? JSON.parse(body.toString('utf8')) : body) as any;
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;

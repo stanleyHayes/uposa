@@ -379,6 +379,7 @@ export interface IPayment { id: string;
   totalAmount: number;
   currency: string;
   status: string;
+  reference?: string;
   providerRef?: string;
   providerData?: unknown;
   callbackUrl?: string;
@@ -850,6 +851,8 @@ const PaymentSchema = new Schema<IPayment>(
     totalAmount: { type: Number, required: true },
     currency: { type: String, default: 'GHS' },
     status: { type: String, enum: PaymentStatusEnum, default: 'PENDING' },
+    // Our generated reference (UPOSA-…): what clients hold and providers echo back.
+    reference: { type: String, index: true },
     providerRef: { type: String },
     providerData: { type: Schema.Types.Mixed },
     callbackUrl: { type: String },

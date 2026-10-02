@@ -39,6 +39,9 @@ const schema = z.object({
   OPENAI_MODEL: z.string().default('gpt-5.5'),
   AI_WRITING_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(30),
   PAYMENT_CALLBACK_BASE_URL: z.string().default('http://localhost:3000'),
+  // Optional Vercel deploy hook for the marketing site. Admin content changes
+  // trigger a rebuild so its prerendered pages and sitemap stay current.
+  MARKETING_DEPLOY_HOOK_URL: z.string().url().optional().or(z.literal('')).default(''),
   // Required in production (credentials encrypted with the dev key would be
   // decryptable from the source tree); optional in dev/test with a fallback.
   CREDENTIALS_ENCRYPTION_KEY: isProd
@@ -100,6 +103,9 @@ export const env = {
 
   // Payment
   PAYMENT_CALLBACK_BASE_URL: e.PAYMENT_CALLBACK_BASE_URL,
+
+  // Marketing site rebuild (SEO prerender)
+  MARKETING_DEPLOY_HOOK_URL: e.MARKETING_DEPLOY_HOOK_URL || '',
 
   // Encryption for payment credentials stored in DB.
   CREDENTIALS_ENCRYPTION_KEY: e.CREDENTIALS_ENCRYPTION_KEY,

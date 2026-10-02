@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { RouteRequest } from '../../types/request.types';
 import * as siteDataService from './site-data.service';
 import { successResponse, errorResponse } from '../../utils/response.utils';
+import { uploadDocumentToCloudinary } from '../../utils/cloudinary.utils';
 
 // Public: Get all site data bundled
 export async function getPublicSiteData(req: RouteRequest, res: Response) {
@@ -27,7 +28,8 @@ export async function getYearGroupReps(req: RouteRequest, res: Response) {
 export async function upsertConfig(req: RouteRequest, res: Response) {
   const { key } = req.params;
   const { value } = req.body;
-  if (!value) return errorResponse(res, 'Value is required', 400);
+  // 0 / false / '' are legitimate values (e.g. a 0 platform fee) — only reject a missing one.
+  if (value === undefined || value === null) return errorResponse(res, 'Value is required', 400);
   const config = await siteDataService.upsertSiteConfig(key, value);
   return successResponse(res, 'Config updated', config);
 }
@@ -54,15 +56,11 @@ export async function deleteRep(req: RouteRequest, res: Response) {
   return successResponse(res, 'Rep deleted');
 }
 
-// Admin: Upload document (PDF/image) and return URL
+// Admin: Upload document (PDF/image) and return URL.
+// Stored on Cloudinary: the container disk is ephemeral on Render, and the
+// absolute URL resolves from every frontend domain.
 export async function uploadDocumentHandler(req: RouteRequest, res: Response) {
   if (!req.file) return errorResponse(res, 'No file uploaded', 400);
-  const fs = await import('fs/promises');
-  const path = await import('path');
-  const uploadsDir = path.default.join(process.cwd(), 'public', 'uploads');
-  await fs.mkdir(uploadsDir, { recursive: true });
-  const ext = path.default.extname(req.file.originalname) || '.pdf';
-  const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
-  await fs.writeFile(path.default.join(uploadsDir, filename), req.file.buffer);
-  return successResponse(res, 'Document uploaded', { url: `/uploads/${filename}` }, 201);
+  const url = await uploadDocumentToCloudinary(req.file, 'documents');
+  return successResponse(res, 'Document uploaded', { url }, 201);
 }

@@ -13,6 +13,7 @@ import { logger } from './config/logger';
 import { corsAllowedOriginPatterns, corsAllowedOrigins, isCorsOriginAllowed } from './config/cors';
 import { errorMiddleware, notFoundMiddleware } from './middleware/error.middleware';
 import { adminLimiter } from './middleware/ratelimit.middleware';
+import { rebuildMarketingOnWrite } from './utils/marketing-rebuild';
 
 // Route imports
 import authRoutes from './modules/auth/auth.routes';
@@ -102,6 +103,20 @@ app.get('/health', (_req, res) => {
 
 // Defense-in-depth rate limit across the entire admin surface (all /api/admin/*).
 app.use('/api/admin', adminLimiter);
+
+// Admin writes to public content rebuild the prerendered marketing site.
+app.use(
+  [
+    '/api/news/admin',
+    '/api/events/admin',
+    '/api/projects/admin',
+    '/api/admin/executives',
+    '/api/admin/site',
+    '/api/admin/gallery',
+    '/api/admin/school-leaders',
+  ],
+  rebuildMarketingOnWrite,
+);
 
 // API Routes
 app.use('/api/auth', authRoutes);

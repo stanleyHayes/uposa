@@ -109,7 +109,7 @@ export async function createEvent(adminId: string, data: CreateEventInput, image
     title: data.title,
     slug,
     description: data.description,
-    imageUrl: imageUrl || null,
+    imageUrl: imageUrl || data.imageUrl || null,
     date: new Date(data.date),
     endDate: data.endDate ? new Date(data.endDate) : null,
     location: data.location || null,
@@ -131,7 +131,9 @@ export async function updateEvent(id: string, data: UpdateEventInput, imageUrl?:
   const updateData: Record<string, unknown> = { ...data };
   if (data.date) updateData.date = new Date(data.date);
   if (data.endDate) updateData.endDate = new Date(data.endDate);
+  // Uploaded file wins; otherwise a pasted URL is kept and '' clears the image.
   if (imageUrl) updateData.imageUrl = imageUrl;
+  else if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl || null;
 
   const result = await repos.events.updateById(id, updateData);
   const withAdmin = await attachCreatedBy(result!);

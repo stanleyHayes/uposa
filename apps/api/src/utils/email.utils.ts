@@ -32,6 +32,20 @@ const NAVY = '#0a1633';
 const GOLD = '#e3b341';
 const CREAM = '#faf7ef';
 
+/**
+ * Escape user-supplied text before interpolating it into email HTML. Without it,
+ * someone can register with a victim's address and a "name" like
+ * `<a/href="https://evil">Claim…</a>` and have UPOSA deliver that markup.
+ */
+export function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 const firstNameOf = (name: string) => (name?.trim().split(/\s+/)[0] || 'there');
 
 /**
@@ -91,10 +105,10 @@ function renderBrandedEmail(opts: {
 
 export async function sendVerificationEmail(email: string, token: string, name: string): Promise<void> {
   const url = `${env.CLIENT_URL}/verify-email/${token}`;
-  const first = firstNameOf(name);
+  const first = escapeHtml(firstNameOf(name));
   await sendEmail({
     to: email,
-    subject: `Welcome to UPOSA, ${first} — confirm your email`,
+    subject: `Welcome to UPOSA, ${firstNameOf(name)} — confirm your email`, // plain text: not escaped
     html: renderBrandedEmail({
       preheader: 'Confirm your email to activate your UPOSA alumni account.',
       heading: `Welcome to the family, ${first}! 🎓`,
@@ -109,7 +123,7 @@ export async function sendVerificationEmail(email: string, token: string, name: 
 
 export async function sendPasswordResetEmail(email: string, token: string, name: string): Promise<void> {
   const url = `${env.CLIENT_URL}/reset-password?token=${token}`;
-  const first = firstNameOf(name);
+  const first = escapeHtml(firstNameOf(name));
   await sendEmail({
     to: email,
     subject: 'Reset your UPOSA password',
@@ -126,7 +140,7 @@ export async function sendPasswordResetEmail(email: string, token: string, name:
 
 export async function sendApprovalEmail(email: string, name: string): Promise<void> {
   const url = `${env.CLIENT_URL}/login`;
-  const first = firstNameOf(name);
+  const first = escapeHtml(firstNameOf(name));
   await sendEmail({
     to: email,
     subject: 'Your UPOSA membership has been approved! 🎉',
@@ -142,7 +156,7 @@ export async function sendApprovalEmail(email: string, name: string): Promise<vo
 }
 
 export async function sendWelcomeEmail(email: string, name: string): Promise<void> {
-  const first = firstNameOf(name);
+  const first = escapeHtml(firstNameOf(name));
   await sendEmail({
     to: email,
     subject: 'Welcome to UPOSA!',

@@ -2,6 +2,7 @@ import { escapeRegex } from '../../utils/search.utils';
 import mongoose from 'mongoose';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
+import { notify } from '../../utils/notify';
 import { CreateDueInput, MarkPaidInput, BulkCreateDuesInput, MemberPayDueInput } from './dues.validation';
 
 async function attachMember(doc: Record<string, any>) {
@@ -91,7 +92,8 @@ export async function markDuePaid(id: string, data: MarkPaidInput) {
   const result = await repos.dues.updateById(id, {
     status: 'PAID',
     paidAt: new Date(),
-    transactionRef: data.transactionRef || null,
+    // Keep the reference the member submitted if the admin doesn't enter one.
+    transactionRef: data.transactionRef || due.transactionRef || null,
     notes: data.notes || (due as any).notes,
   });
 
@@ -111,12 +113,16 @@ export async function memberPayDue(dueId: string, memberId: string, data: Member
     throw Object.assign(new Error('This due has already been paid'), { statusCode: 400 });
   }
 
+  // A manual (MoMo/bank) reference is only a claim: record it for the finance
+  // team to verify and leave the status alone — an admin marks the due PAID via
+  // /admin/:id/mark-paid. Marking it PAID here let any member clear their dues by
+  // typing an arbitrary reference.
   const result = await repos.dues.updateById(dueId, {
-    status: 'PAID',
-    paidAt: new Date(),
-    transactionRef: data.transactionRef || null,
+    transactionRef: data.transactionRef,
     notes: data.notes ? `${(due as any).notes ? (due as any).notes + ' | ' : ''}Payment by member: ${data.notes}` : (due as any).notes,
   });
+
+  notify('GENERAL', 'Dues Payment Submitted', `A member submitted payment reference ${data.transactionRef} for ${due.year} dues — verify and mark as paid.`);
 
   return result!;
 }

@@ -41,7 +41,13 @@ export async function listElections(query: Record<string, string | undefined>) {
     elections.count(where),
   ]);
 
-  const data = await attachCreatedByMany(rawData);
+  // Same rule as getElectionById: members don't see tallies before the election is completed.
+  const masked = rawData.map((e) => e.status === 'COMPLETED' ? e : {
+    ...e,
+    candidates: (e.candidates as ElectionCandidate[]).map(({ votes: _v, ...rest }) => ({ ...rest, votes: 0 })),
+  });
+
+  const data = await attachCreatedByMany(masked);
   return { data, meta: buildPaginationMeta(page, limit, total) };
 }
 
@@ -89,22 +95,20 @@ export async function castVote(electionId: string, voterId: string, data: CastEl
   }
 
   const candidates = election.candidates as ElectionCandidate[];
-  const candidateExists = candidates.some((c) => c.id === data.candidateId);
-  if (!candidateExists) {
+  const candidateIndex = candidates.findIndex((c) => c.id === data.candidateId);
+  if (candidateIndex === -1) {
     throw Object.assign(new Error('Candidate not found'), { statusCode: 404 });
   }
 
-  const updatedCandidates = candidates.map((c) =>
-    c.id === data.candidateId ? { ...c, votes: c.votes + 1 } : c
-  );
-
-  await withTransaction(async (session) => {
+  // Atomic $inc on the candidate's tally. Writing back the whole candidates array
+  // computed from the read above silently dropped votes cast concurrently.
+  const updated = await withTransaction(async (session) => {
     await electionVotes.create({ electionId, candidateId: data.candidateId, voterId }, { session });
-    await elections.updateById(electionId, { candidates: updatedCandidates }, { session });
+    return elections.updateById(electionId, { $inc: { [`candidates.${candidateIndex}.votes`]: 1 } }, { session });
   });
 
   // Emit real-time update
-  const totalVotes = updatedCandidates.reduce((sum: number, c: any) => sum + c.votes, 0);
+  const totalVotes = ((updated?.candidates ?? []) as ElectionCandidate[]).reduce((sum: number, c: any) => sum + (c.votes || 0), 0);
   emitElectionVote(electionId, { electionId, candidateId: data.candidateId, totalVotes });
 
   return { message: 'Vote cast successfully' };

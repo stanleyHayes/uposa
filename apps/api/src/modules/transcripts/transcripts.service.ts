@@ -1,5 +1,5 @@
 import { getRepos } from '../../repositories';
-import { sendEmail } from '../../utils/email.utils';
+import { sendEmail, escapeHtml } from '../../utils/email.utils';
 import { env } from '../../config/env';
 import { notify } from '../../utils/notify';
 import { CreateTranscriptRequestInput } from './transcripts.validation';
@@ -22,11 +22,11 @@ export async function submitTranscriptRequest(data: CreateTranscriptRequestInput
       subject: `[UPOSA] Transcript Request from ${data.fullName}`,
       html: `
         <h3>New Transcript Request</h3>
-        <p><strong>Name:</strong> ${data.fullName}</p>
-        <p><strong>Email:</strong> ${data.email}</p>
-        <p><strong>Phone:</strong> ${data.phone || 'N/A'}</p>
-        <p><strong>Year Group:</strong> ${data.yearGroup}</p>
-        <p><strong>Notes:</strong> ${data.notes || 'None'}</p>
+        <p><strong>Name:</strong> ${escapeHtml(data.fullName)}</p>
+        <p><strong>Email:</strong> ${escapeHtml(data.email)}</p>
+        <p><strong>Phone:</strong> ${escapeHtml(data.phone || 'N/A')}</p>
+        <p><strong>Year Group:</strong> ${escapeHtml(data.yearGroup)}</p>
+        <p><strong>Notes:</strong> ${escapeHtml(data.notes || 'None')}</p>
       `,
     });
   } catch (err) {

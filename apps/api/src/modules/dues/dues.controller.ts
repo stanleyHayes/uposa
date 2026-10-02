@@ -26,7 +26,7 @@ export async function memberPayDueHandler(req: RouteRequest, res: Response): Pro
   const { id } = req.params;
   const parsed = memberPayDueSchema.parse({ body: req.body });
   const due = await memberPayDue(id, req.user.id, parsed.body);
-  successResponse(res, 'Payment submitted successfully', due);
+  successResponse(res, 'Payment submitted for verification', due);
 }
 
 export async function getMemberDueSummaryHandler(req: RouteRequest, res: Response): Promise<void> {

@@ -7,7 +7,8 @@ import {
   signMemberRefreshToken,
   signAdminToken,
   signAdminRefreshToken,
-  verifyMemberToken,
+  verifyMemberRefreshToken,
+  verifyAdminRefreshToken,
 } from '../../utils/jwt.utils';
 import {
   sendVerificationEmail,
@@ -128,7 +129,7 @@ export async function loginMember(data: LoginInput) {
 export async function refreshMemberSession(refreshToken: string) {
   let payload: { id: string; email: string };
   try {
-    payload = verifyMemberToken(refreshToken);
+    payload = verifyMemberRefreshToken(refreshToken);
   } catch {
     throw Object.assign(new Error('Invalid or expired refresh token'), { statusCode: 401 });
   }
@@ -172,6 +173,30 @@ export async function loginAdmin(email: string, password: string) {
 
   const { password: _pw, ...safeData } = admin as any;
   return { admin: safeData, accessToken, refreshToken };
+}
+
+/**
+ * Exchange an admin refresh token for a new session. Admin access tokens last
+ * 15 minutes; without this, admins were sent to /login mid-edit and lost the
+ * form they were filling in. Re-reads the admin so deactivation and role
+ * changes take effect at the next refresh.
+ */
+export async function refreshAdminSession(refreshToken: string) {
+  let payload: { id: string };
+  try {
+    payload = verifyAdminRefreshToken(refreshToken);
+  } catch {
+    throw Object.assign(new Error('Invalid or expired refresh token'), { statusCode: 401 });
+  }
+
+  const { admins } = getRepos();
+  const admin = await admins.findById(payload.id);
+  if (!admin || !admin.isActive) {
+    throw Object.assign(new Error('Invalid or expired refresh token'), { statusCode: 401 });
+  }
+
+  const tokenPayload = { id: (admin as any).id, email: admin.email, role: admin.role as 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR' };
+  return { accessToken: signAdminToken(tokenPayload), refreshToken: signAdminRefreshToken(tokenPayload) };
 }
 
 export async function verifyEmailToken(token: string) {

@@ -12,7 +12,7 @@ export const updateProfileSchema = z.object({
     city: z.string().optional(),
     region: z.string().optional(),
     country: z.string().optional(),
-    yearGroup: z.coerce.number().int().min(1982).optional(),
+    yearGroup: z.coerce.number().int().min(1981).optional(),
     programme: z.enum(['GENERAL_ARTS', 'BUSINESS', 'HOME_ECONOMICS', 'VISUAL_ARTS', 'SCIENCE']).optional(),
     house: z.enum(['ACKAH', 'DENSU', 'TANO', 'NKRUMAH', 'PRA', 'VOLTA']).optional(),
     employmentType: z.enum(['RETIRED', 'STUDENT', 'UNEMPLOYED', 'SELF_EMPLOYED', 'GOVERNMENT_WORKER', 'PRIVATE_WORKER']).optional(),
