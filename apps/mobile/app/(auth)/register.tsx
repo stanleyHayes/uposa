@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Link, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ import { AuthLogo } from '@/components/auth-logo';
 import { AuthBrandPanel } from '@/components/auth-brand-panel';
 import { SelectField } from '@/components/select-field';
 import { countryOptions, stateOptions, useCityOptions } from '@/lib/locations';
+import { PRIVACY_URL, TERMS_URL, openLegalPage } from '@/lib/legal';
 
 const EXPERTISE_OPTIONS = [
   'Education & Teaching', 'Healthcare & Medical Services', 'Engineering & Technical Fields',
@@ -81,6 +82,10 @@ type RegisterForm = {
   willingToVolunteer: string;
   preferredContributions: string[];
   consentGiven: boolean;
+  acceptTerms: boolean;
+  confirmAdult: boolean;
+  directoryOptIn: boolean;
+  marketingOptIn: boolean;
 };
 
 type FormErrors = Partial<Record<keyof RegisterForm, string>>;
@@ -115,6 +120,12 @@ const initialForm: RegisterForm = {
   willingToVolunteer: '',
   preferredContributions: [],
   consentGiven: false,
+  // Ghana Data Protection Act 2012 (Act 843): separate, explicit consents;
+  // opt-ins start unchecked.
+  acceptTerms: false,
+  confirmAdult: false,
+  directoryOptIn: false,
+  marketingOptIn: false,
 };
 
 function formatEnumLabel(value: string) {
@@ -219,7 +230,7 @@ function CheckRow({
   error,
 }: {
   palette: Palette;
-  label: string;
+  label: ReactNode;
   checked: boolean;
   onToggle: () => void;
   error?: boolean;
@@ -267,6 +278,8 @@ function validateStep(step: number, form: RegisterForm): FormErrors {
   }
   if (step === 6) {
     if (!form.consentGiven) errs.consentGiven = 'You must consent to proceed';
+    if (!form.acceptTerms) errs.acceptTerms = 'You must accept the Terms of Use and Privacy Policy';
+    if (!form.confirmAdult) errs.confirmAdult = 'You must confirm you are 18 or older';
   }
   return errs;
 }
@@ -333,6 +346,10 @@ export default function RegisterScreen() {
       formData.append('preferredContributions', JSON.stringify(form.preferredContributions));
       formData.append('isWhatsAppMember', String(form.isWhatsAppMember));
       formData.append('consentGiven', String(form.consentGiven));
+      formData.append('acceptTerms', String(form.acceptTerms));
+      formData.append('confirmAdult', String(form.confirmAdult));
+      formData.append('directoryOptIn', String(form.directoryOptIn));
+      formData.append('marketingOptIn', String(form.marketingOptIn));
 
       await authApi.register(formData);
       setRegistered(true);
@@ -714,6 +731,43 @@ export default function RegisterScreen() {
                 error={!!errors.consentGiven}
               />
               <FieldError palette={palette} message={errors.consentGiven} />
+              <CheckRow
+                palette={palette}
+                label={
+                  <>
+                    I agree to the{' '}
+                    <Text style={[styles.legalLink, { color: palette.tint }]} onPress={() => openLegalPage(TERMS_URL)}>Terms of Use</Text>
+                    {' '}and{' '}
+                    <Text style={[styles.legalLink, { color: palette.tint }]} onPress={() => openLegalPage(PRIVACY_URL)}>Privacy Policy</Text> *
+                  </>
+                }
+                checked={form.acceptTerms}
+                onToggle={() => set('acceptTerms')(!form.acceptTerms)}
+                error={!!errors.acceptTerms}
+              />
+              <FieldError palette={palette} message={errors.acceptTerms} />
+              <CheckRow
+                palette={palette}
+                label="I confirm I am 18 or older *"
+                checked={form.confirmAdult}
+                onToggle={() => set('confirmAdult')(!form.confirmAdult)}
+                error={!!errors.confirmAdult}
+              />
+              <FieldError palette={palette} message={errors.confirmAdult} />
+              <Text style={[styles.optionalLabel, { color: palette.textMuted }]}>Optional</Text>
+              <CheckRow
+                palette={palette}
+                label="Show my profile in the member directory"
+                checked={form.directoryOptIn}
+                onToggle={() => set('directoryOptIn')(!form.directoryOptIn)}
+              />
+              <CheckRow
+                palette={palette}
+                label="Email me UPOSA news and updates"
+                checked={form.marketingOptIn}
+                onToggle={() => set('marketingOptIn')(!form.marketingOptIn)}
+              />
+              <Text style={[styles.optionalHint, { color: palette.textMuted }]}>You can change both later in Settings.</Text>
             </View>
           ) : null}
 
@@ -798,6 +852,9 @@ const styles = StyleSheet.create({
   },
   checkLabel: { flex: 1, fontSize: 14, fontFamily: Fonts.bodyMedium, lineHeight: 19 },
   errorText: { fontSize: 12, fontFamily: Fonts.body, marginTop: -6, marginBottom: 10 },
+  legalLink: { fontFamily: Fonts.bodySemiBold, textDecorationLine: 'underline' },
+  optionalLabel: { fontSize: 11, fontFamily: Fonts.statusBold, letterSpacing: 1, textTransform: 'uppercase', marginTop: 8, marginBottom: 8 },
+  optionalHint: { fontSize: 12, fontFamily: Fonts.body, marginTop: 2 },
   consentCard: { padding: 14, gap: 8, marginBottom: 14 },
   consentTitle: { fontSize: 15, fontFamily: Fonts.bodyBold },
   consentBody: { fontSize: 13, fontFamily: Fonts.body, lineHeight: 19 },

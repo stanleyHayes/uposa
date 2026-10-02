@@ -41,3 +41,6 @@ app-example
 # generated native folders
 /ios
 /android
+
+# store submission credentials (eas.json submit.production.android.serviceAccountKeyPath)
+*service-account*.json

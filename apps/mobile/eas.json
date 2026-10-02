@@ -30,6 +30,17 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "REPLACE_ME_apple-id-email@example.com",
+        "ascAppId": "REPLACE_ME_app-store-connect-app-id",
+        "appleTeamId": "REPLACE_ME_apple-team-id"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./REPLACE_ME_google-play-service-account.json",
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    }
   }
 }

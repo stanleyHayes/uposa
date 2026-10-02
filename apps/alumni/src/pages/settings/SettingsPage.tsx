@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -7,6 +8,8 @@ import {
   ArrowRight,
   Bell,
   CheckCircle2,
+  Download,
+  ExternalLink,
   Eye,
   EyeOff,
   Globe2,
@@ -19,6 +22,7 @@ import {
   Shield,
   Sparkles,
   Sun,
+  Trash2,
   UserCircle,
   type LucideIcon,
 } from 'lucide-react'
@@ -28,7 +32,9 @@ import ScrollReveal from '../../components/common/ScrollReveal'
 import { useAuthStore } from '../../stores/auth.store'
 import { useTheme } from '../../hooks/useTheme'
 import { useToast } from '../../hooks/useToast'
-import { authApi } from '../../api/services'
+import { authApi, membersApi } from '../../api/services'
+import { ACCOUNT_DELETION_URL, PRIVACY_URL, TERMS_URL } from '../../lib/legal'
+import type { Member, MemberPreferences } from '../../types'
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -46,7 +52,7 @@ const tabs: Array<{ key: TabKey; label: string; helper: string; icon: LucideIcon
   { key: 'preferences', label: 'Preferences', helper: 'Theme and region', icon: Palette },
   { key: 'password', label: 'Password', helper: 'Account security', icon: KeyRound },
   { key: 'notifications', label: 'Notifications', helper: 'Email routing', icon: Bell },
-  { key: 'privacy', label: 'Privacy', helper: 'Directory visibility', icon: Shield },
+  { key: 'privacy', label: 'Privacy & data', helper: 'Directory, data, account', icon: Shield },
 ]
 
 const inputCls = 'input input-bordered min-h-12 w-full border-primary/10 bg-base-200/45 pl-10 pr-10 focus:border-primary focus:bg-base-100'
@@ -220,6 +226,229 @@ function PasswordInput({
   )
 }
 
+// Error body may be a Blob when the request used responseType 'blob' (data export).
+async function apiErrorMessage(err: unknown): Promise<string | undefined> {
+  const data = (err as { response?: { data?: unknown } })?.response?.data
+  if (data instanceof Blob) {
+    try {
+      return (JSON.parse(await data.text()) as { message?: string }).message
+    } catch {
+      return undefined
+    }
+  }
+  return (data as { message?: string } | undefined)?.message
+}
+
+// Ghana Data Protection Act 2012 (Act 843) self-service: consent choices, a
+// copy of the member's data (right of access) and account deletion (erasure).
+function PrivacyDataPanel() {
+  const user = useAuthStore((s) => s.user)
+  const updateUser = useAuthStore((s) => s.updateUser)
+  const logout = useAuthStore((s) => s.logout)
+  const navigate = useNavigate()
+  const toast = useToast()
+  const [savingKey, setSavingKey] = useState<keyof MemberPreferences | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [password, setPassword] = useState('')
+  const [confirmed, setConfirmed] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
+  // Same defaults as the API for accounts that predate consent records.
+  const preferences: MemberPreferences = user?.preferences ?? { marketingOptIn: false, directoryOptIn: true }
+
+  // Sessions cached before preferences existed have none: read the current values.
+  useEffect(() => {
+    let active = true
+    authApi.me()
+      .then((res) => {
+        // /auth/me wraps the member as { type, data }.
+        const payload = res.data.data as unknown as (Partial<Member> & { data?: Member }) | undefined
+        const fresh = payload?.data?.preferences ?? payload?.preferences
+        if (active && fresh) updateUser({ preferences: fresh })
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [updateUser])
+
+  const setPreference = async (key: keyof MemberPreferences, value: boolean) => {
+    const previous = preferences
+    updateUser({ preferences: { ...previous, [key]: value } })
+    setSavingKey(key)
+    try {
+      const res = await membersApi.updatePreferences({ [key]: value })
+      if (res.data.data) updateUser({ preferences: res.data.data })
+      toast.success('Privacy preference saved')
+    } catch (err) {
+      updateUser({ preferences: previous })
+      toast.error((await apiErrorMessage(err)) || 'Could not save your preference. Please try again.')
+    } finally {
+      setSavingKey(null)
+    }
+  }
+
+  const downloadData = async () => {
+    setExporting(true)
+    try {
+      const res = await membersApi.exportMyData()
+      const disposition = String(res.headers['content-disposition'] ?? '')
+      const filename = /filename="?([^";]+)"?/.exec(disposition)?.[1]
+        || `uposa-my-data-${new Date().toISOString().slice(0, 10)}.json`
+      const url = URL.createObjectURL(res.data)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      toast.success('Your data download has started')
+    } catch (err) {
+      toast.error((await apiErrorMessage(err)) || 'Could not export your data. Please try again.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const deleteAccount = async () => {
+    if (!password || !confirmed) return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      await membersApi.deleteMyAccount(password)
+      logout()
+      toast.success('Your account has been deleted.')
+      navigate('/login', { replace: true })
+    } catch (err) {
+      setDeleteError((await apiErrorMessage(err)) || 'Could not delete your account. Please try again.')
+      setDeleting(false)
+    }
+  }
+
+  const closeDelete = () => {
+    setDeleteOpen(false)
+    setPassword('')
+    setConfirmed(false)
+    setDeleteError('')
+  }
+
+  return (
+    <div className="overflow-hidden border border-primary/10 bg-base-100/92 shadow-[0_18px_50px_rgba(0,27,80,0.08)] rounded-[28px_6px_28px_6px]">
+      <div className="h-1 bg-secondary" />
+      <div className="flex flex-col p-5 sm:p-6">
+        <PanelHeader
+          icon={Shield}
+          eyebrow="Privacy & data"
+          title="Your data, your choices"
+          description="Choose who can find you and what we email you, download a copy of your data, or delete your account."
+        />
+
+        <div className="mt-6 grid gap-3 md:grid-cols-2">
+          <ToggleRow
+            label="Show my profile in the member directory"
+            description={savingKey === 'directoryOptIn' ? 'Saving…' : 'Signed-in members can find you in directory search.'}
+            checked={preferences.directoryOptIn}
+            onChange={(checked) => setPreference('directoryOptIn', checked)}
+          />
+          <ToggleRow
+            label="Email me UPOSA news and updates"
+            description={savingKey === 'marketingOptIn' ? 'Saving…' : 'Newsletters and association news. Account and payment emails still arrive.'}
+            checked={preferences.marketingOptIn}
+            onChange={(checked) => setPreference('marketingOptIn', checked)}
+          />
+        </div>
+
+        <div className="mt-5 flex flex-col gap-3 border border-primary/10 bg-base-200/40 p-4 sm:flex-row sm:items-center sm:justify-between rounded-[22px_4px_22px_4px]">
+          <div className="min-w-0">
+            <p className="text-sm font-bold">Download my data</p>
+            <p className="mt-1 text-xs leading-relaxed text-base-content/58">
+              A JSON file with your profile, consents, dues, donations, payments, event RSVPs, mentorship, jobs, forum posts and votes.
+            </p>
+          </div>
+          <button type="button" className="btn btn-primary btn-sm min-h-10 shrink-0 gap-2" onClick={downloadData} disabled={exporting}>
+            <Download className="h-4 w-4" />
+            {exporting ? 'Preparing…' : 'Download my data'}
+          </button>
+        </div>
+
+        <div className="mt-5 border border-error/20 bg-error/8 p-4 rounded-[22px_4px_22px_4px]">
+          <div className="flex items-start gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center bg-error/12 text-error rounded-[15px_3px_15px_3px]">
+              <AlertTriangle className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1 space-y-2 text-xs leading-relaxed text-base-content/62">
+              <p className="text-sm font-bold text-error">Delete account</p>
+              <p>
+                <span className="font-bold text-base-content/80">Deleted:</span> your profile details and photo, your sign-in, job posts and
+                applications, mentorship requests, event RSVPs and newsletter subscription.
+              </p>
+              <p>
+                <span className="font-bold text-base-content/80">Kept without your personal details:</span> dues, donation and payment records
+                (the association must keep these for its accounts), anonymous poll and election participation, and your forum posts and
+                comments, which will show as &quot;Deleted member&quot;.
+              </p>
+              <p>This cannot be undone.</p>
+            </div>
+            {!deleteOpen && (
+              <button type="button" className="btn btn-outline btn-error btn-sm min-h-10 shrink-0 gap-2" onClick={() => setDeleteOpen(true)}>
+                <Trash2 className="h-4 w-4" />
+                Delete account
+              </button>
+            )}
+          </div>
+
+          {deleteOpen && (
+            <form
+              className="mt-4 grid gap-3 border-t border-error/15 pt-4"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void deleteAccount()
+              }}
+            >
+              <Field label="Enter your password to confirm" error={deleteError || undefined}>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  className="input input-bordered min-h-12 w-full border-error/25 bg-base-100"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              </Field>
+              <label className="flex cursor-pointer items-start gap-3 text-sm">
+                <input type="checkbox" className="checkbox checkbox-error checkbox-sm mt-0.5" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
+                <span>I understand my account will be permanently deleted and I will be signed out.</span>
+              </label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button type="submit" className="btn btn-error min-h-11 gap-2" disabled={!password || !confirmed || deleting}>
+                  <Trash2 className="h-4 w-4" />
+                  {deleting ? 'Deleting…' : 'Delete my account'}
+                </button>
+                <button type="button" className="btn btn-ghost min-h-11" onClick={closeDelete} disabled={deleting}>Cancel</button>
+              </div>
+            </form>
+          )}
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs font-semibold">
+          {[
+            { href: PRIVACY_URL, label: 'Privacy Policy' },
+            { href: TERMS_URL, label: 'Terms of Use' },
+            { href: ACCOUNT_DELETION_URL, label: 'Account deletion help' },
+          ].map((item) => (
+            <a key={item.href} href={item.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+              {item.label}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   const user = useAuthStore((s) => s.user)
   const setAuth = useAuthStore((s) => s.setAuth)
@@ -239,19 +468,12 @@ export default function SettingsPage() {
     emailMentorship: true,
   })
 
-  const [privacy, setPrivacy] = useState({
-    showEmail: false,
-    showPhone: false,
-    showInDirectory: true,
-    showYearGroup: true,
-  })
-
   const { register, handleSubmit, reset, formState: { errors } } = useForm<PasswordForm>({
     resolver: zodResolver(passwordSchema),
   })
 
   const enabledNotifications = Object.values(notifications).filter(Boolean).length
-  const visiblePrivacyItems = Object.values(privacy).filter(Boolean).length
+  const listedInDirectory = user?.preferences?.directoryOptIn ?? true
 
   const onPasswordSubmit = async (data: PasswordForm) => {
     setPasswordSaving(true)
@@ -280,10 +502,6 @@ export default function SettingsPage() {
 
   const handleSaveNotifications = () => {
     toast.success('Notification preferences saved!')
-  }
-
-  const handleSavePrivacy = () => {
-    toast.success('Privacy settings saved!')
   }
 
   return (
@@ -317,7 +535,7 @@ export default function SettingsPage() {
               <StatTile icon={UserCircle} label="Account" value={user?.membershipStatus || 'Member'} detail={user?.email || 'Signed in'} />
               <StatTile icon={Palette} label="Theme" value={theme === 'dark' ? 'Dark' : 'Light'} detail="Local preference" />
               <StatTile icon={Bell} label="Alerts" value={`${enabledNotifications}/6`} detail="Email channels on" tone="bg-secondary/18 text-primary" />
-              <StatTile icon={Shield} label="Privacy" value={`${visiblePrivacyItems}/4`} detail="Visible profile fields" tone="bg-success/12 text-success" />
+              <StatTile icon={Shield} label="Directory" value={listedInDirectory ? 'Listed' : 'Hidden'} detail="Member directory visibility" tone="bg-success/12 text-success" />
             </div>
           </div>
         </section>
@@ -544,59 +762,7 @@ export default function SettingsPage() {
 
           {tab === 'privacy' && (
             <ScrollReveal>
-              <div className="overflow-hidden border border-primary/10 bg-base-100/92 shadow-[0_18px_50px_rgba(0,27,80,0.08)] rounded-[28px_6px_28px_6px]">
-                <div className="h-1 bg-secondary" />
-                <div className="flex min-h-[34rem] flex-col p-5 sm:p-6">
-                  <PanelHeader
-                    icon={Shield}
-                    eyebrow="Privacy"
-                    title="Directory visibility"
-                    description="Control what other alumni can see when they view your member profile."
-                  />
-
-                  <div className="mt-6 grid gap-3 md:grid-cols-2">
-                    {[
-                      { key: 'showInDirectory', label: 'Show in alumni directory', desc: 'Allow members to find you in directory search' },
-                      { key: 'showEmail', label: 'Show email address', desc: 'Display your email on your public profile' },
-                      { key: 'showPhone', label: 'Show phone number', desc: 'Display your phone number on your public profile' },
-                      { key: 'showYearGroup', label: 'Show year group', desc: 'Display your year group on your profile' },
-                    ].map((item) => (
-                      <ToggleRow
-                        key={item.key}
-                        label={item.label}
-                        description={item.desc}
-                        checked={privacy[item.key as keyof typeof privacy]}
-                        onChange={(checked) => setPrivacy((prev) => ({ ...prev, [item.key]: checked }))}
-                      />
-                    ))}
-                  </div>
-
-                  <div className="mt-5 border border-error/20 bg-error/8 p-4 rounded-[22px_4px_22px_4px]">
-                    <div className="flex items-start gap-3">
-                      <span className="grid h-11 w-11 shrink-0 place-items-center bg-error/12 text-error rounded-[15px_3px_15px_3px]">
-                        <AlertTriangle className="h-5 w-5" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-error">Deactivate account</p>
-                        <p className="mt-1 text-xs leading-relaxed text-base-content/58">
-                          This hides your profile and disables your account. Reactivation requires admin support.
-                        </p>
-                      </div>
-                      <button type="button" className="btn btn-outline btn-error btn-sm min-h-10 shrink-0">Deactivate</button>
-                    </div>
-                  </div>
-
-                  <div className="mt-auto flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-xs font-semibold leading-relaxed text-base-content/42">
-                      {visiblePrivacyItems} of 4 profile visibility options are enabled.
-                    </p>
-                    <button type="button" className="btn btn-primary min-h-11 gap-2 sm:min-w-48" onClick={handleSavePrivacy}>
-                      Save privacy
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <PrivacyDataPanel />
             </ScrollReveal>
           )}
         </section>

@@ -9,6 +9,7 @@ import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import { Field, PrimaryButton, Surface } from '@/components/mobile-ui';
 import { AuthBrandPanel } from '@/components/auth-brand-panel';
+import { PRIVACY_URL, TERMS_URL, openLegalPage } from '@/lib/legal';
 
 export default function LoginScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -145,6 +146,11 @@ export default function LoginScreen() {
                   </Text>
                 </Pressable>
               </Link>
+              <Text style={{ color: palette.textMuted, fontSize: 12, fontFamily: Fonts.body }}>
+                <Text accessibilityRole="link" style={{ textDecorationLine: 'underline' }} onPress={() => openLegalPage(PRIVACY_URL)}>Privacy Policy</Text>
+                {'  ·  '}
+                <Text accessibilityRole="link" style={{ textDecorationLine: 'underline' }} onPress={() => openLegalPage(TERMS_URL)}>Terms of Use</Text>
+              </Text>
             </View>
           </Surface>
         </View>

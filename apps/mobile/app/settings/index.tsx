@@ -9,9 +9,9 @@ import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import { useThemePreference, type ThemePreference } from '@/lib/theme-context';
 import { Field, HeroPanel, PrimaryButton, ScreenHeader, ScreenScroll, Surface } from '@/components/mobile-ui';
+import { PrivacyDataSection } from '@/components/privacy-data-section';
 
 const NOTIFICATIONS_KEY = 'uposa_mobile_notifications';
-const PRIVACY_KEY = 'uposa_mobile_privacy';
 
 const NOTIFICATION_OPTIONS = [
   { key: 'emailEvents', label: 'Events & gatherings', desc: 'Upcoming events and RSVP updates' },
@@ -20,13 +20,6 @@ const NOTIFICATION_OPTIONS = [
   { key: 'emailPolls', label: 'Polls & elections', desc: 'New votes and ballot windows' },
   { key: 'emailDues', label: 'Dues reminders', desc: 'Outstanding dues and payment prompts' },
   { key: 'emailMentorship', label: 'Mentorship requests', desc: 'Mentorship activity and responses' },
-] as const;
-
-const PRIVACY_OPTIONS = [
-  { key: 'showInDirectory', label: 'Show in alumni directory', desc: 'Allow members to find you in directory search' },
-  { key: 'showEmail', label: 'Show email address', desc: 'Display your email on your public profile' },
-  { key: 'showPhone', label: 'Show phone number', desc: 'Display your phone number on your public profile' },
-  { key: 'showYearGroup', label: 'Show year group', desc: 'Display your year group on your profile' },
 ] as const;
 
 type ToggleMap = Record<string, boolean>;
@@ -88,19 +81,12 @@ export default function SettingsScreen() {
   const [notifications, setNotifications] = useState<ToggleMap>(() =>
     Object.fromEntries(NOTIFICATION_OPTIONS.map((o) => [o.key, true]))
   );
-  const [privacy, setPrivacy] = useState<ToggleMap>(() =>
-    Object.fromEntries(PRIVACY_OPTIONS.map((o) => [o.key, true]))
-  );
 
   useEffect(() => {
     (async () => {
       try {
-        const [savedNotifications, savedPrivacy] = await Promise.all([
-          AsyncStorage.getItem(NOTIFICATIONS_KEY),
-          AsyncStorage.getItem(PRIVACY_KEY),
-        ]);
+        const savedNotifications = await AsyncStorage.getItem(NOTIFICATIONS_KEY);
         if (savedNotifications) setNotifications((prev) => ({ ...prev, ...JSON.parse(savedNotifications) }));
-        if (savedPrivacy) setPrivacy((prev) => ({ ...prev, ...JSON.parse(savedPrivacy) }));
       } catch {
         // keep defaults
       }
@@ -111,14 +97,6 @@ export default function SettingsScreen() {
     setNotifications((prev) => {
       const updated = { ...prev, [key]: next };
       AsyncStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updated)).catch(() => {});
-      return updated;
-    });
-  };
-
-  const togglePrivacy = (key: string, next: boolean) => {
-    setPrivacy((prev) => {
-      const updated = { ...prev, [key]: next };
-      AsyncStorage.setItem(PRIVACY_KEY, JSON.stringify(updated)).catch(() => {});
       return updated;
     });
   };
@@ -244,22 +222,7 @@ export default function SettingsScreen() {
           ))}
         </Surface>
 
-        <Surface palette={palette} style={{ padding: 16, marginTop: 18 }}>
-          <Text style={{ color: palette.text, fontSize: 16, fontFamily: Fonts.display, marginBottom: 4 }}>Privacy</Text>
-          <Text style={{ color: palette.textMuted, fontSize: 13, fontFamily: Fonts.body, lineHeight: 19, marginBottom: 6 }}>
-            Control what other alumni can see when they view your member profile.
-          </Text>
-          {PRIVACY_OPTIONS.map((opt) => (
-            <ToggleRow
-              key={opt.key}
-              palette={palette}
-              label={opt.label}
-              description={opt.desc}
-              value={!!privacy[opt.key]}
-              onValueChange={(next) => togglePrivacy(opt.key, next)}
-            />
-          ))}
-        </Surface>
+        <PrivacyDataSection palette={palette} />
 
         <Surface palette={palette} style={{ padding: 16, marginTop: 18 }}>
           <Text style={{ color: palette.text, fontSize: 16, fontFamily: Fonts.display, marginBottom: 4 }}>Session</Text>

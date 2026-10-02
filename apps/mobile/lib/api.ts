@@ -6,7 +6,7 @@ import type {
   Member, Event, EventRsvp, News, Due, Project, Donation,
   Job, JobApplication, MentorshipRequest,
   ForumPost, ForumComment, Poll, Election, ContactMessage,
-  PaymentMethod, GalleryItem, GalleryCategory, SiteConfig, Announcement,
+  PaymentMethod, GalleryItem, GalleryCategory, SiteConfig, Announcement, MemberPreferences,
 } from './types';
 import { REFRESH_TOKEN_KEY, TOKEN_KEY, getToken, removeToken, setToken } from './token-storage';
 
@@ -186,6 +186,14 @@ export const membersApi = {
     client.get<ApiResponse<Due[]>>('/members/my/dues'),
   myDonations: () =>
     client.get<ApiResponse<Donation[]>>('/members/my/donations'),
+  // Privacy self-service (Ghana Data Protection Act 2012, Act 843)
+  updatePreferences: (data: Partial<MemberPreferences>) =>
+    client.put<ApiResponse<MemberPreferences>>('/members/me/preferences', data),
+  // Raw text so the file is saved exactly as the server produced it.
+  exportMyData: () =>
+    client.get<string>('/members/me/export', { responseType: 'text', transformResponse: (body) => body, timeout: 60000 }),
+  deleteMyAccount: (password: string) =>
+    client.delete<ApiResponse>('/members/me', { data: { password } }),
 };
 
 // -------- Events --------

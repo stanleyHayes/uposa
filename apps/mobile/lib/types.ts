@@ -19,9 +19,15 @@ export type DonationChannel = 'MOMO' | 'BANK' | 'PAYPAL' | 'PAYSTACK' | 'STRIPE'
 export type PaymentProvider = 'PAYSTACK' | 'STRIPE' | 'CRYPTO';
 export type DonationStatus = 'PENDING' | 'CONFIRMED' | 'FAILED';
 
+export interface MemberPreferences {
+  marketingOptIn: boolean;
+  directoryOptIn: boolean;
+}
+
 export interface Member {
   id: string;
   fullName: string;
+  preferences?: MemberPreferences;
   gender?: Gender;
   dateOfBirth?: string;
   maritalStatus?: MaritalStatus;

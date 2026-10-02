@@ -21,9 +21,15 @@ export type PollStatus = 'ACTIVE' | 'CLOSED'
 export type ElectionStatus = 'UPCOMING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED'
 
 // Models
+export interface MemberPreferences {
+  marketingOptIn: boolean
+  directoryOptIn: boolean
+}
+
 export interface Member {
   id: string
   fullName: string
+  preferences?: MemberPreferences
   gender?: Gender
   dateOfBirth?: string
   maritalStatus?: MaritalStatus

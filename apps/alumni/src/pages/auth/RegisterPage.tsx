@@ -32,6 +32,7 @@ import SEO from '../../components/common/SEO'
 import DatePicker from '../../components/ui/DatePicker'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import { countryOptions, stateOptions, useCityOptions } from '../../lib/locations'
+import { PRIVACY_URL, TERMS_URL } from '../../lib/legal'
 
 const EXPERTISE_OPTIONS = [
   'Education & Teaching', 'Healthcare & Medical Services', 'Engineering & Technical Fields',
@@ -49,11 +50,17 @@ const CONTRIBUTION_OPTIONS = [
   'Events & Reunions', 'Media & Communications', 'Other',
 ]
 
+// An untouched <select> yields '' and an unpicked radio group null; both mean
+// "not provided". Without this, z.enum().optional() rejected them and the
+// submit failed silently (no visible error) unless every optional choice was made.
+const optionalEnum = <T extends [string, ...string[]]>(values: T) =>
+  z.preprocess((value) => (value === '' || value === null ? undefined : value), z.enum(values).optional())
+
 const schema = z.object({
   fullName: z.string().min(2, 'Full name is required'),
-  gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
+  gender: optionalEnum(['MALE', 'FEMALE', 'OTHER']),
   dateOfBirth: z.string().optional(),
-  maritalStatus: z.enum(['SINGLE', 'MARRIED', 'SEPARATED', 'DIVORCED', 'WIDOWED']).optional(),
+  maritalStatus: optionalEnum(['SINGLE', 'MARRIED', 'SEPARATED', 'DIVORCED', 'WIDOWED']),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
   mobileNumber: z.string().min(5, 'Mobile number is required'),
@@ -64,9 +71,9 @@ const schema = z.object({
   region: z.string().optional(),
   country: z.string().optional(),
   yearGroup: z.string().optional().transform((v) => v ? Number(v) : undefined),
-  programme: z.enum(['GENERAL_ARTS', 'BUSINESS', 'HOME_ECONOMICS', 'VISUAL_ARTS', 'SCIENCE']).optional(),
-  house: z.enum(['ACKAH', 'DENSU', 'TANO', 'NKRUMAH', 'PRA', 'VOLTA']).optional(),
-  employmentType: z.enum(['RETIRED', 'STUDENT', 'UNEMPLOYED', 'SELF_EMPLOYED', 'GOVERNMENT_WORKER', 'PRIVATE_WORKER']).optional(),
+  programme: optionalEnum(['GENERAL_ARTS', 'BUSINESS', 'HOME_ECONOMICS', 'VISUAL_ARTS', 'SCIENCE']),
+  house: optionalEnum(['ACKAH', 'DENSU', 'TANO', 'NKRUMAH', 'PRA', 'VOLTA']),
+  employmentType: optionalEnum(['RETIRED', 'STUDENT', 'UNEMPLOYED', 'SELF_EMPLOYED', 'GOVERNMENT_WORKER', 'PRIVATE_WORKER']),
   occupation: z.string().optional(),
   organization: z.string().optional(),
   areaOfExpertise: z.array(z.string()).optional(),
@@ -76,9 +83,14 @@ const schema = z.object({
   nextOfKinContact: z.string().optional(),
   nextOfKinRelationship: z.string().optional(),
   isWhatsAppMember: z.boolean().optional(),
-  willingToVolunteer: z.enum(['YES', 'NO', 'MAYBE']).optional(),
+  willingToVolunteer: optionalEnum(['YES', 'NO', 'MAYBE']),
   preferredContributions: z.array(z.string()).optional(),
   consentGiven: z.literal(true, { message: 'You must consent to proceed' }),
+  // Ghana Data Protection Act 2012 (Act 843): explicit, separate consents.
+  acceptTerms: z.literal(true, { message: 'You must accept the Terms of Use and Privacy Policy' }),
+  confirmAdult: z.literal(true, { message: 'You must confirm you are 18 or older' }),
+  directoryOptIn: z.boolean().optional(),
+  marketingOptIn: z.boolean().optional(),
 }).refine((d) => d.password === d.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
@@ -133,6 +145,9 @@ export default function RegisterPage() {
       preferredContributions: [],
       isWhatsAppMember: false,
       country: 'Ghana',
+      // Opt-ins must be affirmative: both start unchecked.
+      directoryOptIn: false,
+      marketingOptIn: false,
     },
   })
 
@@ -772,6 +787,35 @@ export default function RegisterPage() {
                       </label>
                       {errors.consentGiven && <p className="text-error text-xs mt-1">{errors.consentGiven.message}</p>}
                     </div>
+                    <div className="form-control">
+                      <label className="cursor-pointer flex items-start gap-3 p-4 rounded-xl border border-base-300 hover:bg-base-200/50 transition-colors">
+                        <input type="checkbox" className={`checkbox checkbox-primary mt-0.5 ${errors.acceptTerms ? 'checkbox-error' : ''}`} {...register('acceptTerms')} />
+                        <span className="label-text font-medium">
+                          I agree to the{' '}
+                          <a href={TERMS_URL} target="_blank" rel="noopener noreferrer" className="link link-primary">Terms of Use</a>
+                          {' '}and{' '}
+                          <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="link link-primary">Privacy Policy</a> *
+                        </span>
+                      </label>
+                      {errors.acceptTerms && <p className="text-error text-xs mt-1">{errors.acceptTerms.message}</p>}
+                    </div>
+                    <div className="form-control">
+                      <label className="cursor-pointer flex items-start gap-3 p-4 rounded-xl border border-base-300 hover:bg-base-200/50 transition-colors">
+                        <input type="checkbox" className={`checkbox checkbox-primary mt-0.5 ${errors.confirmAdult ? 'checkbox-error' : ''}`} {...register('confirmAdult')} />
+                        <span className="label-text font-medium">I confirm I am 18 or older *</span>
+                      </label>
+                      {errors.confirmAdult && <p className="text-error text-xs mt-1">{errors.confirmAdult.message}</p>}
+                    </div>
+                    <p className="text-xs font-medium text-base-content/40 uppercase tracking-wider pt-1">Optional</p>
+                    <label className="cursor-pointer flex items-start gap-3 p-4 rounded-xl border border-base-300 hover:bg-base-200/50 transition-colors">
+                      <input type="checkbox" className="checkbox checkbox-primary checkbox-sm mt-0.5" {...register('directoryOptIn')} />
+                      <span className="text-sm">Show my profile in the member directory</span>
+                    </label>
+                    <label className="cursor-pointer flex items-start gap-3 p-4 rounded-xl border border-base-300 hover:bg-base-200/50 transition-colors">
+                      <input type="checkbox" className="checkbox checkbox-primary checkbox-sm mt-0.5" {...register('marketingOptIn')} />
+                      <span className="text-sm">Email me UPOSA news and updates</span>
+                    </label>
+                    <p className="text-xs text-base-content/45">You can change both later in Settings → Privacy &amp; data.</p>
                   </motion.div>
                 )}
               </AnimatePresence>

@@ -24,6 +24,7 @@ import { authApi } from '../../api/services'
 import { useAuthStore } from '../../stores/auth.store'
 import { useToast } from '../../hooks/useToast'
 import SEO from '../../components/common/SEO'
+import { PRIVACY_URL, TERMS_URL } from '../../lib/legal'
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -344,6 +345,11 @@ export default function LoginPage() {
                     <Link to="/register" className="inline-flex items-center gap-1 font-bold text-primary transition-colors hover:text-accent">
                       Create your account <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
+                    <p className="mt-3 text-xs text-base-content/45">
+                      <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="link link-hover">Privacy Policy</a>
+                      <span aria-hidden="true"> · </span>
+                      <a href={TERMS_URL} target="_blank" rel="noopener noreferrer" className="link link-hover">Terms of Use</a>
+                    </p>
                   </div>
                 </div>
               </motion.div>

@@ -4,7 +4,7 @@ import type {
   Member, Event, EventRsvp, Project, News, Donation, Due, Job, JobApplication,
   MentorshipRequest, ForumPost, ForumComment, Poll, Election, ContactMessage,
   PaymentMethod, GalleryItem, GalleryCategory, Executive, SchoolLeader,
-  YearGroupRepsByYear, Announcement,
+  YearGroupRepsByYear, Announcement, MemberPreferences,
 } from '../types'
 
 // Auth
@@ -46,6 +46,13 @@ export const membersApi = {
     client.get<ApiResponse<Due[]>>('/members/my/dues'),
   myDonations: () =>
     client.get<ApiResponse<Donation[]>>('/members/my/donations'),
+  // Privacy self-service (Ghana Data Protection Act 2012, Act 843)
+  updatePreferences: (data: Partial<MemberPreferences>) =>
+    client.put<ApiResponse<MemberPreferences>>('/members/me/preferences', data),
+  exportMyData: () =>
+    client.get<Blob>('/members/me/export', { responseType: 'blob' }),
+  deleteMyAccount: (password: string) =>
+    client.delete<ApiResponse>('/members/me', { data: { password } }),
 }
 
 // Events
