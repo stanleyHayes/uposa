@@ -24,6 +24,7 @@ import { ScrollReveal } from "../components/common/ScrollReveal.tsx";
 import { StaggerChildren } from "../components/common/StaggerChildren.tsx";
 import { HeroReveal } from "../components/common/HeroReveal.tsx";
 import SEO from "../components/common/SEO.tsx";
+import { staticPageSeo } from "../seo/structuredData.ts";
 import { useSiteData } from "../context/SiteDataContext.tsx";
 import type { SiteData } from "../context/SiteDataContext.tsx";
 import SplashScreen from "../components/common/SplashScreen.tsx";
@@ -324,11 +325,7 @@ const Donate = () => {
 
     return (
         <Layout>
-            <SEO
-                title="Donate"
-                description="Support UPOSA projects, scholarships, school infrastructure, and student welfare through secure donations."
-                canonicalPath="/donate"
-            />
+            <SEO {...staticPageSeo('donate')} />
 
             <section className="relative overflow-hidden bg-base-100 text-primary">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
@@ -340,7 +337,7 @@ const Donate = () => {
                     }}
                 />
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -right-24 top-8 h-[520px] w-[520px] object-contain opacity-[0.08] md:h-[680px] md:w-[680px]"
@@ -350,7 +347,7 @@ const Donate = () => {
                     <HeroReveal>
                         <div className="max-w-4xl">
                             <div className="mb-8 inline-flex items-center gap-3 border border-primary/15 bg-base-200 px-4 py-2">
-                                <img src="/logo.png" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
+                                <img src="/logo.webp" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">Giving desk</p>
                                     <p className="text-sm font-semibold text-primary/70">Projects, welfare, and school support</p>
@@ -482,7 +479,7 @@ const Donate = () => {
 
             <section className="relative overflow-hidden bg-base-100 py-16 md:py-24">
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -right-24 top-8 h-[360px] w-[360px] object-contain opacity-[0.035]"
@@ -588,7 +585,7 @@ const Donate = () => {
 
             <section className="relative overflow-hidden bg-base-200 py-16 md:py-24">
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -left-24 bottom-0 h-[360px] w-[360px] object-contain opacity-[0.03]"
@@ -656,7 +653,7 @@ const Donate = () => {
 
             <section className="relative overflow-hidden bg-primary text-primary-content">
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -left-28 top-4 h-[420px] w-[420px] object-contain opacity-[0.045]"

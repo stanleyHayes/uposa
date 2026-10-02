@@ -27,6 +27,7 @@ import { StaggerChildren } from "../components/common/StaggerChildren.tsx";
 import { HeroReveal } from "../components/common/HeroReveal.tsx";
 import ExecutiveHierarchy from "../components/common/ExecutiveHierarchy.tsx";
 import SEO from "../components/common/SEO.tsx";
+import { staticPageSeo } from "../seo/structuredData.ts";
 import { useSiteData } from "../context/SiteDataContext.tsx";
 import SplashScreen from "../components/common/SplashScreen.tsx";
 
@@ -68,7 +69,7 @@ const About = () => {
 
     return (
         <Layout>
-            <SEO canonicalPath="/about" title="About UPOSA" />
+            <SEO {...staticPageSeo('about')} />
 
             <section className="relative overflow-hidden bg-base-100 text-primary">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
@@ -80,7 +81,7 @@ const About = () => {
                     }}
                 />
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -right-24 top-8 h-[520px] w-[520px] object-contain opacity-[0.08] md:top-4 md:h-[680px] md:w-[680px]"
@@ -90,7 +91,7 @@ const About = () => {
                     <HeroReveal>
                         <div className="max-w-4xl">
                             <div className="mb-8 inline-flex items-center gap-3 border border-primary/15 bg-base-200 px-4 py-2">
-                                <img src="/logo.png" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
+                                <img src="/logo.webp" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">About UPOSA</p>
                                     <p className="text-sm font-semibold text-primary/70">University Practice Old Students Association</p>
@@ -127,7 +128,7 @@ const About = () => {
                                         <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">Association brief</p>
                                         <h2 className="mt-2 text-3xl font-bold leading-tight">What UPOSA carries forward</h2>
                                     </div>
-                                    <img src="/logo.png" alt="" aria-hidden="true" className="h-16 w-16 shrink-0 bg-primary-content object-contain p-1.5" />
+                                    <img src="/logo.webp" alt="" aria-hidden="true" className="h-16 w-16 shrink-0 bg-primary-content object-contain p-1.5" />
                                 </div>
                                 <div className="mt-7 space-y-3">
                                     {quickFacts.map((fact) => {
@@ -219,7 +220,7 @@ const About = () => {
 
             <section className="relative overflow-hidden bg-base-200 py-16 md:py-24">
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -right-24 top-8 h-[360px] w-[360px] object-contain opacity-[0.035]"
@@ -375,7 +376,7 @@ const About = () => {
                         backgroundSize: "42px 42px",
                     }}
                 />
-                <ParallaxImg src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -bottom-36 -right-16 h-[420px] w-[420px] object-contain opacity-[0.1]" />
+                <ParallaxImg src="/logo.webp" alt="" aria-hidden="true" className="pointer-events-none absolute -bottom-36 -right-16 h-[420px] w-[420px] object-contain opacity-[0.1]" />
                 <div className="relative mx-auto grid max-w-7xl gap-8 px-4 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
                     <ScrollReveal direction="right">
                         <div>

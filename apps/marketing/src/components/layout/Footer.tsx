@@ -138,7 +138,7 @@ export const Footer = () => {
             />
             <Parallax offset={130} className="pointer-events-none absolute -right-24 top-10">
                 <img
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="h-[460px] w-[460px] object-contain opacity-[0.06] md:h-[620px] md:w-[620px]"
@@ -150,7 +150,7 @@ export const Footer = () => {
                     <div className="grid gap-8 border-b border-primary-content/10 py-12 md:grid-cols-[1fr_460px] md:items-center">
                         <div className="max-w-2xl">
                             <div className="mb-6 inline-flex items-center gap-3 border border-primary-content/10 bg-primary-content/10 px-4 py-2">
-                                <img src="/logo.png" alt="UPOSA crest" className="h-10 w-10 bg-primary-content/10 object-contain p-1" />
+                                <img src="/logo.webp" alt="UPOSA crest" className="h-10 w-10 bg-primary-content/10 object-contain p-1" />
                                 <div>
                                     <p className="text-sm font-bold">UPOSA</p>
                                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary-content/40">The Legit Elites</p>

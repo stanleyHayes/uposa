@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { Home, Mail } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Layout } from '../components/layout/Layout'
+import SEO from '../components/common/SEO'
 
 /* ─── Animated SVG Doodles ─────────────────────────────────── */
 function AnimatedDoodles() {
@@ -109,6 +110,7 @@ function AnimatedDoodles() {
 export default function NotFoundPage() {
   return (
     <Layout>
+      <SEO title="Page not found" description="The page you were looking for doesn't exist on the UPOSA website." noindex />
       <div className="relative min-h-[80vh] flex flex-col items-center justify-center text-center px-4 pt-24 pb-16 overflow-hidden">
         {/* Decorative background glows */}
         <div className="absolute inset-0 pointer-events-none">

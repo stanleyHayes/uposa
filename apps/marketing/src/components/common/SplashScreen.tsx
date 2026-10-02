@@ -8,7 +8,7 @@ export default function SplashScreen() {
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center gap-7 bg-[#0a1633] text-center">
       <img
-        src="/logo.png"
+        src="/logo.webp"
         alt="UPOSA"
         className="h-24 w-24 object-contain animate-pulse drop-shadow-[0_12px_34px_rgba(0,0,0,0.5)]"
       />

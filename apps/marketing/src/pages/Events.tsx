@@ -19,7 +19,8 @@ import { ScrollReveal } from "../components/common/ScrollReveal.tsx";
 import { StaggerChildren } from "../components/common/StaggerChildren.tsx";
 import { HeroReveal } from "../components/common/HeroReveal.tsx";
 import SEO from "../components/common/SEO.tsx";
-import { useSiteData } from "../context/SiteDataContext.tsx";
+import { staticPageSeo, eventItem } from "../seo/structuredData.ts";
+import { usePrerenderedPage, useSiteData } from "../context/SiteDataContext.tsx";
 import { rsvpToEvent } from "../api/client.ts";
 import SplashScreen from "../components/common/SplashScreen.tsx";
 import EmptyState from "../components/common/EmptyState.tsx";
@@ -114,7 +115,7 @@ function EventImage({ event, className = "" }: { event: EventItem; className?: s
                 />
             ) : (
                 <div className="flex h-full min-h-60 flex-col items-center justify-center bg-primary p-8 text-center text-primary-content">
-                    <img src="/logo.png" alt="" aria-hidden="true" className="mb-5 h-20 w-20 bg-base-100 object-contain p-2 opacity-90" />
+                    <img src="/logo.webp" alt="" aria-hidden="true" className="mb-5 h-20 w-20 bg-base-100 object-contain p-2 opacity-90" />
                     <Calendar size={34} className="text-secondary" />
                 </div>
             )}
@@ -148,8 +149,10 @@ function EventMeta({ event, light = false }: { event: EventItem; light?: boolean
 
 const Events = () => {
     const { data, loading } = useSiteData();
-    const [allEvents, setAllEvents] = useState<EventItem[]>([]);
-    const [eventsLoading, setEventsLoading] = useState(true);
+    const prerendered = usePrerenderedPage<EventItem[]>("events");
+    const [allEvents, setAllEvents] = useState<EventItem[]>(prerendered ?? []);
+    const [eventsLoading, setEventsLoading] = useState(!prerendered);
+    const fallbackEvents = data?.upcomingEvents;
     const [status, setStatus] = useState<EventStatusFilter>("ALL");
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
@@ -160,13 +163,17 @@ const Events = () => {
     const [rsvpError, setRsvpError] = useState("");
 
     useEffect(() => {
-        setEventsLoading(true);
-        fetch(`${API_BASE}/events`)
+        fetch(`${API_BASE}/events?limit=100`)
             .then(async (response) => response.json() as Promise<EventsResponse>)
-            .then((json) => setAllEvents(Array.isArray(json.data) ? json.data : []))
-            .catch(() => setAllEvents(data?.upcomingEvents || []))
+            .then((json) => {
+                if (Array.isArray(json.data)) setAllEvents(json.data);
+                else if (!prerendered) setAllEvents(fallbackEvents || []);
+            })
+            .catch(() => {
+                if (!prerendered) setAllEvents(fallbackEvents || []);
+            })
             .finally(() => setEventsLoading(false));
-    }, [data]);
+    }, [fallbackEvents, prerendered]);
 
     useEffect(() => {
         if (rsvpModalOpen) {
@@ -236,14 +243,15 @@ const Events = () => {
     }
 
     const statusFilters: EventStatusFilter[] = ["ALL", "UPCOMING", "ONGOING", "PAST"];
+    // Event rich results for what's still ahead (status comes from the API, so
+    // the build-time HTML and the client agree).
+    const eventsJsonLd = allEvents
+        .filter((event) => event.slug && (event.status === "UPCOMING" || event.status === "ONGOING"))
+        .map((event) => eventItem({ ...event, slug: event.slug as string, status: event.status as string }));
 
     return (
         <Layout>
-            <SEO
-                title="Events"
-                description="Discover upcoming UPOSA events, reunions, and alumni gatherings. RSVP and stay connected with University Practice SHS alumni."
-                canonicalPath="/events"
-            />
+            <SEO {...staticPageSeo('events', eventsJsonLd)} />
 
             <section className="relative overflow-hidden bg-base-100 text-primary">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
@@ -255,7 +263,7 @@ const Events = () => {
                     }}
                 />
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -right-24 top-8 h-[520px] w-[520px] object-contain opacity-[0.08] md:h-[680px] md:w-[680px]"
@@ -265,7 +273,7 @@ const Events = () => {
                     <HeroReveal>
                         <div className="max-w-4xl">
                             <div className="mb-8 inline-flex items-center gap-3 border border-primary/15 bg-base-200 px-4 py-2">
-                                <img src="/logo.png" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
+                                <img src="/logo.webp" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">Events desk</p>
                                     <p className="text-sm font-semibold text-primary/70">Reunions, meetings, and alumni gatherings</p>

@@ -2,58 +2,41 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <!-- Primary SEO Meta Tags -->
-    <title>UPOSA - University Practice Old Students' Association | The Legit Elites</title>
-    <meta name="description" content="UPOSA is the official alumni association of University Practice Senior High School (UPSHS), Cape Coast, Ghana. Join fellow alumni, support your alma mater, and stay connected." />
-    <meta name="keywords" content="UPOSA, University Practice, Old Students Association, UPSHS, Cape Coast, Ghana, Alumni, Legit Elites, Senior High School" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#0a1633" />
     <meta name="author" content="UPOSA National" />
-    <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://uposa.org" />
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://uposa.org" />
-    <meta property="og:title" content="UPOSA - University Practice Old Students' Association" />
-    <meta property="og:description" content="Join the official alumni network of University Practice Senior High School. Connect, contribute, and celebrate our legacy." />
-    <meta property="og:image" content="https://uposa.org/og-image.png" />
-    <meta property="og:site_name" content="UPOSA" />
-    <meta property="og:locale" content="en_GH" />
+    <!--
+      Generic head tags for the SPA shell. Every prerendered page replaces the
+      data-seo-default tags with its own (scripts/prerender.mjs), and main.tsx
+      removes them before a client-rendered page adds its own, so a page never
+      ships two titles/descriptions/canonicals.
+    -->
+    <title data-seo-default>UPOSA | University Practice SHS Old Students' Association, Cape Coast</title>
+    <meta data-seo-default name="description" content="UPOSA is the official old students' association of University Practice Senior High School (UPSHS), Cape Coast, Ghana. Register as an alumnus, pay dues, back school projects, and reconnect with your year group." />
+    <meta data-seo-default property="og:type" content="website" />
+    <meta data-seo-default property="og:site_name" content="UPOSA" />
+    <meta data-seo-default property="og:title" content="UPOSA | University Practice SHS Old Students' Association" />
+    <meta data-seo-default property="og:description" content="The official alumni network of University Practice Senior High School, Cape Coast. Connect, contribute, and celebrate our legacy." />
+    <meta data-seo-default property="og:image" content="https://www.uposa.org/og-image.png" />
+    <meta data-seo-default name="twitter:card" content="summary_large_image" />
 
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="UPOSA - University Practice Old Students' Association" />
-    <meta name="twitter:description" content="Join the official alumni network of University Practice Senior High School. Connect, contribute, and celebrate our legacy." />
-    <meta name="twitter:image" content="https://uposa.org/og-image.png" />
-
-    <!-- Structured Data -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "UPOSA - University Practice Old Students' Association",
-      "alternateName": "UPOSA",
-      "url": "https://uposa.org",
-      "logo": "https://uposa.org/logo.png",
-      "description": "The official alumni association of University Practice Senior High School (UPSHS), Cape Coast, Ghana.",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "University Practice Senior High School, UCC",
-        "addressLocality": "Cape Coast",
-        "addressCountry": "GH"
-      },
-      "sameAs": [
-        "https://www.facebook.com/share/1Ckq3GEdMS/",
-        "https://www.instagram.com/uposanational"
-      ]
-    }
+    <!-- Apply the saved/OS theme before first paint so dark-mode visitors don't see a light flash. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('uposa-theme');
+          if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', t === 'dark' ? 'uposa-dark' : 'uposa-light');
+        } catch (e) { /* storage blocked: React applies the theme after mount */ }
+      })();
     </script>
 
-    <!-- Fonts -->
-
-    <!-- Boot splash (shown instantly before React/CSS load; replaced on mount) -->
+    <!-- Boot splash (shown instantly before React/CSS load on client-rendered pages; replaced on mount) -->
     <style>
       #boot-splash{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;background:#0a1633;text-align:center}
       #boot-splash img{width:96px;height:96px;object-fit:contain;animation:bs-pulse 1.8s ease-in-out infinite;filter:drop-shadow(0 12px 34px rgba(0,0,0,.5))}
@@ -70,13 +53,14 @@
   <body>
     <div id="root">
       <div id="boot-splash">
-        <img src="/logo.png" alt="UPOSA" />
+        <img src="/logo.webp" alt="UPOSA" width="96" height="96" />
         <div>
           <div class="bs-word">UPOSA</div>
           <div class="bs-tag">The Legit Elites</div>
         </div>
         <div class="bs-dots"><span></span><span></span><span></span></div>
       </div>
+      <!--app-html:end-->
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

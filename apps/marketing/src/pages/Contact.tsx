@@ -22,6 +22,7 @@ import { ScrollReveal } from "../components/common/ScrollReveal.tsx";
 import { StaggerChildren } from "../components/common/StaggerChildren.tsx";
 import { HeroReveal } from "../components/common/HeroReveal.tsx";
 import SEO from "../components/common/SEO.tsx";
+import { staticPageSeo } from "../seo/structuredData.ts";
 import { useSiteData } from "../context/SiteDataContext.tsx";
 import { submitContact, submitTranscriptRequest, subscribeNewsletter } from "../api/client.ts";
 import SplashScreen from "../components/common/SplashScreen.tsx";
@@ -186,11 +187,7 @@ const Contact = () => {
 
     return (
         <Layout>
-            <SEO
-                title="Contact"
-                description="Reach the UPOSA desk for enquiries, transcript requests, alumni support, and association updates."
-                canonicalPath="/contact"
-            />
+            <SEO {...staticPageSeo('contact')} />
 
             <section className="relative overflow-hidden bg-base-100 text-primary">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
@@ -202,7 +199,7 @@ const Contact = () => {
                     }}
                 />
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -right-24 top-8 h-[520px] w-[520px] object-contain opacity-[0.08] md:h-[680px] md:w-[680px]"
@@ -212,7 +209,7 @@ const Contact = () => {
                     <HeroReveal>
                         <div className="max-w-4xl">
                             <div className="mb-8 inline-flex items-center gap-3 border border-primary/15 bg-base-200 px-4 py-2">
-                                <img src="/logo.png" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
+                                <img src="/logo.webp" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">Contact desk</p>
                                     <p className="text-sm font-semibold text-primary/70">Messages, documents, and alumni support</p>

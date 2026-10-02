@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback, useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 
 type Theme = "light" | "dark";
@@ -7,7 +7,11 @@ const THEME_MAP = { light: "uposa-light", dark: "uposa-dark" } as const;
 
 function applyTheme(theme: Theme) {
     document.documentElement.setAttribute("data-theme", THEME_MAP[theme]);
-    localStorage.setItem("uposa-theme", theme);
+    try {
+        localStorage.setItem("uposa-theme", theme);
+    } catch {
+        // Storage blocked; the theme still applies for this visit.
+    }
 }
 
 /**
@@ -49,15 +53,41 @@ function runThemeTransition(next: Theme, commit: () => void, event?: { clientX: 
     });
 }
 
-export function useTheme() {
-    const [theme, setTheme] = useState<Theme>(() => {
-        if (typeof window === "undefined") return "light";
-
-        const stored = localStorage.getItem("uposa-theme") as Theme | null;
+function readPreferredTheme(): Theme {
+    try {
+        const stored = localStorage.getItem("uposa-theme");
         if (stored === "light" || stored === "dark") return stored;
+    } catch {
+        // Storage can be blocked (privacy mode); fall through to the OS preference.
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
 
-        return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    });
+// Module-level store so prerendered HTML (always "light") hydrates cleanly and
+// the client switches to the visitor's theme right after, without a mismatch.
+let currentTheme: Theme | null = null;
+const listeners = new Set<() => void>();
+
+const themeStore = {
+    subscribe(listener: () => void) {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+    },
+    getSnapshot(): Theme {
+        currentTheme ??= readPreferredTheme();
+        return currentTheme;
+    },
+    getServerSnapshot(): Theme {
+        return "light";
+    },
+    set(next: Theme) {
+        currentTheme = next;
+        listeners.forEach((listener) => listener());
+    },
+};
+
+export function useTheme() {
+    const theme = useSyncExternalStore(themeStore.subscribe, themeStore.getSnapshot, themeStore.getServerSnapshot);
 
     useEffect(() => {
         applyTheme(theme);
@@ -66,7 +96,7 @@ export function useTheme() {
     const toggle = useCallback(
         (event?: { clientX: number; clientY: number }) => {
             const next: Theme = theme === "light" ? "dark" : "light";
-            runThemeTransition(next, () => setTheme(next), event);
+            runThemeTransition(next, () => themeStore.set(next), event);
         },
         [theme],
     );

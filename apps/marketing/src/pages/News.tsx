@@ -18,7 +18,8 @@ import { ScrollReveal } from "../components/common/ScrollReveal.tsx";
 import { StaggerChildren } from "../components/common/StaggerChildren.tsx";
 import { HeroReveal } from "../components/common/HeroReveal.tsx";
 import SEO from "../components/common/SEO.tsx";
-import { useSiteData } from "../context/SiteDataContext.tsx";
+import { staticPageSeo } from "../seo/structuredData.ts";
+import { usePrerenderedPage, useSiteData } from "../context/SiteDataContext.tsx";
 import SplashScreen from "../components/common/SplashScreen.tsx";
 import EmptyState from "../components/common/EmptyState.tsx";
 
@@ -76,7 +77,7 @@ function ArticleImage({ item, className = "" }: { item: NewsItem; className?: st
                 />
             ) : (
                 <div className="flex h-full min-h-64 flex-col items-center justify-center bg-primary p-8 text-center text-primary-content">
-                    <img src="/logo.png" alt="" aria-hidden="true" className="mb-5 h-20 w-20 bg-base-100 object-contain p-2 opacity-90" />
+                    <img src="/logo.webp" alt="" aria-hidden="true" className="mb-5 h-20 w-20 bg-base-100 object-contain p-2 opacity-90" />
                     <Newspaper size={34} className="text-secondary" />
                 </div>
             )}
@@ -106,17 +107,24 @@ function ArticleMeta({ item, light = false }: { item: NewsItem; light?: boolean 
 
 const News = () => {
     const { data, loading } = useSiteData();
-    const [allNews, setAllNews] = useState<NewsItem[]>([]);
+    const prerendered = usePrerenderedPage<NewsItem[]>("news");
+    const [fetchedNews, setFetchedNews] = useState<NewsItem[] | null>(prerendered ?? null);
     const [category, setCategory] = useState("ALL");
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
+    const allNews = useMemo(() => fetchedNews ?? data?.latestNews ?? [], [fetchedNews, data]);
 
     useEffect(() => {
-        fetch(`${API_BASE}/news`)
+        // The API pages at 10 by default; ask for everything so no article is orphaned.
+        fetch(`${API_BASE}/news?limit=100`)
             .then(async (response) => response.json() as Promise<NewsResponse>)
-            .then((json) => setAllNews(Array.isArray(json.data) ? json.data : []))
-            .catch(() => setAllNews(data?.latestNews || []));
-    }, [data]);
+            .then((json) => {
+                if (Array.isArray(json.data)) setFetchedNews(json.data);
+            })
+            .catch(() => {
+                // Keep the prerendered list, or fall back to latestNews from site data.
+            });
+    }, []);
 
     const categories = useMemo(() => {
         const unique = new Set(allNews.map((item) => item.category).filter(Boolean));
@@ -145,11 +153,7 @@ const News = () => {
 
     return (
         <Layout>
-            <SEO
-                title="News & Announcements"
-                description="Stay updated with the latest news, announcements, and stories from UPOSA and University Practice Senior High School."
-                canonicalPath="/news"
-            />
+            <SEO {...staticPageSeo('news')} />
 
             <section className="relative overflow-hidden bg-base-100 text-primary">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
@@ -161,7 +165,7 @@ const News = () => {
                     }}
                 />
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -right-24 top-8 h-[520px] w-[520px] object-contain opacity-[0.08] md:h-[680px] md:w-[680px]"
@@ -171,7 +175,7 @@ const News = () => {
                     <HeroReveal>
                         <div className="max-w-4xl">
                             <div className="mb-8 inline-flex items-center gap-3 border border-primary/15 bg-base-200 px-4 py-2">
-                                <img src="/logo.png" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
+                                <img src="/logo.webp" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">News desk</p>
                                     <p className="text-sm font-semibold text-primary/70">Announcements, reports, and alumni stories</p>

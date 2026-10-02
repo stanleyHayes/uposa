@@ -14,4 +14,15 @@ export default defineConfig({
   resolve: {
     dedupe: ['react', 'react-dom'],
   },
+  build: {
+    // scripts/prerender.mjs reads this to add <link rel="modulepreload"> for
+    // each prerendered route's own chunk (then deletes it from dist).
+    manifest: true,
+  },
+  // The prerender (SSR) build must bundle its dependencies too: hoisted
+  // packages like framer-motion would otherwise import the root's React 18 at
+  // runtime instead of this app's React 19 (same issue as `dedupe` above).
+  ssr: {
+    noExternal: true,
+  },
 })

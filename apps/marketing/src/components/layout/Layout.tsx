@@ -19,12 +19,12 @@ const SiteWatermarks = () => (
             }}
         />
         <img
-            src="/logo.png"
+            src="/logo.webp"
             alt=""
             className="absolute -right-32 top-24 h-[420px] w-[420px] object-contain opacity-[0.028] md:h-[560px] md:w-[560px]"
         />
         <img
-            src="/logo.png"
+            src="/logo.webp"
             alt=""
             className="absolute -left-28 bottom-8 h-[320px] w-[320px] object-contain opacity-[0.022] md:h-[460px] md:w-[460px]"
         />

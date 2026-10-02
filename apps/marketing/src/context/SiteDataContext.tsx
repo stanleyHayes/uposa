@@ -187,20 +187,49 @@ export interface SiteData {
   schoolLeaders: SchoolLeaderData[];
 }
 
+/**
+ * Data captured at build time by scripts/prerender.mjs. It is embedded in each
+ * prerendered page as JSON so the first client render matches the static HTML
+ * (hydration) without waiting on the API. `pages` holds per-route API
+ * responses keyed like "news", "events", "news/<slug>".
+ */
+export interface PrerenderPayload {
+  siteData: SiteData | null;
+  pages: Record<string, unknown>;
+}
+
+export const PRERENDER_DATA_ID = '__UPOSA_DATA__';
+
 interface SiteDataContextType {
   data: SiteData | null;
   loading: boolean;
   error: string | null;
+  pages: Record<string, unknown>;
 }
 
-const SiteDataContext = createContext<SiteDataContextType>({ data: null, loading: true, error: null });
+const SiteDataContext = createContext<SiteDataContextType>({ data: null, loading: true, error: null, pages: {} });
 
-export function SiteDataProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<SiteData | null>(null);
-  const [loading, setLoading] = useState(true);
+function readEmbeddedPayload(): PrerenderPayload | null {
+  if (typeof document === 'undefined') return null;
+  const el = document.getElementById(PRERENDER_DATA_ID);
+  if (!el?.textContent) return null;
+  try {
+    return JSON.parse(el.textContent) as PrerenderPayload;
+  } catch {
+    return null;
+  }
+}
+
+export function SiteDataProvider({ children, initialPayload }: { children: ReactNode; initialPayload?: PrerenderPayload }) {
+  const [payload] = useState(() => initialPayload ?? readEmbeddedPayload());
+  const [data, setData] = useState<SiteData | null>(payload?.siteData ?? null);
+  const [loading, setLoading] = useState(!payload?.siteData);
   const [error, setError] = useState<string | null>(null);
+  const pages = payload?.pages ?? {};
 
   useEffect(() => {
+    // Prerendered pages already have data; refresh it quietly so content
+    // published since the last build still shows up.
     fetchSiteData()
       .then(setData)
       .catch((e) => setError(e.message))
@@ -212,7 +241,7 @@ export function SiteDataProvider({ children }: { children: ReactNode }) {
   if (error && !data) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-5 bg-base-100 px-6 text-center text-primary">
-        <img src="/logo.png" alt="UPOSA" className="h-16 w-16 object-contain opacity-80" />
+        <img src="/logo.webp" alt="UPOSA" className="h-16 w-16 object-contain opacity-80" />
         <div>
           <h1 className="text-2xl font-bold">We couldn't load the site right now</h1>
           <p className="mt-2 max-w-md text-base-content/60">
@@ -227,7 +256,7 @@ export function SiteDataProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <SiteDataContext.Provider value={{ data, loading, error }}>
+    <SiteDataContext.Provider value={{ data, loading, error, pages }}>
       {children}
     </SiteDataContext.Provider>
   );
@@ -236,4 +265,10 @@ export function SiteDataProvider({ children }: { children: ReactNode }) {
 // eslint-disable-next-line react-refresh/only-export-components
 export function useSiteData() {
   return useContext(SiteDataContext);
+}
+
+/** Build-time API response for this route, if the page was prerendered with it. */
+// eslint-disable-next-line react-refresh/only-export-components
+export function usePrerenderedPage<T>(key: string): T | undefined {
+  return useContext(SiteDataContext).pages[key] as T | undefined;
 }

@@ -23,6 +23,7 @@ import { ScrollReveal } from "../components/common/ScrollReveal.tsx";
 import { StaggerChildren } from "../components/common/StaggerChildren.tsx";
 import { HeroReveal } from "../components/common/HeroReveal.tsx";
 import SEO from "../components/common/SEO.tsx";
+import { staticPageSeo } from "../seo/structuredData.ts";
 import SplashScreen from "../components/common/SplashScreen.tsx";
 import EmptyState from "../components/common/EmptyState.tsx";
 import { SkeletonBlock, SkeletonCardGrid, SkeletonRows } from "../components/common/Skeleton.tsx";
@@ -309,11 +310,7 @@ const Community = () => {
 
     return (
         <Layout>
-            <SEO
-                title="Community"
-                description="Join the UPOSA community through mentorship, job opportunities, discussions, polls, and elections."
-                canonicalPath="/community"
-            />
+            <SEO {...staticPageSeo('community')} />
 
             <section className="relative overflow-hidden bg-base-100 text-primary">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
@@ -325,7 +322,7 @@ const Community = () => {
                     }}
                 />
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -right-24 top-8 h-[520px] w-[520px] object-contain opacity-[0.08] md:h-[680px] md:w-[680px]"
@@ -335,7 +332,7 @@ const Community = () => {
                     <HeroReveal>
                         <div className="max-w-4xl">
                             <div className="mb-8 inline-flex items-center gap-3 border border-primary/15 bg-base-200 px-4 py-2">
-                                <img src="/logo.png" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
+                                <img src="/logo.webp" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">Community desk</p>
                                     <p className="text-sm font-semibold text-primary/70">Mentors, jobs, forum, and votes</p>

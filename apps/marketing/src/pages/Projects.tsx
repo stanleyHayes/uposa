@@ -23,7 +23,8 @@ import { ScrollReveal } from "../components/common/ScrollReveal.tsx";
 import { StaggerChildren } from "../components/common/StaggerChildren.tsx";
 import { HeroReveal } from "../components/common/HeroReveal.tsx";
 import SEO from "../components/common/SEO.tsx";
-import { useSiteData } from "../context/SiteDataContext.tsx";
+import { staticPageSeo } from "../seo/structuredData.ts";
+import { usePrerenderedPage, useSiteData } from "../context/SiteDataContext.tsx";
 import SplashScreen from "../components/common/SplashScreen.tsx";
 import EmptyState from "../components/common/EmptyState.tsx";
 import StatusPill from "../components/common/StatusPill.tsx";
@@ -91,7 +92,7 @@ function ProjectImage({ src, title, className = "" }: { src?: string | null; tit
     if (!src || failed) {
         return (
             <div className={`relative grid place-items-center overflow-hidden bg-primary ${className}`}>
-                <img src="/logo.png" alt="" aria-hidden="true" className="h-28 w-28 object-contain opacity-20" />
+                <img src="/logo.webp" alt="" aria-hidden="true" className="h-28 w-28 object-contain opacity-20" />
                 <div
                     className="absolute inset-0 opacity-15"
                     style={{
@@ -135,26 +136,28 @@ function ProjectProgress({ project, dark = false }: { project: ProjectItem; dark
 
 const Projects = () => {
     const { data, loading } = useSiteData();
-    const [allProjects, setAllProjects] = useState<ProjectItem[]>([]);
-    const [projectsLoading, setProjectsLoading] = useState(true);
+    const prerendered = usePrerenderedPage<ProjectItem[]>("projects");
+    const [allProjects, setAllProjects] = useState<ProjectItem[]>(prerendered ?? []);
+    const [projectsLoading, setProjectsLoading] = useState(!prerendered);
     const [status, setStatus] = useState<ProjectStatusFilter>("ALL");
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
+    const fallbackProjects = data?.ongoingProjects;
 
     useEffect(() => {
         let cancelled = false;
 
-        setProjectsLoading(true);
-        fetch(`${API_BASE}/projects`)
+        fetch(`${API_BASE}/projects?limit=100`)
             .then((response) => response.json() as Promise<ProjectsResponse>)
             .then((responseData) => {
-                if (!cancelled) {
-                    setAllProjects(responseData.data || responseData.ongoingProjects || data?.ongoingProjects || []);
-                }
+                if (cancelled) return;
+                const list = responseData.data || responseData.ongoingProjects;
+                if (list) setAllProjects(list);
+                else if (!prerendered) setAllProjects(fallbackProjects || []);
             })
             .catch(() => {
-                if (!cancelled) {
-                    setAllProjects(data?.ongoingProjects || []);
+                if (!cancelled && !prerendered) {
+                    setAllProjects(fallbackProjects || []);
                 }
             })
             .finally(() => {
@@ -166,7 +169,7 @@ const Projects = () => {
         return () => {
             cancelled = true;
         };
-    }, [data]);
+    }, [fallbackProjects, prerendered]);
 
     const filtered = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -206,11 +209,7 @@ const Projects = () => {
 
     return (
         <Layout>
-            <SEO
-                title="Projects"
-                description="Explore UPOSA's ongoing and completed projects supporting University Practice Senior High School infrastructure, NSMQ team, and student welfare."
-                canonicalPath="/projects"
-            />
+            <SEO {...staticPageSeo('projects')} />
 
             <section className="relative overflow-hidden bg-base-100 text-primary">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
@@ -222,7 +221,7 @@ const Projects = () => {
                     }}
                 />
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -right-24 top-8 h-[520px] w-[520px] object-contain opacity-[0.08] md:h-[680px] md:w-[680px]"
@@ -232,7 +231,7 @@ const Projects = () => {
                     <HeroReveal>
                         <div className="max-w-4xl">
                             <div className="mb-8 inline-flex items-center gap-3 border border-primary/15 bg-base-200 px-4 py-2">
-                                <img src="/logo.png" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
+                                <img src="/logo.webp" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">Projects desk</p>
                                     <p className="text-sm font-semibold text-primary/70">Funding, school support, and visible delivery</p>

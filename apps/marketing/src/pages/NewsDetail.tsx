@@ -18,7 +18,8 @@ import { HeroReveal } from "../components/common/HeroReveal.tsx";
 import SEO from "../components/common/SEO.tsx";
 import MarkdownContent from "../components/common/MarkdownContent.tsx";
 import { SkeletonBlock, SkeletonLines } from "../components/common/Skeleton.tsx";
-import { useSiteData } from "../context/SiteDataContext.tsx";
+import { usePrerenderedPage, useSiteData } from "../context/SiteDataContext.tsx";
+import { breadcrumbs, newsArticle } from "../seo/structuredData.ts";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
@@ -31,6 +32,7 @@ type NewsDetailItem = {
     category: string;
     authorName?: string | null;
     publishedAt?: string | null;
+    updatedAt?: string | null;
 };
 
 type NewsDetailResponse = {
@@ -98,7 +100,7 @@ function NewsHeroImage({ src, title }: { src?: string | null; title: string }) {
                         backgroundSize: "40px 40px",
                     }}
                 />
-                <img src="/logo.png" alt="" aria-hidden="true" className="absolute -right-16 -top-16 h-72 w-72 object-contain opacity-[0.08]" />
+                <img src="/logo.webp" alt="" aria-hidden="true" className="absolute -right-16 -top-16 h-72 w-72 object-contain opacity-[0.08]" />
                 <div className="relative text-center">
                     <Newspaper size={42} className="mx-auto mb-4 text-secondary" />
                     <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary-content/55">UPOSA news desk</p>
@@ -119,10 +121,10 @@ function NewsHeroImage({ src, title }: { src?: string | null; title: string }) {
     );
 }
 
-function NewsDetailSkeleton() {
+function NewsDetailSkeleton({ slug }: { slug?: string }) {
     return (
         <Layout>
-            <SEO title="Loading Article" canonicalPath="/news" />
+            <SEO title="UPOSA News" canonicalPath={slug ? `/news/${slug}` : "/news"} />
             <section className="relative overflow-hidden bg-base-100">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
                 <div className="mx-auto grid max-w-7xl gap-8 px-4 py-16 md:py-24 lg:grid-cols-[1fr_360px] lg:items-end">
@@ -154,8 +156,9 @@ function NewsDetailSkeleton() {
 const NewsDetail = () => {
     const { slug } = useParams<{ slug: string }>();
     const { data } = useSiteData();
-    const [item, setItem] = useState<NewsDetailItem | null>(null);
-    const [loading, setLoading] = useState(true);
+    const prerendered = usePrerenderedPage<NewsDetailItem>(`news/${slug}`);
+    const [item, setItem] = useState<NewsDetailItem | null>(prerendered ?? null);
+    const [loading, setLoading] = useState(!prerendered);
 
     const fallbackItem = useMemo(
         () => data?.latestNews.find((article) => article.slug === slug) || null,
@@ -166,15 +169,16 @@ const NewsDetail = () => {
         if (!slug) return;
 
         let cancelled = false;
-        setLoading(true);
 
+        // Routes remount per pathname, so `item` is only set here when this
+        // article was prerendered; keep it if the refresh fails.
         fetch(`${API_BASE}/news/${slug}`)
             .then((response) => response.json() as Promise<NewsDetailResponse>)
             .then((json) => {
-                if (!cancelled) setItem(json.data || fallbackItem);
+                if (!cancelled) setItem((current) => json.data || current || fallbackItem);
             })
             .catch(() => {
-                if (!cancelled) setItem(fallbackItem);
+                if (!cancelled) setItem((current) => current || fallbackItem);
             })
             .finally(() => {
                 if (!cancelled) setLoading(false);
@@ -186,13 +190,13 @@ const NewsDetail = () => {
     }, [fallbackItem, slug]);
 
     if (loading) {
-        return <NewsDetailSkeleton />;
+        return <NewsDetailSkeleton slug={slug} />;
     }
 
     if (!item) {
         return (
             <Layout>
-                <SEO title="Article Not Found" canonicalPath="/news" />
+                <SEO title="Article Not Found" canonicalPath="/news" noindex />
                 <section className="relative overflow-hidden bg-base-100 text-primary">
                     <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
                     <div className="mx-auto max-w-4xl px-4 py-20 text-center md:py-28">
@@ -225,6 +229,13 @@ const NewsDetail = () => {
                 description={summary}
                 canonicalPath={`/news/${slug}`}
                 ogType="article"
+                ogImage={item.imageUrl}
+                publishedTime={item.publishedAt}
+                modifiedTime={item.updatedAt}
+                jsonLd={[
+                    newsArticle({ ...item, slug: slug ?? "", description: summary }),
+                    breadcrumbs([{ name: "News", path: "/news" }, { name: item.title, path: `/news/${slug}` }]),
+                ]}
             />
 
             <section className="relative overflow-hidden bg-base-100 text-primary">
@@ -237,7 +248,7 @@ const NewsDetail = () => {
                     }}
                 />
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -right-28 top-6 h-[520px] w-[520px] object-contain opacity-[0.08] md:h-[700px] md:w-[700px]"

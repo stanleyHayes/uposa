@@ -33,6 +33,8 @@ import { StaggerChildren } from "../components/common/StaggerChildren.tsx";
 import { HeroReveal } from "../components/common/HeroReveal.tsx";
 import { AnimatedCounter } from "../components/common/AnimatedCounter.tsx";
 import SEO from "../components/common/SEO.tsx";
+import { STATIC_ROUTES } from "../seo/site.ts";
+import { organizationGraph } from "../seo/structuredData.ts";
 import EmptyState from "../components/common/EmptyState.tsx";
 import { useSiteData } from "../context/SiteDataContext.tsx";
 import { subscribeNewsletter } from "../api/client.ts";
@@ -124,7 +126,11 @@ const Home = () => {
 
     return (
         <Layout>
-            <SEO canonicalPath="/" />
+            <SEO
+                description={STATIC_ROUTES.home.description}
+                canonicalPath="/"
+                jsonLd={organizationGraph({ email: contactEmail, phone: contactPhone, address: data.config.contact.address })}
+            />
 
             <section className="relative overflow-hidden bg-base-100 text-primary">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
@@ -137,7 +143,7 @@ const Home = () => {
                 />
                 <Parallax offset={150} className="pointer-events-none absolute -right-28 top-8 md:top-4">
                     <img
-                        src="/logo.png"
+                        src="/logo.webp"
                         alt=""
                         aria-hidden="true"
                         className="h-[520px] w-[520px] object-contain opacity-[0.1] md:h-[680px] md:w-[680px]"
@@ -148,7 +154,7 @@ const Home = () => {
                     <HeroReveal>
                         <div className="max-w-4xl">
                             <div className="mb-8 inline-flex items-center gap-3 border border-primary/15 bg-base-200 px-4 py-2">
-                                <img src="/logo.png" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
+                                <img src="/logo.webp" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">The Legit Elites</p>
                                     <p className="text-sm font-semibold text-primary/70">University Practice Old Students Association</p>
@@ -198,7 +204,7 @@ const Home = () => {
                                         <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">UPOSA Desk</p>
                                         <h2 className="mt-2 text-3xl font-bold leading-tight">What do you need today?</h2>
                                     </div>
-                                    <img src="/logo.png" alt="" aria-hidden="true" className="h-16 w-16 shrink-0 bg-primary-content object-contain p-1.5" />
+                                    <img src="/logo.webp" alt="" aria-hidden="true" className="h-16 w-16 shrink-0 bg-primary-content object-contain p-1.5" />
                                 </div>
                                 <div className="mt-7 space-y-3">
                                     {actionCards.map((item) => {
@@ -249,7 +255,7 @@ const Home = () => {
                 <div className="mx-auto max-w-7xl px-4">
                     <div className="grid overflow-hidden border border-primary/15 bg-primary text-primary-content lg:grid-cols-[1fr_auto]">
                         <div className="relative p-6 md:p-8">
-                            <ParallaxImg src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -right-10 top-1/2 h-56 w-56 -translate-y-1/2 object-contain opacity-[0.06]" />
+                            <ParallaxImg src="/logo.webp" alt="" aria-hidden="true" className="pointer-events-none absolute -right-10 top-1/2 h-56 w-56 -translate-y-1/2 object-contain opacity-[0.06]" />
                             <div className="relative max-w-3xl">
                                 <p className="mb-4 text-sm font-bold uppercase tracking-[0.24em] text-secondary">Choose a lane this week</p>
                                 <h2 className="text-3xl font-bold leading-tight md:text-4xl">A longer homepage is useful only if it keeps sending people somewhere practical.</h2>
@@ -276,7 +282,7 @@ const Home = () => {
             <Reveal3D>
             <section className="relative overflow-hidden bg-base-200 py-16 md:py-24">
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -left-24 top-8 h-[360px] w-[360px] object-contain opacity-[0.035]"
@@ -289,7 +295,7 @@ const Home = () => {
                                     <p className="text-sm font-bold uppercase tracking-[0.24em] text-secondary">Member journey</p>
                                     <h2 className="mt-4 text-4xl font-bold leading-tight md:text-5xl">From old student to active contributor.</h2>
                                 </div>
-                                <img src="/logo.png" alt="" aria-hidden="true" className="h-16 w-16 shrink-0 bg-primary-content object-contain p-1.5" />
+                                <img src="/logo.webp" alt="" aria-hidden="true" className="h-16 w-16 shrink-0 bg-primary-content object-contain p-1.5" />
                             </div>
                             <p className="max-w-md leading-relaxed text-primary-content/68">
                                 The homepage should help someone know what to do in the first thirty seconds: join, pay, follow, attend, support, and contact the desk.
@@ -340,7 +346,7 @@ const Home = () => {
             <section className="relative overflow-hidden bg-base-100 py-16 md:py-24">
                 <div className="absolute left-0 top-0 h-full w-2 bg-secondary" />
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -bottom-28 right-4 h-[340px] w-[340px] object-contain opacity-[0.035]"
@@ -393,7 +399,7 @@ const Home = () => {
 
             <section className="relative overflow-hidden bg-primary text-primary-content">
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -right-28 top-10 h-[420px] w-[420px] object-contain opacity-[0.09]"
@@ -537,7 +543,7 @@ const Home = () => {
                                             <img src={featuredNews.imageUrl} alt={featuredNews.title} className="h-full min-h-64 w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
                                         ) : (
                                             <div className="relative min-h-64 overflow-hidden bg-primary p-8 text-primary-content">
-                                                <img src="/logo.png" alt="" aria-hidden="true" className="absolute -right-10 top-8 h-60 w-60 object-contain opacity-[0.1]" />
+                                                <img src="/logo.webp" alt="" aria-hidden="true" className="absolute -right-10 top-8 h-60 w-60 object-contain opacity-[0.1]" />
                                                 <Newspaper size={44} className="relative text-secondary" />
                                             </div>
                                         )}
@@ -640,7 +646,7 @@ const Home = () => {
             <section className="relative overflow-hidden bg-base-200 py-16 md:py-24">
                 <div className="absolute inset-x-0 top-0 h-px bg-base-300" />
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -bottom-24 left-6 h-[340px] w-[340px] object-contain opacity-[0.035]"
@@ -686,7 +692,7 @@ const Home = () => {
 
             <section className="relative overflow-hidden bg-base-100 py-16 md:py-24">
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -left-20 top-8 h-[300px] w-[300px] object-contain opacity-[0.03]"
@@ -717,7 +723,7 @@ const Home = () => {
                                             </div>
                                         ) : (
                                             <div className="relative aspect-[16/10] overflow-hidden bg-primary text-primary-content">
-                                                <img src="/logo.png" alt="" aria-hidden="true" className="absolute -right-8 top-4 h-44 w-44 object-contain opacity-[0.1]" />
+                                                <img src="/logo.webp" alt="" aria-hidden="true" className="absolute -right-8 top-4 h-44 w-44 object-contain opacity-[0.1]" />
                                                 <Newspaper size={42} className="absolute bottom-6 left-6 text-secondary" />
                                             </div>
                                         )}
@@ -750,7 +756,7 @@ const Home = () => {
 
             <section className="relative overflow-hidden bg-base-200 py-16 md:py-24">
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -right-24 bottom-8 h-[360px] w-[360px] object-contain opacity-[0.035]"
@@ -828,7 +834,7 @@ const Home = () => {
                     }}
                 />
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -bottom-36 -right-16 h-[420px] w-[420px] object-contain opacity-[0.1]"

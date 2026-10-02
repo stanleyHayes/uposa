@@ -1,5 +1,5 @@
 import {StrictMode} from 'react'
-import {createRoot} from 'react-dom/client'
+import {createRoot, hydrateRoot} from 'react-dom/client'
 import '@fontsource/fraunces/latin-600.css'
 import '@fontsource/fraunces/latin-700.css'
 import '@fontsource/fraunces/latin-800.css'
@@ -13,17 +13,26 @@ import '@fontsource/outfit/latin-900.css'
 import './index.css'
 import App from './App.tsx'
 import {BrowserRouter} from "react-router";
-import {HelmetProvider} from "react-helmet-async";
 import {SiteDataProvider} from "./context/SiteDataContext.tsx";
 
-createRoot(document.getElementById('root')!).render(
+const container = document.getElementById('root')!;
+
+const app = (
     <StrictMode>
-        <HelmetProvider>
-            <BrowserRouter>
-                <SiteDataProvider>
-                    <App/>
-                </SiteDataProvider>
-            </BrowserRouter>
-        </HelmetProvider>
-    </StrictMode>,
-)
+        <BrowserRouter>
+            <SiteDataProvider>
+                <App/>
+            </SiteDataProvider>
+        </BrowserRouter>
+    </StrictMode>
+);
+
+if (container.dataset.prerendered === 'true') {
+    // scripts/prerender.mjs rendered this route at build time; attach to it.
+    hydrateRoot(container, app);
+} else {
+    // SPA shell (e.g. an article published after the last build): drop the
+    // generic head tags so the page's own <SEO> tags are the only ones.
+    document.head.querySelectorAll('[data-seo-default]').forEach((el) => el.remove());
+    createRoot(container).render(app);
+}

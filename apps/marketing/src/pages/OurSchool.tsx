@@ -26,6 +26,7 @@ import { ScrollReveal } from "../components/common/ScrollReveal.tsx";
 import { StaggerChildren } from "../components/common/StaggerChildren.tsx";
 import { HeroReveal } from "../components/common/HeroReveal.tsx";
 import SEO from "../components/common/SEO.tsx";
+import { staticPageSeo, highSchool } from "../seo/structuredData.ts";
 import { useSiteData, type GalleryItemData } from "../context/SiteDataContext.tsx";
 import SplashScreen from "../components/common/SplashScreen.tsx";
 import EmptyState from "../components/common/EmptyState.tsx";
@@ -64,7 +65,7 @@ const GalleryTile = ({ image, index, onOpen }: GalleryTileProps) => {
             ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-base-100 p-6 text-center">
                     <div className="mb-4 border border-secondary/30 bg-base-200 p-4">
-                        <img src="/logo.png" alt="" aria-hidden="true" className="h-16 w-16 object-contain opacity-90" />
+                        <img src="/logo.webp" alt="" aria-hidden="true" className="h-16 w-16 object-contain opacity-90" />
                     </div>
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-secondary">Image unavailable</p>
                 </div>
@@ -148,7 +149,7 @@ const OurSchool = () => {
 
     return (
         <Layout>
-            <SEO title="Our School" description="Learn about University Practice Senior High School (UPSHS), its academic programs, leadership, achievements, gallery, and legacy in Cape Coast, Ghana." canonicalPath="/our-school" />
+            <SEO {...staticPageSeo('ourSchool', [highSchool({ name: schoolInfo.name, location: schoolInfo.location, founded: schoolInfo.founded })])} />
 
             <section className="relative overflow-hidden bg-base-100 text-primary">
                 <div className="absolute inset-x-0 top-0 h-2 bg-secondary" />
@@ -160,7 +161,7 @@ const OurSchool = () => {
                     }}
                 />
                 <ParallaxImg
-                    src="/logo.png"
+                    src="/logo.webp"
                     alt=""
                     aria-hidden="true"
                     className="pointer-events-none absolute -right-24 top-8 h-[520px] w-[520px] object-contain opacity-[0.08] md:top-4 md:h-[680px] md:w-[680px]"
@@ -170,7 +171,7 @@ const OurSchool = () => {
                     <HeroReveal>
                         <div className="max-w-4xl">
                             <div className="mb-8 inline-flex items-center gap-3 border border-primary/15 bg-base-200 px-4 py-2">
-                                <img src="/logo.png" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
+                                <img src="/logo.webp" alt="UPOSA crest" className="h-10 w-10 bg-base-100 object-contain p-1" />
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">Our school</p>
                                     <p className="text-sm font-semibold text-primary/70">{schoolInfo.abbreviation || "UPSHS"} legacy</p>
@@ -207,7 +208,7 @@ const OurSchool = () => {
                                         <p className="text-xs font-bold uppercase tracking-[0.2em] text-secondary">School brief</p>
                                         <h2 className="mt-2 text-3xl font-bold leading-tight">{schoolInfo.abbreviation || schoolInfo.name}</h2>
                                     </div>
-                                    <img src="/logo.png" alt="" aria-hidden="true" className="h-16 w-16 shrink-0 bg-primary-content object-contain p-1.5" />
+                                    <img src="/logo.webp" alt="" aria-hidden="true" className="h-16 w-16 shrink-0 bg-primary-content object-contain p-1.5" />
                                 </div>
 
                                 <div className="mt-7 space-y-3">
@@ -499,7 +500,7 @@ const OurSchool = () => {
                                     src={filteredGallery[lightboxIndex].imageUrl}
                                     alt={filteredGallery[lightboxIndex].title}
                                     onError={(event) => {
-                                        event.currentTarget.src = "/logo.png";
+                                        event.currentTarget.src = "/logo.webp";
                                         event.currentTarget.className = "max-h-[70vh] w-full bg-base-100 p-10 object-contain";
                                     }}
                                     className="max-h-[70vh] w-full object-contain"
@@ -548,7 +549,7 @@ const OurSchool = () => {
                         backgroundSize: "42px 42px",
                     }}
                 />
-                <ParallaxImg src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -bottom-36 -right-16 h-[420px] w-[420px] object-contain opacity-[0.1]" />
+                <ParallaxImg src="/logo.webp" alt="" aria-hidden="true" className="pointer-events-none absolute -bottom-36 -right-16 h-[420px] w-[420px] object-contain opacity-[0.1]" />
                 <ScrollReveal>
                     <div className="relative mx-auto max-w-4xl px-4 text-center">
                         <div className="mb-6 inline-flex items-center gap-2 border border-primary-content/12 bg-primary-content/10 px-4 py-2">

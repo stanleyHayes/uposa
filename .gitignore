@@ -1,6 +1,7 @@
 node_modules
 node_modules.bak
 dist
+dist-ssr
 .env
 .env.local
 .env.*.local
@@ -11,6 +12,8 @@ uploads/*
 !uploads/.gitkeep
 
 *.txt
+# robots.txt must deploy with the site (it was silently ignored before)
+!apps/*/public/robots.txt
 package-lock.json
 
 *.tsbuildinfo

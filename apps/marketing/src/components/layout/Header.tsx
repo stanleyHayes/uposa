@@ -196,7 +196,7 @@ export const Header = () => {
                 <div className="flex min-h-[72px] items-center justify-between gap-4 py-3">
                     <Link to="/" className="group flex min-w-0 shrink-0 items-center gap-3">
                         <span className="grid h-12 w-12 shrink-0 place-items-center border border-primary-content/10 bg-primary-content/10">
-                            <img src="/logo.png" alt="UPOSA" className="h-10 w-10 object-contain" />
+                            <img src="/logo.webp" alt="UPOSA" className="h-10 w-10 object-contain" />
                         </span>
                         <span className="hidden sm:block">
                             <span className="block text-lg font-bold leading-none tracking-wide">UPOSA</span>
