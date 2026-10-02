@@ -44,6 +44,8 @@ const About = () => {
     const yearGroupReps = data.yearGroupReps;
     const stats = data.config.stats;
     const school = data.config.schoolInfo;
+    const constitution = data.config.constitution;
+    const constitutionUrl = constitution?.url?.startsWith('https://') ? constitution.url : null;
     const repRows = Object.entries(yearGroupReps).sort(([a], [b]) => a.localeCompare(b));
     const representedYears = repRows.filter(([, reps]) => reps.length > 0).length;
     const totalCouncilMembers = repRows.reduce((total, [, reps]) => total + reps.length, 0);
@@ -390,11 +392,18 @@ const About = () => {
                                 <ScrollText size={27} />
                             </div>
                             <p className="leading-relaxed text-primary-content/70">
-                                The UPOSA Constitution outlines the governance structure, membership guidelines, and operational procedures of the association. All members are encouraged to familiarize themselves with these documents.
+                                {constitution?.summary?.trim() || "The UPOSA Constitution outlines the governance structure, membership guidelines, and operational procedures of the association. All members are encouraged to familiarize themselves with these documents."}
                             </p>
-                            <a href="/UPOSA_Constitution.pdf" download className="btn btn-secondary mt-7">
-                                <Download size={18} /> Download Constitution
-                            </a>
+                            {/* The document is published from admin → About content; until then, offer a copy on request. */}
+                            {constitutionUrl ? (
+                                <a href={constitutionUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary mt-7">
+                                    <Download size={18} /> Download Constitution
+                                </a>
+                            ) : (
+                                <Link to="/contact" className="btn btn-secondary mt-7">
+                                    <Download size={18} /> Request a copy
+                                </Link>
+                            )}
                         </div>
                     </ScrollReveal>
                 </div>

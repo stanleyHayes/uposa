@@ -177,6 +177,8 @@ export interface SiteData {
     history: HistoryConfig;
     stats: StatsConfig;
     schoolInfo: SchoolInfoConfig;
+    /** Uploaded in admin (About content). Null until a document is published. */
+    constitution?: { url: string; summary: string } | null;
   };
   executives: Executive[];
   yearGroupReps: Record<string, YearGroupRep[]>;
