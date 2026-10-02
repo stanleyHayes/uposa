@@ -31,6 +31,7 @@ const { render, STATIC_ROUTES, SITE_URL, absoluteUrl, PRERENDER_DATA_ID } = awai
 const PAGE_SOURCES = {
     '/': 'Home', '/about': 'About', '/our-school': 'OurSchool', '/membership': 'Membership', '/news': 'News',
     '/events': 'Events', '/projects': 'Projects', '/community': 'Community', '/donate': 'Donate', '/contact': 'Contact',
+    '/privacy': 'Privacy', '/terms': 'Terms', '/account-deletion': 'AccountDeletion',
 };
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,150}$/i;
 

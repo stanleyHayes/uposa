@@ -15,6 +15,9 @@ const Donate = lazy(() => import("./pages/Donate.tsx"));
 const OurSchool = lazy(() => import("./pages/OurSchool.tsx"));
 const NewsDetail = lazy(() => import("./pages/NewsDetail.tsx"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail.tsx"));
+const Privacy = lazy(() => import("./pages/Privacy.tsx"));
+const Terms = lazy(() => import("./pages/Terms.tsx"));
+const AccountDeletion = lazy(() => import("./pages/AccountDeletion.tsx"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage.tsx"));
 
 function App() {
@@ -38,6 +41,9 @@ function App() {
                     <Route path="/community" element={<Community />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/donate" element={<Donate />} />
+                    <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/terms" element={<Terms />} />
+                    <Route path="/account-deletion" element={<AccountDeletion />} />
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>
             </AnimatePresence>

@@ -118,7 +118,11 @@ const Membership = () => {
                 occupation: (fd.get("occupation") as string) || undefined,
                 areaOfExpertise: expertise.length > 0 ? expertise : undefined,
                 willingToVolunteer: fd.get("volunteer") ? "YES" : "NO",
-                consentGiven: !!fd.get("consent"),
+                acceptTerms: !!fd.get("acceptTerms"),
+                confirmAdult: !!fd.get("confirmAdult"),
+                directoryOptIn: !!fd.get("directoryOptIn"),
+                marketingOptIn: !!fd.get("marketingOptIn"),
+                consentGiven: !!fd.get("acceptTerms"),
             });
             setSubmitted(true);
             regFormRef.current?.reset();
@@ -474,8 +478,23 @@ const Membership = () => {
                                                     <span className="text-sm leading-relaxed text-base-content/70">I am willing to volunteer for UPOSA activities.</span>
                                                 </label>
                                                 <label className="flex cursor-pointer items-start gap-3">
-                                                    <input name="consent" type="checkbox" className="checkbox checkbox-primary checkbox-sm mt-0.5" required />
-                                                    <span className="text-sm leading-relaxed text-base-content/70">I consent to being contacted for association purposes. *</span>
+                                                    <input name="directoryOptIn" type="checkbox" className="checkbox checkbox-primary checkbox-sm mt-0.5" />
+                                                    <span className="text-sm leading-relaxed text-base-content/70">Show my profile in the member directory (name, year group, city and work, never my contact details).</span>
+                                                </label>
+                                                <label className="flex cursor-pointer items-start gap-3">
+                                                    <input name="marketingOptIn" type="checkbox" className="checkbox checkbox-primary checkbox-sm mt-0.5" />
+                                                    <span className="text-sm leading-relaxed text-base-content/70">Email me UPOSA news and updates. You can unsubscribe at any time.</span>
+                                                </label>
+                                                <label className="flex cursor-pointer items-start gap-3">
+                                                    <input name="confirmAdult" type="checkbox" className="checkbox checkbox-primary checkbox-sm mt-0.5" required />
+                                                    <span className="text-sm leading-relaxed text-base-content/70">I confirm I am 18 or older. *</span>
+                                                </label>
+                                                <label className="flex cursor-pointer items-start gap-3">
+                                                    <input name="acceptTerms" type="checkbox" className="checkbox checkbox-primary checkbox-sm mt-0.5" required />
+                                                    <span className="text-sm leading-relaxed text-base-content/70">
+                                                        I agree to the <Link to="/terms" target="_blank" className="font-semibold text-primary underline">Terms of Use</Link> and{" "}
+                                                        <Link to="/privacy" target="_blank" className="font-semibold text-primary underline">Privacy Policy</Link>, and consent to UPOSA processing my data to manage my membership. *
+                                                    </span>
                                                 </label>
                                             </div>
 

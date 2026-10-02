@@ -15,6 +15,9 @@ export const DEFAULT_DESCRIPTION =
     "UPOSA is the official old students' association of University Practice Senior High School (UPSHS), Cape Coast, Ghana. Register as an alumnus, pay dues, back school projects, and reconnect with your year group.";
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
 export const LOGO_URL = `${SITE_URL}/logo.png`;
+/** Date shown on the Privacy Policy and Terms; bump it whenever their content changes. */
+export const POLICY_UPDATED = '2 October 2026';
+
 export const SOCIAL_PROFILES = [
     'https://www.facebook.com/share/1Ckq3GEdMS/',
     'https://www.instagram.com/uposanational',
@@ -131,6 +134,33 @@ export const STATIC_ROUTES = {
         label: 'Contact',
         changefreq: 'yearly',
         priority: 0.6,
+    },
+    privacy: {
+        path: '/privacy',
+        title: 'Privacy Policy',
+        description:
+            "How UPOSA collects, uses and protects old students' personal data under Ghana's Data Protection Act, 2012 (Act 843), and how to access, correct or delete it.",
+        label: 'Privacy Policy',
+        changefreq: 'yearly',
+        priority: 0.3,
+    },
+    terms: {
+        path: '/terms',
+        title: 'Terms of Use',
+        description:
+            'Terms for using the UPOSA website, member portal and mobile app: membership eligibility, community conduct, dues, donations and refunds.',
+        label: 'Terms of Use',
+        changefreq: 'yearly',
+        priority: 0.3,
+    },
+    accountDeletion: {
+        path: '/account-deletion',
+        title: 'Delete Your UPOSA Account',
+        description:
+            'How to delete your UPOSA member account from the mobile app, the member portal or by email, and what data is deleted or kept.',
+        label: 'Account deletion',
+        changefreq: 'yearly',
+        priority: 0.3,
     },
 } satisfies Record<string, RouteMeta>;
 

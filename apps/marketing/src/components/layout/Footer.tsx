@@ -324,6 +324,9 @@ export const Footer = () => {
                         ["/contact", "Contact"],
                         ["/about#constitution", "Constitution"],
                         ["/membership#dues", "Dues"],
+                        ["/privacy", "Privacy"],
+                        ["/terms", "Terms"],
+                        ["/account-deletion", "Delete account"],
                     ] as const).map(([to, label]) => (
                         <Link key={to} to={to} className={isLinkActive(to) ? "text-secondary" : "hover:text-primary-content/70"}>
                             {label}
