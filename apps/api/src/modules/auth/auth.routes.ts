@@ -14,8 +14,7 @@ import {
   adminForgotPasswordHandler,
   adminResetPasswordHandler,
 } from './auth.controller';
-import { authMiddleware } from '../../middleware/auth.middleware';
-import { adminMiddleware } from '../../middleware/admin.middleware';
+import { authMiddleware, memberOrAdminMiddleware } from '../../middleware/auth.middleware';
 import { uploadSingle } from '../../middleware/upload.middleware';
 import { authLimiter, refreshLimiter } from '../../middleware/ratelimit.middleware';
 
@@ -37,29 +36,7 @@ router.post('/logout', logout);
 // Protected - member only
 router.put('/change-password', authMiddleware, changePasswordHandler);
 
-// Protected - member or admin
-router.get('/me', (req, res, next) => {
-  // Try member auth first, then admin auth
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
-
-  if (token) {
-    try {
-      const { verifyMemberToken } = require('../../utils/jwt.utils');
-      req.user = verifyMemberToken(token);
-      next();
-    } catch {
-      try {
-        const { verifyAdminToken } = require('../../utils/jwt.utils');
-        req.admin = verifyAdminToken(token);
-        next();
-      } catch {
-        res.status(401).json({ success: false, message: 'Invalid or expired token' });
-      }
-    }
-  } else {
-    res.status(401).json({ success: false, message: 'Token required' });
-  }
-}, getMeHandler);
+// Protected - member or admin (live session check included)
+router.get('/me', memberOrAdminMiddleware, getMeHandler);
 
 export default router;

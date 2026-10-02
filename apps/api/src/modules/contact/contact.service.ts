@@ -1,7 +1,7 @@
 import { escapeRegex } from '../../utils/search.utils';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
-import { sendEmail, escapeHtml } from '../../utils/email.utils';
+import { buildContactAcknowledgement, buildContactNotification, sendInBackground } from '../../utils/email.utils';
 import { env } from '../../config/env';
 import { notify } from '../../utils/notify';
 import { CreateContactMessageInput } from './contact.validation';
@@ -18,21 +18,9 @@ export async function submitContactMessage(data: CreateContactMessageInput) {
     repliedAt: null,
   });
 
-  try {
-    await sendEmail({
-      to: env.FROM_EMAIL,
-      subject: `[UPOSA Contact] ${data.subject}`,
-      html: `
-        <h3>New Contact Message</h3>
-        <p><strong>From:</strong> ${escapeHtml(data.name)} (${escapeHtml(data.email)})</p>
-        <p><strong>Subject:</strong> ${escapeHtml(data.subject)}</p>
-        <p><strong>Message:</strong></p>
-        <p>${escapeHtml(data.message).replace(/\n/g, '<br>')}</p>
-      `,
-    });
-  } catch (err) {
-    console.error('Failed to send contact notification:', err);
-  }
+  // Previously sent to FROM_EMAIL (the no-reply address), so nobody received it.
+  sendInBackground(env.STAFF_INBOX_EMAIL, buildContactNotification(data), 'contact-notification', data.email);
+  sendInBackground(data.email, buildContactAcknowledgement(data), 'contact-acknowledgement');
 
   notify('NEW_CONTACT_MESSAGE', 'New Contact Message', `${data.name} sent a message: "${data.subject}"`, '/contact-messages');
 

@@ -1,6 +1,36 @@
 import mongoose from 'mongoose';
 import { env } from './env';
 import { logger } from './logger';
+import { Member, Admin, EMAIL_CI_INDEX } from '../models';
+import { caseInsensitiveDuplicateEmailPipeline } from '../utils/search.utils';
+
+/**
+ * Make sure the case-insensitive unique email indexes exist. Mongoose's
+ * autoIndex (on by default — nothing in this app disables it) builds them at
+ * startup, but it swallows failures silently. If case-variant duplicates
+ * already exist the build fails: log how many (never the emails) and keep
+ * serving — the app-level case-insensitive checks still prevent new ones.
+ */
+export async function ensureEmailIndexes(): Promise<void> {
+  for (const model of [Member, Admin]) {
+    try {
+      // Idempotent: a no-op when autoIndex already built it with the same options.
+      await model.collection.createIndex(EMAIL_CI_INDEX.fields, EMAIL_CI_INDEX.options);
+    } catch (err) {
+      const code = (err as { code?: number }).code;
+      if (code === 11000) {
+        const groups = await model.collection.aggregate(caseInsensitiveDuplicateEmailPipeline()).toArray().catch(() => []);
+        logger.error(
+          { collection: model.collection.collectionName, duplicateGroups: groups.length },
+          `Case-insensitive unique email index NOT created: ${groups.length} group(s) of case-variant duplicate emails exist. ` +
+          'Run `npm run check:email-duplicates -w apps/api` to review them.',
+        );
+      } else {
+        logger.error({ err, collection: model.collection.collectionName }, 'Could not create case-insensitive email index');
+      }
+    }
+  }
+}
 
 const MAX_RETRIES = 5;
 
@@ -16,6 +46,8 @@ export async function connectDB(): Promise<void> {
         socketTimeoutMS: 45000,
       });
       logger.info('MongoDB connected via Mongoose');
+      // Background: never blocks startup and never throws.
+      void ensureEmailIndexes();
 
       mongoose.connection.on('error', (err) => logger.error({ err }, 'MongoDB connection error'));
       mongoose.connection.on('disconnected', () => logger.warn('MongoDB disconnected'));

@@ -1,5 +1,5 @@
 import { getRepos } from '../../repositories';
-import { sendEmail, escapeHtml } from '../../utils/email.utils';
+import { buildTranscriptAcknowledgement, buildTranscriptNotification, sendInBackground } from '../../utils/email.utils';
 import { env } from '../../config/env';
 import { notify } from '../../utils/notify';
 import { CreateTranscriptRequestInput } from './transcripts.validation';
@@ -16,22 +16,9 @@ export async function submitTranscriptRequest(data: CreateTranscriptRequestInput
     status: 'PENDING',
   });
 
-  try {
-    await sendEmail({
-      to: env.FROM_EMAIL,
-      subject: `[UPOSA] Transcript Request from ${data.fullName}`,
-      html: `
-        <h3>New Transcript Request</h3>
-        <p><strong>Name:</strong> ${escapeHtml(data.fullName)}</p>
-        <p><strong>Email:</strong> ${escapeHtml(data.email)}</p>
-        <p><strong>Phone:</strong> ${escapeHtml(data.phone || 'N/A')}</p>
-        <p><strong>Year Group:</strong> ${escapeHtml(data.yearGroup)}</p>
-        <p><strong>Notes:</strong> ${escapeHtml(data.notes || 'None')}</p>
-      `,
-    });
-  } catch (err) {
-    console.error('Failed to send transcript request notification:', err);
-  }
+  // Previously sent to FROM_EMAIL (the no-reply address), so nobody received it.
+  sendInBackground(env.STAFF_INBOX_EMAIL, buildTranscriptNotification(data), 'transcript-notification', data.email);
+  sendInBackground(data.email, buildTranscriptAcknowledgement(data), 'transcript-acknowledgement');
 
   notify('NEW_TRANSCRIPT_REQUEST', 'Transcript Request', `${data.fullName} (${data.yearGroup}) requested a transcript.`, '/contact-messages');
 

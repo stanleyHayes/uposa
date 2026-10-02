@@ -72,3 +72,25 @@ export function hmacHexMatches(
     return expected.length === received.length && crypto.timingSafeEqual(expected, received);
   });
 }
+
+/** sha256 (hex) of a one-time token — only this is stored, never the token itself. */
+export function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+/**
+ * Lookup filters for an emailed one-time token, in order: the hash (tokens
+ * issued since hashing) then the legacy plaintext field (tokens issued before
+ * the deploy keep working until they're used or expire).
+ */
+export function tokenLookupFilters(
+  token: string,
+  hashField: string,
+  legacyField: string,
+  extra: Record<string, unknown> = {},
+): Array<Record<string, unknown>> {
+  return [
+    { ...extra, [hashField]: hashToken(token) },
+    { ...extra, [legacyField]: token },
+  ];
+}

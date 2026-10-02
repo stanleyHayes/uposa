@@ -13,11 +13,14 @@ import {
   suspendMemberHandler,
   changeMemberStatusHandler,
   deleteMemberHandler,
+  updatePreferencesHandler,
+  exportMyDataHandler,
+  deleteMyAccountHandler,
 } from './members.controller';
 import { authMiddleware, memberOrAdminMiddleware } from '../../middleware/auth.middleware';
 import { adminMiddleware, requireAdminRole } from '../../middleware/admin.middleware';
 import { uploadSingle } from '../../middleware/upload.middleware';
-import { uploadLimiter } from '../../middleware/ratelimit.middleware';
+import { uploadLimiter, dataExportLimiter, accountDeletionLimiter } from '../../middleware/ratelimit.middleware';
 
 const router = Router();
 
@@ -30,6 +33,10 @@ router.get('/my/dues', authMiddleware, getMyDuesHandler);
 router.get('/my/donations', authMiddleware, getMyDonationsHandler);
 router.put('/profile', authMiddleware, updateProfileHandler);
 router.post('/profile/photo', authMiddleware, uploadLimiter, uploadSingle('photo'), uploadProfilePhotoHandler);
+// Privacy self-service (Ghana Data Protection Act 2012 / app-store account deletion)
+router.put('/me/preferences', authMiddleware, updatePreferencesHandler);
+router.get('/me/export', authMiddleware, dataExportLimiter, exportMyDataHandler);
+router.delete('/me', authMiddleware, accountDeletionLimiter, deleteMyAccountHandler);
 router.get('/:id', authMiddleware, getMemberByIdHandler);
 
 export default router;

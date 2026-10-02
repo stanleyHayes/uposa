@@ -22,3 +22,23 @@ export function normalizeEmail(email: string): string {
 export function emailMatch(email: string): { $regex: string; $options: string } {
   return { $regex: `^${escapeRegex(normalizeEmail(email))}$`, $options: 'i' };
 }
+
+/** For logs/reports: j***@gmail.com (first character of the local part only). */
+export function maskEmail(email: string): string {
+  const at = email.lastIndexOf('@');
+  if (at <= 0) return '***';
+  return `${email[0]}***${email.slice(at)}`;
+}
+
+/**
+ * Aggregation grouping a collection's emails case-insensitively and keeping
+ * groups with more than one account (case-variant duplicates).
+ */
+export function caseInsensitiveDuplicateEmailPipeline(): Record<string, unknown>[] {
+  return [
+    { $match: { email: { $type: 'string' } } },
+    { $group: { _id: { $toLower: '$email' }, count: { $sum: 1 }, accounts: { $push: { id: '$_id', email: '$email', createdAt: '$createdAt' } } } },
+    { $match: { count: { $gt: 1 } } },
+    { $sort: { count: -1 } },
+  ];
+}

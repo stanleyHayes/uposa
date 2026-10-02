@@ -19,11 +19,20 @@ const stringArrayField = z.preprocess(
 // Emails are compared/stored as trimmed lowercase ("Kofi@Mail.com " === "kofi@mail.com").
 export const emailField = z.string().trim().toLowerCase().email('Invalid email address');
 
-const booleanField = z.preprocess((val) => {
+// Register is multipart (photo upload), so booleans arrive as 'true'/'false' strings.
+const toBoolean = (val: unknown) => {
   if (val === 'true') return true;
   if (val === 'false') return false;
   return val;
-}, z.boolean().optional());
+};
+
+const booleanField = z.preprocess(toBoolean, z.boolean().optional());
+
+/** A box that must be ticked (literal true); anything else fails with `message`. */
+const requiredTrue = (message: string) => z.preprocess(toBoolean, z.literal(true, { error: message }));
+
+/** Optional opt-in, defaults to false (Act 843: consent must be affirmative). */
+const optIn = z.preprocess(toBoolean, z.boolean().optional().default(false));
 
 export const registerSchema = z.object({
   body: z.object({
@@ -54,13 +63,13 @@ export const registerSchema = z.object({
     isWhatsAppMember: booleanField,
     willingToVolunteer: z.enum(['YES', 'NO', 'MAYBE']).optional(),
     preferredContributions: stringArrayField,
-    consentGiven: z.preprocess((val) => {
-      if (val === 'true') return true;
-      if (val === 'false') return false;
-      return val;
-    }, z.boolean().refine((val) => val === true, {
-      message: 'Consent is required',
-    })),
+    // Ghana Data Protection Act 2012 (Act 843) + app-store requirements.
+    acceptTerms: requiredTrue('You must accept the Terms and Privacy Policy'),
+    confirmAdult: requiredTrue('You must confirm you are 18 or older'),
+    marketingOptIn: optIn,
+    directoryOptIn: optIn,
+    // Legacy checkbox, superseded by acceptTerms; still accepted from older clients.
+    consentGiven: booleanField,
   }),
 });
 

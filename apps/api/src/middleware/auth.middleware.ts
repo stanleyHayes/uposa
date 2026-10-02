@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyMemberToken, verifyAdminToken, MemberTokenPayload } from '../utils/jwt.utils';
+import { verifyMemberToken, verifyAdminToken, MemberTokenPayload, AdminTokenPayload } from '../utils/jwt.utils';
+import { isMemberTokenLive, isAdminTokenLive } from '../utils/session-state.utils';
 import { errorResponse } from '../utils/response.utils';
 
 declare global {
@@ -12,48 +13,57 @@ declare global {
   }
 }
 
-export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
-  try {
-    const authHeader = req.headers.authorization;
-    let token: string | undefined;
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7);
-    } else if (req.cookies?.accessToken) {
-      token = req.cookies.accessToken;
-    }
-
-    if (!token) {
-      errorResponse(res, 'Access token required', 401);
-      return;
-    }
-
-    const payload = verifyMemberToken(token);
-    req.user = payload;
-    next();
-  } catch {
-    errorResponse(res, 'Invalid or expired token', 401);
-  }
+function bearerToken(req: Request): string | undefined {
+  const authHeader = req.headers.authorization;
+  return authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
 }
 
-export function optionalAuthMiddleware(req: Request, _res: Response, next: NextFunction): void {
+/**
+ * Verified member access token whose account is still live (exists, not
+ * suspended/inactive/deleted, issued after the last password change); else null.
+ * DB errors propagate (→ 500) rather than logging the member out.
+ */
+export async function resolveMember(token: string | undefined): Promise<MemberTokenPayload | null> {
+  if (!token) return null;
+  let payload: MemberTokenPayload;
   try {
-    const authHeader = req.headers.authorization;
-    let token: string | undefined;
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7);
-    } else if (req.cookies?.accessToken) {
-      token = req.cookies.accessToken;
-    }
-
-    if (token) {
-      req.user = verifyMemberToken(token);
-    }
+    payload = verifyMemberToken(token);
   } catch {
-    req.user = undefined;
+    return null;
   }
+  return (await isMemberTokenLive(payload)) ? payload : null;
+}
 
+/** Verified admin access token whose account is still active (see resolveMember). */
+export async function resolveAdmin(token: string | undefined): Promise<AdminTokenPayload | null> {
+  if (!token) return null;
+  let payload: AdminTokenPayload;
+  try {
+    payload = verifyAdminToken(token);
+  } catch {
+    return null;
+  }
+  return (await isAdminTokenLive(payload)) ? payload : null;
+}
+
+export async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const token = bearerToken(req) || req.cookies?.accessToken;
+  if (!token) {
+    errorResponse(res, 'Access token required', 401);
+    return;
+  }
+  const member = await resolveMember(token);
+  if (!member) {
+    errorResponse(res, 'Invalid or expired token', 401);
+    return;
+  }
+  req.user = member;
+  next();
+}
+
+export async function optionalAuthMiddleware(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  // A stale or revoked token simply means "anonymous" here.
+  req.user = (await resolveMember(bearerToken(req) || req.cookies?.accessToken)) ?? undefined;
   next();
 }
 
@@ -62,26 +72,23 @@ export function optionalAuthMiddleware(req: Request, _res: Response, next: NextF
  * the alumni/mobile apps and the admin dashboard all read). Sets req.user or
  * req.admin accordingly; 401 when neither verifies.
  */
-export function memberOrAdminMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
-  const bearer = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+export async function memberOrAdminMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const bearer = bearerToken(req);
 
   const memberToken = bearer || req.cookies?.accessToken;
-  if (memberToken) {
-    try {
-      req.user = verifyMemberToken(memberToken);
-      next();
-      return;
-    } catch { /* fall through to admin */ }
+  const member = await resolveMember(memberToken);
+  if (member) {
+    req.user = member;
+    next();
+    return;
   }
 
   const adminToken = bearer || req.cookies?.adminToken;
-  if (adminToken) {
-    try {
-      req.admin = verifyAdminToken(adminToken);
-      next();
-      return;
-    } catch { /* fall through */ }
+  const admin = await resolveAdmin(adminToken);
+  if (admin) {
+    req.admin = admin;
+    next();
+    return;
   }
 
   errorResponse(res, memberToken || adminToken ? 'Invalid or expired token' : 'Access token required', 401);

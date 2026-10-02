@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "start": "node dist/server.js",
     "seed": "ts-node scripts/seed.ts",
+    "check:email-duplicates": "ts-node --transpile-only scripts/check-email-duplicates.ts",
+    "email:preview": "ts-node --transpile-only scripts/preview-emails.ts",
     "test": "vitest run test/unit",
     "test:integration": "vitest run test/integration",
     "test:watch": "vitest"

@@ -24,3 +24,6 @@ apps/*/vite.config.js
 test-results
 playwright-report
 .playwright
+
+# Rendered email templates (npm run email:preview -w apps/api)
+apps/api/email-previews

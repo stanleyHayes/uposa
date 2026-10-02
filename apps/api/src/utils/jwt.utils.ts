@@ -5,12 +5,16 @@ export interface MemberTokenPayload {
   id: string;
   email: string;
   role: 'MEMBER';
+  /** Issued-at (seconds), present on verified tokens. */
+  iat?: number;
 }
 
 export interface AdminTokenPayload {
   id: string;
   email: string;
   role: 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR';
+  /** Issued-at (seconds), present on verified tokens. */
+  iat?: number;
 }
 
 const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'];

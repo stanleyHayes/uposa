@@ -4,7 +4,10 @@ import {
   updateProfileSchema,
   listMembersQuerySchema,
   adminUpdateMemberStatusSchema,
+  updatePreferencesSchema,
+  deleteAccountSchema,
 } from './members.validation';
+import { updateMyPreferences, exportMyData, deleteMyAccount } from './privacy.service';
 import {
   listMembers,
   getMemberDirectory,
@@ -121,5 +124,41 @@ export async function changeMemberStatusHandler(req: RouteRequest, res: Response
 export async function deleteMemberHandler(req: RouteRequest, res: Response): Promise<void> {
   const { id } = req.params;
   const result = await deleteMember(id);
+  successResponse(res, result.message);
+}
+
+// ── Privacy self-service (Act 843) ──
+
+export async function updatePreferencesHandler(req: RouteRequest, res: Response): Promise<void> {
+  if (!req.user) {
+    errorResponse(res, 'Unauthorized', 401);
+    return;
+  }
+  const parsed = updatePreferencesSchema.parse({ body: req.body });
+  const preferences = await updateMyPreferences(req.user.id, parsed.body);
+  successResponse(res, 'Preferences updated', preferences);
+}
+
+export async function exportMyDataHandler(req: RouteRequest, res: Response): Promise<void> {
+  if (!req.user) {
+    errorResponse(res, 'Unauthorized', 401);
+    return;
+  }
+  const data = await exportMyData(req.user.id);
+  const date = data.generatedAt.slice(0, 10); // YYYY-MM-DD (UTC)
+  res.setHeader('Content-Disposition', `attachment; filename="uposa-my-data-${date}.json"`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json(data);
+}
+
+export async function deleteMyAccountHandler(req: RouteRequest, res: Response): Promise<void> {
+  if (!req.user) {
+    errorResponse(res, 'Unauthorized', 401);
+    return;
+  }
+  const parsed = deleteAccountSchema.parse({ body: req.body });
+  const result = await deleteMyAccount(req.user.id, parsed.body.password);
+  res.clearCookie('accessToken');
+  res.clearCookie('refreshToken');
   successResponse(res, result.message);
 }

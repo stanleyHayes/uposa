@@ -3,6 +3,9 @@ import crypto from 'crypto';
 import { getRepos } from '../../repositories';
 import { env } from '../../config/env';
 import { emailMatch } from '../../utils/search.utils';
+import { hashToken, tokenLookupFilters } from '../../utils/crypto.utils';
+import { buildRegistrationConsents, toMemberView } from '../../utils/privacy.utils';
+import { invalidateMemberSession, invalidateAdminSession } from '../../utils/session-state.utils';
 import { toSafeAdmin } from '../admin/admin.service';
 import {
   signMemberToken,
@@ -17,20 +20,24 @@ import {
   sendVerificationEmail,
   sendPasswordResetEmail,
   sendAdminPasswordResetEmail,
-  sendWelcomeEmail,
 } from '../../utils/email.utils';
 import { RegisterInput, LoginInput, ForgotPasswordInput, ResetPasswordInput } from './auth.validation';
+
+const EMAIL_TAKEN = 'An account with this email already exists';
+// Same message for an unknown email, a wrong password and a deleted account (no enumeration).
+const INVALID_CREDENTIALS = 'Invalid credentials';
 
 export async function registerMember(data: RegisterInput, photoUrl?: string) {
   const { members } = getRepos();
   // Case-insensitive: older accounts may be stored mixed-case.
   const existing = await members.findOne({ email: emailMatch(data.email) });
   if (existing) {
-    throw Object.assign(new Error('Email already registered'), { statusCode: 409 });
+    throw Object.assign(new Error(EMAIL_TAKEN), { statusCode: 409 });
   }
 
   const hashedPassword = await bcrypt.hash(data.password, 12);
   const verificationToken = crypto.randomBytes(32).toString('hex');
+  const now = new Date();
 
   const member = await members.create({
     fullName: data.fullName,
@@ -66,40 +73,46 @@ export async function registerMember(data: RegisterInput, photoUrl?: string) {
     membershipStatus: 'PENDING',
     isApproved: false,
     approvedAt: null,
-    consentGiven: data.consentGiven,
+    consentGiven: true,
+    consents: buildRegistrationConsents({ marketingOptIn: data.marketingOptIn, directoryOptIn: data.directoryOptIn }, now),
     isVerified: false,
-    verificationToken,
+    // Only the hash is stored; the token itself goes out in the email.
+    verificationTokenHash: hashToken(verificationToken),
+    verificationToken: null,
     resetToken: null,
     resetTokenExpiry: null,
+  }).catch((err: { code?: number }) => {
+    // Two registrations racing past the check above: the case-insensitive unique index catches it.
+    if (err?.code === 11000) throw Object.assign(new Error(EMAIL_TAKEN), { statusCode: 409 });
+    throw err;
   });
 
   try {
+    // One email: the verification message also explains the approval step.
     await sendVerificationEmail(member.email, verificationToken, member.fullName);
-    await sendWelcomeEmail(member.email, member.fullName);
   } catch (emailErr) {
     console.error('Failed to send email:', emailErr);
   }
 
-  const { password: _pw, verificationToken: _vt, resetToken: _rt, resetTokenExpiry: _rte, ...safeData } = member as any;
-  return safeData;
+  return toMemberView(member);
 }
 
 export async function loginMember(data: LoginInput) {
   const { members } = getRepos();
   const member = await members.findOne({ email: emailMatch(data.email) });
-  if (!member) {
-    throw Object.assign(new Error('Invalid email or password'), { statusCode: 401 });
+  if (!member || member.membershipStatus === 'DELETED') {
+    throw Object.assign(new Error(INVALID_CREDENTIALS), { statusCode: 401 });
   }
 
   const passwordMatch = await bcrypt.compare(data.password, member.password);
   if (!passwordMatch) {
-    throw Object.assign(new Error('Invalid email or password'), { statusCode: 401 });
+    throw Object.assign(new Error(INVALID_CREDENTIALS), { statusCode: 401 });
   }
 
   if (!member.isVerified) {
     if (process.env.NODE_ENV === 'development') {
       // Auto-verify in dev mode for testing convenience
-      await members.updateById((member as any).id, { isVerified: true, verificationToken: null });
+      await members.updateById((member as any).id, { isVerified: true, verificationToken: null, verificationTokenHash: null });
     } else {
       throw Object.assign(new Error('Please verify your email address before logging in'), { statusCode: 403 });
     }
@@ -126,9 +139,7 @@ export async function loginMember(data: LoginInput) {
   const accessToken = signMemberToken(tokenPayload);
   const refreshToken = signMemberRefreshToken(tokenPayload);
 
-  const { password: _pw, verificationToken: _vt, resetToken: _rt, resetTokenExpiry: _rte, ...safeData } = member as any;
-
-  return { member: safeData, accessToken, refreshToken };
+  return { member: toMemberView(member), accessToken, refreshToken };
 }
 
 export async function refreshMemberSession(refreshToken: string) {
@@ -145,7 +156,7 @@ export async function refreshMemberSession(refreshToken: string) {
     throw Object.assign(new Error('Invalid or expired refresh token'), { statusCode: 401 });
   }
 
-  if ((member as any).membershipStatus === 'SUSPENDED' || (member as any).membershipStatus === 'INACTIVE') {
+  if (['SUSPENDED', 'INACTIVE', 'DELETED'].includes(member.membershipStatus)) {
     throw Object.assign(new Error('Invalid or expired refresh token'), { statusCode: 401 });
   }
 
@@ -211,14 +222,24 @@ export async function refreshAdminSession(refreshToken: string) {
   return { accessToken: signAdminToken(tokenPayload), refreshToken: signAdminRefreshToken(tokenPayload) };
 }
 
+/** First match for an emailed token: by hash, then legacy plaintext (pre-hashing tokens). */
+async function findMemberByToken(filters: Array<Record<string, unknown>>) {
+  const { members } = getRepos();
+  for (const filter of filters) {
+    const member = await members.findOne(filter);
+    if (member) return member;
+  }
+  return null;
+}
+
 export async function verifyEmailToken(token: string) {
   const { members } = getRepos();
-  const member = await members.findOne({ verificationToken: token });
+  const member = await findMemberByToken(tokenLookupFilters(token, 'verificationTokenHash', 'verificationToken'));
   if (!member) {
     throw Object.assign(new Error('Invalid or expired verification token'), { statusCode: 400 });
   }
 
-  await members.updateById((member as any).id, { isVerified: true, verificationToken: null });
+  await members.updateById((member as any).id, { isVerified: true, verificationToken: null, verificationTokenHash: null });
   return { message: 'Email verified successfully' };
 }
 
@@ -230,7 +251,8 @@ export async function forgotPassword(data: ForgotPasswordInput) {
   const resetToken = crypto.randomBytes(32).toString('hex');
   const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
 
-  await members.updateById((member as any).id, { resetToken, resetTokenExpiry });
+  // Only the hash is stored; any legacy plaintext token is cleared (a new request supersedes it).
+  await members.updateById((member as any).id, { resetTokenHash: hashToken(resetToken), resetToken: null, resetTokenExpiry });
 
   try {
     await sendPasswordResetEmail(member.email, resetToken, member.fullName);
@@ -243,12 +265,11 @@ export async function forgotPassword(data: ForgotPasswordInput) {
 
 export async function resetPassword(data: ResetPasswordInput) {
   const { members } = getRepos();
-  const member = await members.findOne({
-    resetToken: data.token,
-    resetTokenExpiry: { $gt: new Date() },
-  });
+  const member = await findMemberByToken(
+    tokenLookupFilters(data.token, 'resetTokenHash', 'resetToken', { resetTokenExpiry: { $gt: new Date() } }),
+  );
 
-  if (!member) {
+  if (!member || member.membershipStatus === 'DELETED') {
     throw Object.assign(new Error('Invalid or expired reset token'), { statusCode: 400 });
   }
 
@@ -256,9 +277,11 @@ export async function resetPassword(data: ResetPasswordInput) {
   await members.updateById((member as any).id, {
     password: hashedPassword,
     resetToken: null,
+    resetTokenHash: null,
     resetTokenExpiry: null,
     passwordChangedAt: new Date(),
   });
+  invalidateMemberSession(String((member as any).id));
 
   return { message: 'Password reset successfully' };
 }
@@ -281,6 +304,7 @@ export async function changeMemberPassword(memberId: string, data: { currentPass
 
   const hashedPassword = await bcrypt.hash(data.newPassword, 12);
   await members.updateById(member.id, { password: hashedPassword, passwordChangedAt: new Date() });
+  invalidateMemberSession(String(member.id));
 
   // Older refresh tokens are now revoked; hand this device a fresh session.
   const tokenPayload = { id: member.id, email: member.email };
@@ -302,17 +326,12 @@ export async function getMe(userId: string, isAdmin: boolean) {
 
   const member = await members.findById(userId);
   if (!member) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
-  const { password: _pw, verificationToken: _vt, resetToken: _rt, resetTokenExpiry: _rte, ...safeData } = member as any;
-  return { type: 'member', data: safeData };
+  return { type: 'member', data: toMemberView(member) };
 }
 
 // ── Admin password reset ──
 
 const ADMIN_RESET_MESSAGE = 'If an admin account exists with that email, a reset link has been sent';
-
-function sha256(value: string): string {
-  return crypto.createHash('sha256').update(value).digest('hex');
-}
 
 /** Always resolves with the same message (no account enumeration). */
 export async function adminForgotPassword(email: string) {
@@ -323,7 +342,7 @@ export async function adminForgotPassword(email: string) {
   // Only the hash is stored, so a database leak doesn't expose usable reset links.
   const token = crypto.randomBytes(32).toString('hex');
   await admins.updateById((admin as any).id, {
-    resetTokenHash: sha256(token),
+    resetTokenHash: hashToken(token),
     resetTokenExpiry: new Date(Date.now() + 60 * 60 * 1000),
   });
 
@@ -339,7 +358,7 @@ export async function adminForgotPassword(email: string) {
 export async function adminResetPassword(token: string, password: string) {
   const { admins } = getRepos();
   const admin = await admins.findOne({
-    resetTokenHash: sha256(token),
+    resetTokenHash: hashToken(token),
     resetTokenExpiry: { $gt: new Date() },
   });
   if (!admin || !admin.isActive) {
@@ -352,6 +371,7 @@ export async function adminResetPassword(token: string, password: string) {
     resetTokenExpiry: null,
     passwordChangedAt: new Date(),
   });
+  invalidateAdminSession(String((admin as any).id));
 
   return { message: 'Password reset successfully' };
 }

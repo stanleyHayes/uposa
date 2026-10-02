@@ -4,6 +4,8 @@ import {
   adminListSubscribersHandler,
   adminUnsubscribeHandler,
   adminDeleteSubscriberHandler,
+  unsubscribePageHandler,
+  unsubscribeOneClickHandler,
 } from './newsletter.controller';
 import { adminMiddleware, requireAdminRole } from '../../middleware/admin.middleware';
 import { newsletterLimiter } from '../../middleware/ratelimit.middleware';
@@ -12,6 +14,9 @@ const router = Router();
 
 // Public
 router.post('/', newsletterLimiter, subscribeHandler);
+// Signed links from marketing emails (see utils/email.utils.ts → sendMarketingEmail)
+router.get('/unsubscribe', newsletterLimiter, unsubscribePageHandler);
+router.post('/unsubscribe', newsletterLimiter, unsubscribeOneClickHandler);
 
 export default router;
 

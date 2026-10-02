@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { notify } from '../../utils/notify';
+import { buildPaymentReceipt, sendInBackground } from '../../utils/email.utils';
 import { CreateDonationInput, ConfirmDonationInput, AdminCreateDonationInput, AdminUpdateDonationInput } from './donations.validation';
 
 export async function submitDonation(data: CreateDonationInput, memberId?: string) {
@@ -147,7 +148,24 @@ export async function confirmDonation(id: string, data: ConfirmDonationInput) {
     await repos.projects.incrementById((donation as any).projectId, 'raisedAmount', (donation as any).amount);
   }
 
+  await sendDonationReceipt(result as Record<string, any>);
   return result!;
+}
+
+/** Thank-you receipt for a donation confirmed by the association (no-op without an email). */
+async function sendDonationReceipt(donation: Record<string, any>) {
+  if (!donation?.donorEmail) return;
+  const project = donation.projectId ? await getRepos().projects.findById(String(donation.projectId)) : null;
+  sendInBackground(donation.donorEmail, buildPaymentReceipt({
+    name: donation.donorName || '',
+    kind: 'DONATION',
+    amount: donation.amount,
+    currency: donation.currency,
+    reference: donation.transactionRef,
+    description: project?.title || 'Donation to UPOSA',
+    isMember: Boolean(donation.memberId),
+    channel: donation.channel,
+  }), 'donation-receipt');
 }
 
 export async function getDonationSummary() {
@@ -205,6 +223,7 @@ export async function adminCreateDonation(data: AdminCreateDonationInput) {
   if (status === 'CONFIRMED' && projectId) {
     await repos.projects.incrementById(projectId, 'raisedAmount', data.amount);
   }
+  if (status === 'CONFIRMED') await sendDonationReceipt(donation as Record<string, any>);
 
   return getDonationById(String(donation.id));
 }

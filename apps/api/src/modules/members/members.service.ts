@@ -3,9 +3,13 @@ import mongoose from 'mongoose';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { sendApprovalEmail } from '../../utils/email.utils';
+import { DIRECTORY_VISIBLE_FILTER, SAFE_MEMBER_PROJECTION, toMemberView } from '../../utils/privacy.utils';
+import { invalidateMemberSession } from '../../utils/session-state.utils';
 import { UpdateProfileInput } from './members.validation';
 
-const SAFE_MEMBER_PROJECTION = '-password -verificationToken -resetToken -resetTokenExpiry';
+// Listed to other members only if active, approved and opted in to the
+// directory (accounts that predate consents count as opted in).
+const DIRECTORY_BASE = { membershipStatus: 'ACTIVE', isApproved: true, ...DIRECTORY_VISIBLE_FILTER };
 
 const DIRECTORY_PROJECTION = 'fullName photoUrl yearGroup programme house city country occupation organization areaOfExpertise willingToVolunteer';
 
@@ -30,7 +34,7 @@ function buildMemberFilter(query: Record<string, string | undefined>, base: Reco
 export async function listMembers(query: Record<string, string | undefined>) {
   const { members } = getRepos();
   const { page, limit, skip } = getPaginationParams(query);
-  const where = buildMemberFilter(query, { membershipStatus: 'ACTIVE', isApproved: true });
+  const where = buildMemberFilter(query, DIRECTORY_BASE);
 
   const [data, total] = await Promise.all([
     members.findMany(where, { projection: DIRECTORY_PROJECTION, sort: { fullName: 1 }, skip, limit }),
@@ -44,7 +48,7 @@ export async function getMemberDirectory(query: Record<string, string | undefine
   const { members } = getRepos();
   const { page, limit, skip } = getPaginationParams(query);
   const { search } = query;
-  const where: Record<string, unknown> = { membershipStatus: 'ACTIVE', isApproved: true };
+  const where: Record<string, unknown> = { ...DIRECTORY_BASE };
   const { yearGroup, house, programme, country } = query;
 
   if (yearGroup) where.yearGroup = parseInt(yearGroup, 10);
@@ -75,11 +79,11 @@ export async function getMemberById(id: string, requesterId?: string) {
   if (requesterId && id === requesterId) {
     const self = await members.findById(id, { projection: SAFE_MEMBER_PROJECTION });
     if (!self) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
-    return self;
+    return toMemberView(self);
   }
 
   const member = await members.findOne(
-    { _id: id, membershipStatus: 'ACTIVE', isApproved: true },
+    { _id: id, ...DIRECTORY_BASE },
     { projection: DIRECTORY_PROJECTION },
   );
   if (!member) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
@@ -96,16 +100,14 @@ export async function updateProfile(memberId: string, data: UpdateProfileInput) 
 
   const result = await members.updateById(memberId, updateData);
   if (!result) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
-  const { password: _pw, verificationToken: _vt, resetToken: _rt, resetTokenExpiry: _rte, ...safe } = result as any;
-  return safe;
+  return toMemberView(result);
 }
 
 export async function updateProfilePhoto(memberId: string, photoUrl: string) {
   const { members } = getRepos();
   const result = await members.updateById(memberId, { photoUrl });
   if (!result) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
-  const { password: _pw, verificationToken: _vt, resetToken: _rt, resetTokenExpiry: _rte, ...safe } = result as any;
-  return safe;
+  return toMemberView(result);
 }
 
 export async function getMyDues(memberId: string, query: Record<string, string | undefined>) {
@@ -164,8 +166,9 @@ export async function adminListMembers(query: Record<string, string | undefined>
   const { page, limit, skip } = getPaginationParams(query);
   const { status, search, yearGroup, house, programme } = query;
 
-  const where: Record<string, unknown> = {};
-  if (status && status !== 'all') where.membershipStatus = status.toUpperCase();
+  // Self-deleted (anonymised) accounts are hidden unless asked for with ?status=DELETED.
+  const where: Record<string, unknown> = { membershipStatus: { $ne: 'DELETED' } };
+  if (status && status.toLowerCase() !== 'all') where.membershipStatus = status.toUpperCase();
   if (yearGroup) where.yearGroup = parseInt(yearGroup, 10);
   if (house) where.house = house;
   if (programme) where.programme = programme;
@@ -188,14 +191,21 @@ export async function adminGetMemberById(id: string) {
   const { members } = getRepos();
   const member = await members.findById(id);
   if (!member) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
-  const { password: _pw, verificationToken: _vt, resetToken: _rt, resetTokenExpiry: _rte, ...safeData } = member as any;
-  return safeData;
+  // Includes consents, effective `preferences` and deletedAt.
+  return toMemberView(member);
+}
+
+function assertNotDeleted(member: { membershipStatus?: string }) {
+  if (member.membershipStatus === 'DELETED') {
+    throw Object.assign(new Error('This account was deleted by the member and cannot be changed'), { statusCode: 400 });
+  }
 }
 
 export async function approveMember(id: string) {
   const { members } = getRepos();
   const member = await members.findById(id);
   if (!member) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
+  assertNotDeleted(member);
 
   const result = await members.updateById(id, {
     isApproved: true,
@@ -203,6 +213,7 @@ export async function approveMember(id: string) {
     membershipStatus: 'ACTIVE',
     rejectionReason: null,
   });
+  invalidateMemberSession(id);
 
   try {
     await sendApprovalEmail((member as any).email, (member as any).fullName);
@@ -210,8 +221,7 @@ export async function approveMember(id: string) {
     console.error('Failed to send approval email:', err);
   }
 
-  const { password: _pw, verificationToken: _vt, resetToken: _rt, resetTokenExpiry: _rte, ...safe } = result as any;
-  return safe;
+  return toMemberView(result!);
 }
 
 export async function suspendMember(id: string) {
@@ -219,9 +229,11 @@ export async function suspendMember(id: string) {
   const member = await members.findById(id);
   if (!member) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
 
+  assertNotDeleted(member);
+
   const result = await members.updateById(id, { membershipStatus: 'SUSPENDED' });
-  const { password: _pw, verificationToken: _vt, resetToken: _rt, resetTokenExpiry: _rte, ...safe } = result as any;
-  return safe;
+  invalidateMemberSession(id); // takes effect on their next request, not at token expiry
+  return toMemberView(result!);
 }
 
 export async function changeMemberStatus(
@@ -232,6 +244,7 @@ export async function changeMemberStatus(
   const { members } = getRepos();
   const member = await members.findById(id);
   if (!member) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
+  assertNotDeleted(member);
 
   const updates: Record<string, unknown> = { membershipStatus: status };
   // Rejecting a registration (INACTIVE) keeps the admin's reason; reactivating clears it.
@@ -239,8 +252,8 @@ export async function changeMemberStatus(
   if (status === 'ACTIVE') updates.rejectionReason = null;
 
   const result = await members.updateById(id, updates);
-  const { password: _pw, verificationToken: _vt, resetToken: _rt, resetTokenExpiry: _rte, ...safe } = result as any;
-  return safe;
+  invalidateMemberSession(id);
+  return toMemberView(result!);
 }
 
 export async function deleteMember(id: string) {
@@ -248,5 +261,6 @@ export async function deleteMember(id: string) {
   const member = await members.findById(id);
   if (!member) throw Object.assign(new Error('Member not found'), { statusCode: 404 });
   await members.deleteById(id);
+  invalidateMemberSession(id);
   return { message: 'Member deleted successfully' };
 }

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyAdminToken, AdminTokenPayload } from '../utils/jwt.utils';
+import { AdminTokenPayload } from '../utils/jwt.utils';
+import { resolveAdmin } from './auth.middleware';
 import { errorResponse } from '../utils/response.utils';
 
 declare global {
@@ -10,28 +11,24 @@ declare global {
   }
 }
 
-export function adminMiddleware(req: Request, res: Response, next: NextFunction): void {
-  try {
-    const authHeader = req.headers.authorization;
-    let token: string | undefined;
+export async function adminMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : req.cookies?.adminToken;
 
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7);
-    } else if (req.cookies?.adminToken) {
-      token = req.cookies.adminToken;
-    }
-
-    if (!token) {
-      errorResponse(res, 'Admin access token required', 401);
-      return;
-    }
-
-    const payload = verifyAdminToken(token);
-    req.admin = payload;
-    next();
-  } catch {
-    errorResponse(res, 'Invalid or expired admin token', 401);
+  if (!token) {
+    errorResponse(res, 'Admin access token required', 401);
+    return;
   }
+
+  // Also checks the live account: deactivation, a password change or a role
+  // change revokes the token immediately (see utils/session-state.utils.ts).
+  const admin = await resolveAdmin(token);
+  if (!admin) {
+    errorResponse(res, 'Invalid or expired admin token', 401);
+    return;
+  }
+  req.admin = admin;
+  next();
 }
 
 export function requireRole(...roles: Array<'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR'>) {

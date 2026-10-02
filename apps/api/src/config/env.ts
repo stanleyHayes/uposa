@@ -20,6 +20,9 @@ const schema = z.object({
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   CLIENT_URL: z.string().default('http://localhost:3000'),
   ADMIN_URL: z.string().default('http://localhost:5173'),
+  // Public origin of this API (used for links that must hit the API directly,
+  // e.g. one-click newsletter unsubscribe). Falls back to localhost:PORT.
+  API_PUBLIC_URL: z.string().default(''),
   ALLOWED_ORIGINS: z.string().default(''),
   ALLOWED_ORIGIN_PATTERNS: z.string().default(''),
   CLOUDINARY_CLOUD_NAME: z.string().default(''),
@@ -27,6 +30,9 @@ const schema = z.object({
   CLOUDINARY_API_SECRET: z.string().default(''),
   RESEND_API_KEY: z.string().default(''),
   FROM_EMAIL: z.string().default('UPOSA <noreply@uposa.org>'),
+  // Where contact/transcript notifications go, and where replies to UPOSA emails land.
+  STAFF_INBOX_EMAIL: z.string().email().default('info@uposa.org'),
+  REPLY_TO_EMAIL: z.string().email().default('info@uposa.org'),
   PAYSTACK_SECRET_KEY: z.string().default(''),
   PAYSTACK_PUBLIC_KEY: z.string().default(''),
   PAYSTACK_WEBHOOK_SECRET: z.string().default(''),
@@ -70,6 +76,7 @@ export const env = {
   JWT_REFRESH_EXPIRES_IN: e.JWT_REFRESH_EXPIRES_IN,
   CLIENT_URL: e.CLIENT_URL,
   ADMIN_URL: e.ADMIN_URL,
+  API_PUBLIC_URL: (e.API_PUBLIC_URL || `http://localhost:${e.PORT}`).replace(/\/+$/, ''),
   ALLOWED_ORIGINS: toList(e.ALLOWED_ORIGINS),
   ALLOWED_ORIGIN_PATTERNS: toList(e.ALLOWED_ORIGIN_PATTERNS),
 
@@ -81,6 +88,8 @@ export const env = {
   // Resend
   RESEND_API_KEY: e.RESEND_API_KEY,
   FROM_EMAIL: e.FROM_EMAIL,
+  STAFF_INBOX_EMAIL: e.STAFF_INBOX_EMAIL,
+  REPLY_TO_EMAIL: e.REPLY_TO_EMAIL,
 
   // Paystack
   PAYSTACK_SECRET_KEY: e.PAYSTACK_SECRET_KEY,

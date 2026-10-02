@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { getRepos } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { notify } from '../../utils/notify';
+import { buildPaymentReceipt, sendInBackground } from '../../utils/email.utils';
 import { CreateDueInput, MarkPaidInput, BulkCreateDuesInput, MemberPayDueInput } from './dues.validation';
 
 async function attachMember(doc: Record<string, any>) {
@@ -100,6 +101,16 @@ export async function markDuePaid(id: string, data: MarkPaidInput) {
   if (!result) throw Object.assign(new Error('This due is already marked as paid'), { statusCode: 409 });
 
   const withMember = await attachMember(result as Record<string, any>);
+  if (withMember.member) {
+    sendInBackground(withMember.member.email, buildPaymentReceipt({
+      name: withMember.member.fullName,
+      kind: 'DUES',
+      amount: (result as any).amount,
+      reference: (result as any).transactionRef,
+      description: `Membership dues ${(result as any).year}`,
+      isMember: true,
+    }), 'dues-receipt');
+  }
   return withMember;
 }
 

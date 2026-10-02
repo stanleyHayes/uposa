@@ -21,7 +21,8 @@ export const Programme = ['GENERAL_ARTS', 'BUSINESS', 'HOME_ECONOMICS', 'VISUAL_
 export const House = ['ACKAH', 'DENSU', 'TANO', 'NKRUMAH', 'PRA', 'VOLTA'] as const;
 export const EmploymentType = ['RETIRED', 'STUDENT', 'UNEMPLOYED', 'SELF_EMPLOYED', 'GOVERNMENT_WORKER', 'PRIVATE_WORKER'] as const;
 export const WillingnessToVolunteer = ['YES', 'NO', 'MAYBE'] as const;
-export const MembershipStatus = ['PENDING', 'ACTIVE', 'SUSPENDED', 'INACTIVE'] as const;
+// DELETED = self-service account deletion (record anonymised, kept for accounting).
+export const MembershipStatus = ['PENDING', 'ACTIVE', 'SUSPENDED', 'INACTIVE', 'DELETED'] as const;
 export const AdminRole = ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] as const;
 export const EventStatus = ['UPCOMING', 'ONGOING', 'PAST', 'CANCELLED'] as const;
 export const ProjectStatus = ['ONGOING', 'COMPLETED', 'PAUSED'] as const;
@@ -53,9 +54,12 @@ export interface IMember {
   email: string;
   password: string;
   isVerified: boolean;
-  verificationToken?: string;
-  resetToken?: string;
-  resetTokenExpiry?: Date;
+  /** Legacy plaintext tokens (pre-hashing); new tokens are stored only as sha256 hashes. */
+  verificationToken?: string | null;
+  verificationTokenHash?: string | null;
+  resetToken?: string | null;
+  resetTokenHash?: string | null;
+  resetTokenExpiry?: Date | null;
   mobileNumber?: string;
   altPhoneNumber?: string;
   residentialAddress?: string;
@@ -85,8 +89,22 @@ export interface IMember {
   rejectionReason?: string | null;
   passwordChangedAt?: Date | null;
   consentGiven: boolean;
+  consents?: IMemberConsents | null;
+  deletedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** Ghana Data Protection Act 2012 (Act 843) consent record. Absent on pre-consent accounts. */
+export interface IMemberConsents {
+  termsAcceptedAt?: Date | null;
+  termsVersion?: string | null;
+  privacyVersion?: string | null;
+  adultConfirmedAt?: Date | null;
+  marketingOptIn?: boolean | null;
+  marketingUpdatedAt?: Date | null;
+  directoryOptIn?: boolean | null;
+  directoryUpdatedAt?: Date | null;
 }
 
 export interface IAdmin { id: string;
@@ -406,6 +424,31 @@ export interface IPayment { id: string;
 // ═══════════════════════════════════════════════════════════
 
 // ── Member ──
+const MemberConsentsSchema = new Schema<IMemberConsents>(
+  {
+    termsAcceptedAt: { type: Date },
+    termsVersion: { type: String },
+    privacyVersion: { type: String },
+    adultConfirmedAt: { type: Date },
+    marketingOptIn: { type: Boolean },
+    marketingUpdatedAt: { type: Date },
+    directoryOptIn: { type: Boolean },
+    directoryUpdatedAt: { type: Date },
+  },
+  { _id: false },
+);
+
+/**
+ * Case-insensitive unique email (strength 2 = ignore case, keep accents). Named
+ * so it can coexist with the original case-sensitive `email_1` index; built by
+ * autoIndex at startup and verified/logged in config/db.ts (Mongoose otherwise
+ * swallows index-build failures silently).
+ */
+export const EMAIL_CI_INDEX = {
+  fields: { email: 1 } as const,
+  options: { unique: true, collation: { locale: 'en', strength: 2 }, name: 'email_ci_unique' },
+};
+
 const MemberSchema = new Schema<IMember>(
   {
     fullName: { type: String, required: true },
@@ -417,7 +460,9 @@ const MemberSchema = new Schema<IMember>(
     password: { type: String, required: true },
     isVerified: { type: Boolean, default: false },
     verificationToken: { type: String },
+    verificationTokenHash: { type: String },
     resetToken: { type: String },
+    resetTokenHash: { type: String },
     resetTokenExpiry: { type: Date },
     mobileNumber: { type: String },
     altPhoneNumber: { type: String },
@@ -449,9 +494,13 @@ const MemberSchema = new Schema<IMember>(
     // Refresh tokens issued before this are rejected (password change/reset revokes sessions).
     passwordChangedAt: { type: Date },
     consentGiven: { type: Boolean, default: false },
+    consents: { type: MemberConsentsSchema },
+    deletedAt: { type: Date },
   },
   { timestamps: true, collection: 'members', toJSON: toJSONOptions },
 );
+
+MemberSchema.index(EMAIL_CI_INDEX.fields, EMAIL_CI_INDEX.options);
 
 export const Member: Model<IMember> = mongoose.models.Member || mongoose.model<IMember>('Member', MemberSchema);
 
@@ -470,6 +519,8 @@ const AdminSchema = new Schema<IAdmin>(
   },
   { timestamps: true, collection: 'admins', toJSON: toJSONOptions },
 );
+
+AdminSchema.index(EMAIL_CI_INDEX.fields, EMAIL_CI_INDEX.options);
 
 export const Admin: Model<IAdmin> = mongoose.models.Admin || mongoose.model<IAdmin>('Admin', AdminSchema);
 

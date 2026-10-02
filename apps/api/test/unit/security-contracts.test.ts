@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import crypto from 'crypto';
 
 import { parseQueryFirstValue } from '../../src/utils/query-parser.utils';
@@ -19,6 +19,20 @@ import { authenticateSocketToken } from '../../src/config/socket';
 import { toPublicPaymentView } from '../../src/modules/payments/payments.service';
 import { updateProfileSchema } from '../../src/modules/members/members.validation';
 import { memberOrAdminMiddleware } from '../../src/middleware/auth.middleware';
+import { installFakeAccounts, restoreRepos } from './fake-repos';
+
+// Auth now also checks the live account, so these suites run against in-memory accounts.
+const MEMBER_ID = '507f1f77bcf86cd799439011';
+const ADMIN_ID = '507f1f77bcf86cd799439022';
+function withLiveAccounts() {
+  beforeEach(() => {
+    installFakeAccounts(
+      [{ id: MEMBER_ID, membershipStatus: 'ACTIVE' }],
+      [{ id: ADMIN_ID, isActive: true, role: 'MODERATOR' }],
+    );
+  });
+  afterEach(restoreRepos);
+}
 
 describe('parseQueryFirstValue (Express query parser)', () => {
   it('collapses repeated keys to the first value', () => {
@@ -126,15 +140,18 @@ describe('webhook HMAC verification', () => {
 });
 
 describe('authenticateSocketToken', () => {
-  it('accepts member and admin ACCESS tokens', () => {
-    expect(authenticateSocketToken(signMemberToken({ id: 'm1', email: 'm@x.com' }))?.user?.id).toBe('m1');
-    expect(authenticateSocketToken(`Bearer ${signAdminToken({ id: 'a1', email: 'a@x.com', role: 'ADMIN' })}`)?.admin?.id).toBe('a1');
+  withLiveAccounts();
+
+  it('accepts member and admin ACCESS tokens for live accounts', async () => {
+    expect((await authenticateSocketToken(signMemberToken({ id: MEMBER_ID, email: 'm@x.com' })))?.user?.id).toBe(MEMBER_ID);
+    expect((await authenticateSocketToken(`Bearer ${signAdminToken({ id: ADMIN_ID, email: 'a@x.com', role: 'MODERATOR' })}`))?.admin?.id).toBe(ADMIN_ID);
   });
 
-  it('rejects refresh tokens, garbage and missing tokens', () => {
-    expect(authenticateSocketToken(signMemberRefreshToken({ id: 'm1', email: 'm@x.com' }))).toBeNull();
-    expect(authenticateSocketToken('not-a-jwt')).toBeNull();
-    expect(authenticateSocketToken(undefined)).toBeNull();
+  it('rejects refresh tokens, garbage, missing tokens and unknown accounts', async () => {
+    expect(await authenticateSocketToken(signMemberRefreshToken({ id: MEMBER_ID, email: 'm@x.com' }))).toBeNull();
+    expect(await authenticateSocketToken('not-a-jwt')).toBeNull();
+    expect(await authenticateSocketToken(undefined)).toBeNull();
+    expect(await authenticateSocketToken(signMemberToken({ id: '507f1f77bcf86cd799439099', email: 'x@x.com' }))).toBeNull();
   });
 });
 
@@ -157,22 +174,24 @@ describe('profile update clearing', () => {
 });
 
 describe('memberOrAdminMiddleware', () => {
-  function run(authorization?: string) {
+  withLiveAccounts();
+
+  async function run(authorization?: string) {
     let status = 0;
     let nexted = false;
     const req = { headers: { authorization }, cookies: {} } as { headers: object; cookies: object; user?: { id: string }; admin?: { id: string } };
     const res = { status(s: number) { status = s; return this; }, json() { return this; } };
-    memberOrAdminMiddleware(req as never, res as never, () => { nexted = true; });
+    await memberOrAdminMiddleware(req as never, res as never, () => { nexted = true; });
     return { status, nexted, req };
   }
 
-  it('accepts a member or an admin access token', () => {
-    expect(run(`Bearer ${signMemberToken({ id: 'm1', email: 'm@x.com' })}`).req.user?.id).toBe('m1');
-    expect(run(`Bearer ${signAdminToken({ id: 'a1', email: 'a@x.com', role: 'MODERATOR' })}`).req.admin?.id).toBe('a1');
+  it('accepts a member or an admin access token', async () => {
+    expect((await run(`Bearer ${signMemberToken({ id: MEMBER_ID, email: 'm@x.com' })}`)).req.user?.id).toBe(MEMBER_ID);
+    expect((await run(`Bearer ${signAdminToken({ id: ADMIN_ID, email: 'a@x.com', role: 'MODERATOR' })}`)).req.admin?.id).toBe(ADMIN_ID);
   });
 
-  it('401s without a valid token', () => {
-    expect(run()).toMatchObject({ status: 401, nexted: false });
-    expect(run('Bearer junk')).toMatchObject({ status: 401, nexted: false });
+  it('401s without a valid token', async () => {
+    expect(await run()).toMatchObject({ status: 401, nexted: false });
+    expect(await run('Bearer junk')).toMatchObject({ status: 401, nexted: false });
   });
 });

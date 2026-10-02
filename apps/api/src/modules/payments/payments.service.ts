@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { getRepos } from '../../repositories';
 import { env } from '../../config/env';
 import { logger } from '../../config/logger';
+import { buildPaymentReceipt, sendInBackground } from '../../utils/email.utils';
 import { isCorsOriginAllowed } from '../../config/cors';
 import { getPaymentProvider } from '../../providers/payment.registry';
 import { WebhookEvent } from '../../providers/payment.types';
@@ -305,7 +306,37 @@ async function finalizePayment(
     });
   }
 
+  // Only the call that flipped the payment to SUCCESS gets here, so a webhook
+  // retry can't send a second receipt. Never blocks or fails the payment flow.
+  sendReceiptFor(payment).catch((err: unknown) =>
+    logger.warn({ paymentId, err: (err as Error)?.message }, 'Could not prepare payment receipt'));
+
   return payment;
+}
+
+async function sendReceiptFor(payment: Record<string, any>) {
+  if (payment.purpose !== 'DUES' && payment.purpose !== 'DONATION') return;
+  const { dues, donations, projects } = getRepos();
+  let description = payment.purpose === 'DUES' ? 'Membership dues' : 'Donation to UPOSA';
+  if (payment.purpose === 'DUES' && payment.dueId) {
+    const due = await dues.findById(String(payment.dueId));
+    if (due?.year) description = `Membership dues ${due.year}`;
+  }
+  if (payment.purpose === 'DONATION' && payment.donationId) {
+    const donation = await donations.findById(String(payment.donationId));
+    const project = donation?.projectId ? await projects.findById(String(donation.projectId)) : null;
+    if (project?.title) description = project.title;
+  }
+  sendInBackground(payment.payerEmail, buildPaymentReceipt({
+    name: payment.payerName || '',
+    kind: payment.purpose,
+    amount: payment.totalAmount ?? payment.amount,
+    currency: payment.currency,
+    reference: payment.reference || payment.providerRef,
+    description,
+    isMember: Boolean(payment.memberId),
+    channel: payment.provider,
+  }), 'payment-receipt');
 }
 
 export async function getPaymentByReference(reference: string) {

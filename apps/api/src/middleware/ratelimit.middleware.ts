@@ -1,4 +1,4 @@
-import rateLimit, { Options } from 'express-rate-limit';
+import rateLimit, { Options, ipKeyGenerator } from 'express-rate-limit';
 
 // Standard error shape returned by the API, sent when a client exceeds a limit.
 const tooManyRequestsBody = {
@@ -112,3 +112,20 @@ export const transcriptLimiter = publicWriteLimiter();
 export const newsletterLimiter = publicWriteLimiter();
 export const donationLimiter = publicWriteLimiter();
 export const rsvpLimiter = publicWriteLimiter();
+
+/**
+ * Per-member limiters for the privacy endpoints (mount after authMiddleware).
+ * Keyed by member id so members sharing a carrier-NAT IP don't block each other.
+ * Data export: 5 per hour. Account deletion attempts: 5 per hour.
+ */
+function perMemberLimiter(max: number) {
+  return rateLimit({
+    ...baseOptions,
+    windowMs: 60 * 60 * 1000,
+    max,
+    keyGenerator: (req) => (req.user?.id ? `member:${req.user.id}` : ipKeyGenerator(req.ip ?? '')),
+  });
+}
+
+export const dataExportLimiter = perMemberLimiter(5);
+export const accountDeletionLimiter = perMemberLimiter(5);

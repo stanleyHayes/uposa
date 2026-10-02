@@ -3,6 +3,7 @@ import { getRepos, type IRepository } from '../../repositories';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination.utils';
 import { emailMatch } from '../../utils/search.utils';
 import { signAdminToken, signAdminRefreshToken } from '../../utils/jwt.utils';
+import { invalidateAdminSession } from '../../utils/session-state.utils';
 
 /** Admin record without credentials (password hash, reset-token hash). */
 export function toSafeAdmin<T extends object>(admin: T): Omit<T, 'password' | 'resetTokenHash' | 'resetTokenExpiry'> {
@@ -169,7 +170,7 @@ export async function getDashboardStats() {
     recentMessages,
     recentJobs,
   ] = await Promise.all([
-    members.count(),
+    members.count({ membershipStatus: { $ne: 'DELETED' } }),
     members.count({ membershipStatus: 'PENDING', isApproved: false }),
     members.count({ membershipStatus: 'ACTIVE' }),
     donations.aggregate([
@@ -229,7 +230,7 @@ export async function getDashboardStats() {
     monthlyCount(events),
     monthlyCount(forumPosts),
     monthlyCount(eventRsvps),
-    members.findMany({}, {
+    members.findMany({ membershipStatus: { $ne: 'DELETED' } }, {
       projection: 'fullName email membershipStatus createdAt',
       sort: { createdAt: -1 },
       limit: 5,
@@ -356,6 +357,7 @@ export async function updateAdmin(id: string, data: UpdateAdminInput) {
   if (data.email) await assertEmailFree(data.email, id);
 
   const result = await admins.updateById(id, data);
+  invalidateAdminSession(id); // deactivation / role change applies on the next request
   return toSafeAdmin(result!);
 }
 
@@ -380,6 +382,7 @@ export async function changeAdminPassword(adminId: string, currentPassword: stri
 
   const hashed = await bcrypt.hash(newPassword, 12);
   await admins.updateById(adminId, { password: hashed, passwordChangedAt: new Date() });
+  invalidateAdminSession(adminId);
 
   // Older refresh tokens are now revoked; hand this device a fresh session.
   const tokenPayload = { id: String(admin.id), email: admin.email, role: admin.role as 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR' };
@@ -399,5 +402,6 @@ export async function deactivateAdmin(id: string, requesterId: string) {
   if (!admin) throw Object.assign(new Error('Admin not found'), { statusCode: 404 });
 
   const result = await admins.updateById(id, { isActive: false });
+  invalidateAdminSession(id);
   return toSafeAdmin(result!);
 }

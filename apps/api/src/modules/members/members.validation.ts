@@ -57,4 +57,19 @@ export const adminUpdateMemberStatusSchema = z.object({
   }),
 });
 
+const toBoolean = (val: unknown) => (val === 'true' ? true : val === 'false' ? false : val);
+
+export const updatePreferencesSchema = z.object({
+  body: z.object({
+    marketingOptIn: z.preprocess(toBoolean, z.boolean().optional()),
+    directoryOptIn: z.preprocess(toBoolean, z.boolean().optional()),
+  }),
+});
+
+export const deleteAccountSchema = z.object({
+  body: z.object({
+    password: z.string().min(1, 'Password is required'),
+  }),
+});
+
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>['body'];

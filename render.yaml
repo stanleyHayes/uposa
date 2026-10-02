@@ -34,6 +34,12 @@ services:
         sync: false
       - key: FROM_EMAIL
         value: "UPOSA <noreply@uposa.org>"
+      - key: STAFF_INBOX_EMAIL
+        value: info@uposa.org
+      - key: REPLY_TO_EMAIL
+        value: info@uposa.org
+      - key: API_PUBLIC_URL
+        value: https://uposa.onrender.com
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
