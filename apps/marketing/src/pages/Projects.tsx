@@ -29,6 +29,7 @@ import SplashScreen from "../components/common/SplashScreen.tsx";
 import EmptyState from "../components/common/EmptyState.tsx";
 import StatusPill from "../components/common/StatusPill.tsx";
 import { SkeletonBlock } from "../components/common/Skeleton.tsx";
+import { formatDate as formatSiteDate } from "../lib/format.ts";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 const PER_PAGE = 6;
@@ -70,7 +71,7 @@ function progressFor(raisedAmount = 0, goalAmount = 0) {
 }
 
 function formatMoney(amount = 0) {
-    return `GH₵ ${amount.toLocaleString()}`;
+    return `GH₵ ${amount.toLocaleString("en-US")}`;
 }
 
 function formatStatus(status: string) {
@@ -79,7 +80,7 @@ function formatStatus(status: string) {
 
 function formatDate(date?: string | null) {
     if (!date) return null;
-    return new Date(date).toLocaleDateString("en-US", {
+    return formatSiteDate(date, {
         month: "short",
         day: "numeric",
         year: "numeric",

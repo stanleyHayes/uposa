@@ -57,9 +57,9 @@ const Membership = () => {
     const alumniPortalUrl = import.meta.env.VITE_ALUMNI_URL || "http://localhost:5174";
 
     const heroStats = [
-        { label: "Members", value: `${stats.members.toLocaleString()}+`, icon: Users },
+        { label: "Members", value: `${stats.members.toLocaleString("en-US")}+`, icon: Users },
         { label: "Active years", value: `${stats.years}+`, icon: GraduationCap },
-        { label: "Annual dues", value: `${dues.currency} ${dues.annual.toLocaleString()}`, icon: CreditCard },
+        { label: "Annual dues", value: `${dues.currency} ${dues.annual.toLocaleString("en-US")}`, icon: CreditCard },
     ];
 
     const registrationSteps = [
@@ -565,7 +565,7 @@ const Membership = () => {
                                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">Per year</p>
                             </div>
                             <h3 className="text-2xl font-bold text-primary">Annual dues</h3>
-                            <p className="mt-4 text-4xl font-bold text-primary">{dues.currency} {dues.annual.toLocaleString()}</p>
+                            <p className="mt-4 text-4xl font-bold text-primary">{dues.currency} {dues.annual.toLocaleString("en-US")}</p>
                             <p className="mt-3 leading-relaxed text-base-content/60">Standard yearly membership contribution.</p>
                             <Link to="/donate" className="btn btn-primary mt-8 w-full">
                                 Pay annual dues
@@ -580,7 +580,7 @@ const Membership = () => {
                                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">One time</p>
                             </div>
                             <h3 className="text-2xl font-bold">Lifetime membership</h3>
-                            <p className="mt-4 text-4xl font-bold">{dues.currency} {dues.lifetime.toLocaleString()}</p>
+                            <p className="mt-4 text-4xl font-bold">{dues.currency} {dues.lifetime.toLocaleString("en-US")}</p>
                             <p className="mt-3 leading-relaxed text-primary-content/65">A one-time commitment for long-term membership support.</p>
                             <Link to="/donate" className="btn btn-secondary mt-8 w-full">
                                 Pay lifetime dues

@@ -142,7 +142,7 @@ const OurSchool = () => {
 
     const schoolFacts = [
         { label: "Founded", value: String(schoolInfo.founded), icon: Calendar },
-        { label: "Students", value: `${schoolInfo.studentPopulation.toLocaleString()}+`, icon: Users },
+        { label: "Students", value: `${schoolInfo.studentPopulation.toLocaleString("en-US")}+`, icon: Users },
         { label: "Teaching staff", value: `${schoolInfo.teachingStaff}+`, icon: BookOpen },
         { label: "Programs", value: String(schoolInfo.programs.length), icon: GraduationCap },
     ];
@@ -273,7 +273,7 @@ const OurSchool = () => {
                     <div className="space-y-4">
                         {[
                             "The school benefits from its unique location within a university environment, giving students access to academic resources, mentorship, and a culture of learning.",
-                            `With over ${schoolInfo.studentPopulation.toLocaleString()} students and ${schoolInfo.teachingStaff}+ teaching staff, the school combines scale with a deep tradition of discipline and personal development.`,
+                            `With over ${schoolInfo.studentPopulation.toLocaleString("en-US")} students and ${schoolInfo.teachingStaff}+ teaching staff, the school combines scale with a deep tradition of discipline and personal development.`,
                             "UPOSA keeps this story alive by connecting old students back to the institution through projects, mentorship, events, and school support.",
                         ].map((copy, index) => (
                             <ScrollReveal key={copy} delay={index * 0.08}>

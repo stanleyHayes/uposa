@@ -87,7 +87,7 @@ const providerIcons: Record<string, LucideIcon> = {
 
 function formatMoney(currency: string, amount?: number | null) {
     if (!amount || Number.isNaN(amount)) return `${currency} 0`;
-    return `${currency} ${amount.toLocaleString()}`;
+    return `${currency} ${amount.toLocaleString("en-US")}`;
 }
 
 function DetailRow({ label, value, action }: { label: string; value: ReactNode; action?: ReactNode }) {

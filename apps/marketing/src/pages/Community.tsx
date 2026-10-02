@@ -28,6 +28,7 @@ import SplashScreen from "../components/common/SplashScreen.tsx";
 import EmptyState from "../components/common/EmptyState.tsx";
 import { SkeletonBlock, SkeletonCardGrid, SkeletonRows } from "../components/common/Skeleton.tsx";
 import { useSiteData } from "../context/SiteDataContext.tsx";
+import { formatDate } from "../lib/format.ts";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
@@ -214,7 +215,7 @@ const Community = () => {
                     company: job.company || "UPOSA network",
                     location: job.location || "Remote / Ghana",
                     type: job.jobType?.replace("_", "-") || "Opportunity",
-                    posted: job.createdAt ? new Date(job.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "Recently",
+                    posted: job.createdAt ? formatDate(job.createdAt, { month: "long", day: "numeric", year: "numeric" }) : "Recently",
                     postedBy: job.postedBy?.fullName || "UPOSA",
                     url: job.externalUrl || (job.contactEmail ? `mailto:${job.contactEmail}` : "#"),
                 })));
@@ -276,7 +277,7 @@ const Community = () => {
     ];
 
     const heroStats = [
-        { label: "Registered alumni", value: `${stats.members.toLocaleString()}+`, icon: Users },
+        { label: "Registered alumni", value: `${stats.members.toLocaleString("en-US")}+`, icon: Users },
         { label: "Mentors listed", value: String(mentors.length), loading: communityLoading, icon: Handshake },
         { label: "Open opportunities", value: String(jobs.length), loading: communityLoading, icon: Briefcase },
     ];

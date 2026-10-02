@@ -43,10 +43,11 @@ import { Reveal3D } from "../components/common/Reveal3D.tsx";
 import { Parallax, ParallaxImg } from "../components/common/Parallax.tsx";
 import { BouncingDots } from "../components/common/BouncingDots.tsx";
 import { Card, CardAccent, CardBody } from "../components/ui/Card.tsx";
+import { formatDate as formatSiteDate, dayOfMonth } from "../lib/format.ts";
 
 const formatDate = (value?: string | null, options?: Intl.DateTimeFormatOptions) => {
     if (!value) return "Date to be announced";
-    return new Date(value).toLocaleDateString("en-US", options);
+    return formatSiteDate(value, options);
 };
 
 const formatCategory = (value?: string | null) => {
@@ -54,7 +55,7 @@ const formatCategory = (value?: string | null) => {
     return value.charAt(0) + value.slice(1).toLowerCase();
 };
 
-const formatMoney = (value: number) => `GH₵ ${value.toLocaleString()}`;
+const formatMoney = (value: number) => `GH₵ ${value.toLocaleString("en-US")}`;
 
 const progressFor = (raisedAmount: number, goalAmount: number) => {
     if (goalAmount <= 0) return 0;
@@ -116,8 +117,8 @@ const Home = () => {
         { title: "Community calendar", metric: `${upcomingEvents.length}+`, description: "Upcoming events and gatherings for old students, chapters, and friends.", to: "/events", icon: Calendar },
     ];
     const schoolSignals = [
-        { label: "Student body", value: school.studentPopulation ? school.studentPopulation.toLocaleString() : "Growing", icon: Users },
-        { label: "Teaching staff", value: school.teachingStaff ? school.teachingStaff.toLocaleString() : "Active", icon: BookOpen },
+        { label: "Student body", value: school.studentPopulation ? school.studentPopulation.toLocaleString("en-US") : "Growing", icon: Users },
+        { label: "Teaching staff", value: school.teachingStaff ? school.teachingStaff.toLocaleString("en-US") : "Active", icon: BookOpen },
         { label: "Programmes", value: school.programs?.length ? String(school.programs.length) : "Multi-track", icon: GraduationCap },
         { label: "Legacy years", value: `${stats.years}+`, icon: ShieldCheck },
     ];
@@ -512,7 +513,7 @@ const Home = () => {
                                         <div className="mb-6 flex items-start gap-5">
                                             <div className="min-w-20 bg-primary px-4 py-3 text-center text-primary-content">
                                                 <p className="text-xs font-bold uppercase">{formatDate(featuredEvent.date, { month: "short" })}</p>
-                                                <p className="text-4xl font-bold leading-none">{new Date(featuredEvent.date).getDate()}</p>
+                                                <p className="text-4xl font-bold leading-none">{dayOfMonth(featuredEvent.date)}</p>
                                             </div>
                                             <div>
                                                 <h4 className="text-xl font-bold leading-snug text-primary">{featuredEvent.title}</h4>
@@ -581,7 +582,7 @@ const Home = () => {
                                         <Link key={event.id} to="/events" className="group flex items-center gap-4 border border-base-300 bg-base-100 p-4 transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-md">
                                             <div className="w-16 shrink-0 bg-secondary/10 px-2 py-2 text-center text-primary">
                                                 <p className="text-[10px] font-bold uppercase">{formatDate(event.date, { month: "short" })}</p>
-                                                <p className="text-2xl font-bold leading-none">{new Date(event.date).getDate()}</p>
+                                                <p className="text-2xl font-bold leading-none">{dayOfMonth(event.date)}</p>
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <p className="truncate font-bold text-primary">{event.title}</p>

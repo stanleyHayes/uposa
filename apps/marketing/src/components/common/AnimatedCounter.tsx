@@ -36,7 +36,7 @@ export const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
             animate={isInView ? { opacity: 1, scale: 1 } : {}}
             transition={{ duration: 0.4, ease: "easeOut" }}
         >
-            {displayValue.toLocaleString()}{suffix}
+            {displayValue.toLocaleString("en-US")}{suffix}
         </motion.span>
     );
 };

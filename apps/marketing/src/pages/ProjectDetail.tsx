@@ -26,6 +26,7 @@ import MarkdownContent from "../components/common/MarkdownContent.tsx";
 import { SkeletonBlock, SkeletonLines } from "../components/common/Skeleton.tsx";
 import { usePrerenderedPage, useSiteData } from "../context/SiteDataContext.tsx";
 import { breadcrumbs } from "../seo/structuredData.ts";
+import { formatDate as formatSiteDate } from "../lib/format.ts";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
@@ -58,7 +59,7 @@ type ProjectDetailResponse = {
 
 function formatDate(date?: string | null, long = false) {
   if (!date) return null;
-  return new Date(date).toLocaleDateString("en-US", {
+  return formatSiteDate(date, {
     month: long ? "long" : "short",
     day: "numeric",
     year: "numeric",
@@ -66,7 +67,7 @@ function formatDate(date?: string | null, long = false) {
 }
 
 function formatMoney(amount = 0) {
-  return `GH₵ ${amount.toLocaleString()}`;
+  return `GH₵ ${amount.toLocaleString("en-US")}`;
 }
 
 function formatStatus(status?: string | null) {

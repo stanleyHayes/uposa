@@ -32,6 +32,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { useSiteData } from "../../context/SiteDataContext.tsx";
 import { useTheme } from "../../hooks/useTheme.ts";
+import { formatDate } from "../../lib/format.ts";
 
 interface NavChild {
     label: string;
@@ -111,7 +112,7 @@ export const Header = () => {
             iconColor: "text-base-content/70",
             label: "Event",
             title: event.title,
-            subtitle: new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+            subtitle: formatDate(event.date, { month: "short", day: "numeric", year: "numeric" }),
             link: "/events",
         })) || []),
         ...(data?.latestNews?.filter((article) => article.category === "ANNOUNCEMENT").slice(0, 1).map((article) => ({
@@ -120,7 +121,7 @@ export const Header = () => {
             iconColor: "text-secondary",
             label: "Announcement",
             title: article.title,
-            subtitle: article.publishedAt ? new Date(article.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Recent",
+            subtitle: article.publishedAt ? formatDate(article.publishedAt, { month: "short", day: "numeric" }) : "Recent",
             link: `/news/${article.slug}`,
         })) || []),
         ...(data?.latestNews?.filter((article) => article.category !== "ANNOUNCEMENT").slice(0, 1).map((article) => ({
@@ -129,7 +130,7 @@ export const Header = () => {
             iconColor: "text-base-content/70",
             label: "News",
             title: article.title,
-            subtitle: article.publishedAt ? new Date(article.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Recent",
+            subtitle: article.publishedAt ? formatDate(article.publishedAt, { month: "short", day: "numeric" }) : "Recent",
             link: `/news/${article.slug}`,
         })) || []),
         ...(data?.ongoingProjects?.slice(0, 1).map((project) => ({

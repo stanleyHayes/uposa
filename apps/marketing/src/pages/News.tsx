@@ -22,6 +22,7 @@ import { staticPageSeo } from "../seo/structuredData.ts";
 import { usePrerenderedPage, useSiteData } from "../context/SiteDataContext.tsx";
 import SplashScreen from "../components/common/SplashScreen.tsx";
 import EmptyState from "../components/common/EmptyState.tsx";
+import { formatDate as formatSiteDate } from "../lib/format.ts";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 const PER_PAGE = 6;
@@ -52,7 +53,7 @@ function formatCategory(category: string) {
 
 function formatDate(date?: string | null) {
     if (!date) return "Recent";
-    return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return formatSiteDate(date, { month: "short", day: "numeric", year: "numeric" });
 }
 
 function getExcerpt(item: NewsItem) {

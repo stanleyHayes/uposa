@@ -196,6 +196,8 @@ export interface SiteData {
 export interface PrerenderPayload {
   siteData: SiteData | null;
   pages: Record<string, unknown>;
+  /** Build timestamp; time-relative UI renders against it until hydrated (see useNow). */
+  renderedAt?: number;
 }
 
 export const PRERENDER_DATA_ID = '__UPOSA_DATA__';
@@ -205,6 +207,7 @@ interface SiteDataContextType {
   loading: boolean;
   error: string | null;
   pages: Record<string, unknown>;
+  renderedAt?: number;
 }
 
 const SiteDataContext = createContext<SiteDataContextType>({ data: null, loading: true, error: null, pages: {} });
@@ -256,7 +259,7 @@ export function SiteDataProvider({ children, initialPayload }: { children: React
   }
 
   return (
-    <SiteDataContext.Provider value={{ data, loading, error, pages }}>
+    <SiteDataContext.Provider value={{ data, loading, error, pages, renderedAt: payload?.renderedAt }}>
       {children}
     </SiteDataContext.Provider>
   );

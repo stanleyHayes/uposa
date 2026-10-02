@@ -109,7 +109,8 @@ const escapeText = (value) => String(value).replace(/&/g, '&amp;').replace(/</g,
 function splitHoisted(html) {
     const match = html.match(/^(?:\s*(?:<title>[\s\S]*?<\/title>|<meta\b[^>]*>|<link\b[^>]*>))+/);
     const head = match ? match[0] : '';
-    return { head, body: html.slice(head.length) };
+    // Mark them so the client can drop any React re-inserts after a hydration fallback (main.tsx).
+    return { head: head.replace(/<(title|meta|link)\b/g, '<$1 data-ssr'), body: html.slice(head.length) };
 }
 
 function modulePreloads(manifest, sourceName) {
@@ -205,6 +206,8 @@ const preconnect = apiOrigin ? `<link rel="preconnect" href="${apiOrigin}" cross
 await writeFile(path.join(distDir, '_app.html'), template.replace('</head>', `${preconnect}</head>`));
 
 const content = await loadContent();
+// One timestamp for the whole build: time-relative UI hydrates against it (useNow).
+const renderedAt = Date.now();
 const staticRoutes = Object.values(STATIC_ROUTES);
 const sitemap = [];
 
@@ -242,18 +245,18 @@ if (!content) {
     ];
 
     for (const job of jobs) {
-        const payload = { siteData, pages: job.pages };
+        const payload = { siteData, pages: job.pages, renderedAt };
         const { head, body } = splitHoisted(await render(job.path, payload));
         if (!head.includes('rel="canonical"')) throw new Error(`${job.path} rendered without a canonical tag`);
         await writeRoute(job.path, buildPage(template, { headTags: head, body, payload, preloads: preconnect + modulePreloads(manifest, job.source) }));
         sitemap.push({ loc: absoluteUrl(job.path), ...job.sitemap });
     }
 
-    const notFound = splitHoisted(await render('/404', { siteData, pages: {} }));
+    const notFound = splitHoisted(await render('/404', { siteData, pages: {}, renderedAt }));
     await writeFile(path.join(distDir, '404.html'), buildPage(template, {
         headTags: notFound.head,
         body: notFound.body,
-        payload: { siteData, pages: {} },
+        payload: { siteData, pages: {}, renderedAt },
         preloads: preconnect + modulePreloads(manifest, 'NotFoundPage'),
     }));
     log(`rendered ${jobs.length} routes (${articles.length} articles, ${projectDetails.length} projects) + 404`);

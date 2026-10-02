@@ -20,6 +20,7 @@ import MarkdownContent from "../components/common/MarkdownContent.tsx";
 import { SkeletonBlock, SkeletonLines } from "../components/common/Skeleton.tsx";
 import { usePrerenderedPage, useSiteData } from "../context/SiteDataContext.tsx";
 import { breadcrumbs, newsArticle } from "../seo/structuredData.ts";
+import { formatDate as formatSiteDate } from "../lib/format.ts";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
@@ -49,7 +50,7 @@ function formatCategory(category?: string | null) {
 
 function formatDate(date?: string | null) {
     if (!date) return "Recent";
-    return new Date(date).toLocaleDateString("en-US", {
+    return formatSiteDate(date, {
         month: "long",
         day: "numeric",
         year: "numeric",

@@ -21,11 +21,13 @@ import { HeroReveal } from "../components/common/HeroReveal.tsx";
 import SEO from "../components/common/SEO.tsx";
 import { staticPageSeo, eventItem } from "../seo/structuredData.ts";
 import { usePrerenderedPage, useSiteData } from "../context/SiteDataContext.tsx";
+import { useNow } from "../hooks/useNow.ts";
 import { rsvpToEvent } from "../api/client.ts";
 import SplashScreen from "../components/common/SplashScreen.tsx";
 import EmptyState from "../components/common/EmptyState.tsx";
 import { SkeletonBlock, SkeletonCardGrid } from "../components/common/Skeleton.tsx";
 import { BouncingDots } from "../components/common/BouncingDots.tsx";
+import { formatDate, dayOfMonth } from "../lib/format.ts";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 const PER_PAGE = 4;
@@ -56,14 +58,14 @@ function getEventDate(date?: string | null) {
 }
 
 function formatLongDate(date?: string | null) {
-    return getEventDate(date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    return formatDate(getEventDate(date), { year: "numeric", month: "long", day: "numeric" });
 }
 
 function formatMonth(date?: string | null) {
-    return getEventDate(date).toLocaleDateString("en-US", { month: "short" });
+    return formatDate(getEventDate(date), { month: "short" });
 }
 
-function formatStatus(event: EventItem) {
+function formatStatus(event: EventItem, now: number) {
     if (event.status) {
         return event.status
             .toLowerCase()
@@ -71,19 +73,17 @@ function formatStatus(event: EventItem) {
             .replace(/\b\w/g, (letter) => letter.toUpperCase());
     }
 
-    const now = new Date();
-    const starts = getEventDate(event.date);
-    const ends = event.endDate ? getEventDate(event.endDate) : starts;
+    const starts = getEventDate(event.date).getTime();
+    const ends = event.endDate ? getEventDate(event.endDate).getTime() : starts;
     if (starts <= now && ends >= now) return "Ongoing";
     return ends < now ? "Past" : "Upcoming";
 }
 
-function eventMatchesStatus(event: EventItem, status: EventStatusFilter) {
+function eventMatchesStatus(event: EventItem, status: EventStatusFilter, now: number) {
     if (status === "ALL") return true;
 
-    const now = new Date();
-    const starts = getEventDate(event.date);
-    const ends = event.endDate ? getEventDate(event.endDate) : starts;
+    const starts = getEventDate(event.date).getTime();
+    const ends = event.endDate ? getEventDate(event.endDate).getTime() : starts;
 
     if (status === "UPCOMING") return starts >= now;
     if (status === "ONGOING") return starts <= now && ends >= now;
@@ -94,7 +94,7 @@ function EventDateBlock({ event }: { event: EventItem }) {
     return (
         <div className="flex min-w-[74px] flex-col items-center bg-primary px-4 py-3 text-center text-primary-content">
             <span className="text-xs font-bold uppercase tracking-[0.16em] text-secondary">{formatMonth(event.date)}</span>
-            <span className="text-4xl font-bold leading-none">{getEventDate(event.date).getDate()}</span>
+            <span className="text-4xl font-bold leading-none">{dayOfMonth(getEventDate(event.date))}</span>
         </div>
     );
 }
@@ -149,6 +149,7 @@ function EventMeta({ event, light = false }: { event: EventItem; light?: boolean
 
 const Events = () => {
     const { data, loading } = useSiteData();
+    const now = useNow();
     const prerendered = usePrerenderedPage<EventItem[]>("events");
     const [allEvents, setAllEvents] = useState<EventItem[]>(prerendered ?? []);
     const [eventsLoading, setEventsLoading] = useState(!prerendered);
@@ -189,21 +190,21 @@ const Events = () => {
     const filtered = useMemo(() => {
         const query = search.trim().toLowerCase();
         return allEvents.filter((event) => {
-            const matchesStatus = eventMatchesStatus(event, status);
+            const matchesStatus = eventMatchesStatus(event, status, now);
             const matchesSearch = !query
                 || event.title.toLowerCase().includes(query)
                 || event.description.toLowerCase().includes(query)
                 || (event.location || "").toLowerCase().includes(query);
             return matchesStatus && matchesSearch;
         });
-    }, [allEvents, search, status]);
+    }, [allEvents, search, status, now]);
 
     const totalPages = Math.ceil(filtered.length / PER_PAGE);
     const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
     const featuredEvent = paginated.find((event) => event.isFeatured) || paginated[0];
     const secondaryEvents = paginated.filter((event) => event.id !== featuredEvent?.id);
-    const upcomingCount = allEvents.filter((event) => eventMatchesStatus(event, "UPCOMING")).length;
-    const pastCount = allEvents.filter((event) => eventMatchesStatus(event, "PAST")).length;
+    const upcomingCount = allEvents.filter((event) => eventMatchesStatus(event, "UPCOMING", now)).length;
+    const pastCount = allEvents.filter((event) => eventMatchesStatus(event, "PAST", now)).length;
 
     const openRsvp = (event: EventItem) => {
         setRsvpEvent(event);
@@ -435,7 +436,7 @@ const Events = () => {
                                             <EventDateBlock event={featuredEvent} />
                                             <div>
                                                 <span className="inline-flex bg-secondary px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-secondary-content">
-                                                    {formatStatus(featuredEvent)}
+                                                    {formatStatus(featuredEvent, now)}
                                                 </span>
                                                 <div className="mt-3">
                                                     <EventMeta event={featuredEvent} />
@@ -478,7 +479,7 @@ const Events = () => {
                                                             <EventDateBlock event={event} />
                                                             <div className="min-w-0">
                                                                 <span className="inline-flex bg-base-200 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-secondary">
-                                                                    {formatStatus(event)}
+                                                                    {formatStatus(event, now)}
                                                                 </span>
                                                                 <h3 className="mt-3 text-xl font-bold leading-tight text-primary">{event.title}</h3>
                                                             </div>
@@ -616,7 +617,7 @@ const Events = () => {
                                         <div className="mb-5 flex items-center gap-4">
                                             <EventDateBlock event={rsvpEvent} />
                                             <div>
-                                                <p className="text-xs font-bold uppercase tracking-[0.14em] text-secondary">{formatStatus(rsvpEvent)}</p>
+                                                <p className="text-xs font-bold uppercase tracking-[0.14em] text-secondary">{formatStatus(rsvpEvent, now)}</p>
                                                 <p className="mt-1 font-bold text-primary">{formatLongDate(rsvpEvent.date)}</p>
                                             </div>
                                         </div>
