@@ -15,6 +15,7 @@ export * from './contactMessage.types'
 export * from './gallery.types'
 export * from './schoolLeader.types'
 export * from './due.types'
+export * from './report.types'
 
 export interface ActivityLogEntry {
   id: string

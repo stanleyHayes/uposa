@@ -41,6 +41,8 @@ const PollsPage = lazy(() => import('./pages/polls/PollsPage'))
 const PollFormPage = lazy(() => import('./pages/polls/PollFormPage'))
 const PollDetailPage = lazy(() => import('./pages/polls/PollDetailPage'))
 const ForumPage = lazy(() => import('./pages/forum/ForumPage'))
+const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'))
+const ReportDetailPage = lazy(() => import('./pages/reports/ReportDetailPage'))
 const AnnouncementsPage = lazy(() => import('./pages/announcements/AnnouncementsPage'))
 const AnnouncementFormPage = lazy(() => import('./pages/announcements/AnnouncementFormPage'))
 const AnnouncementDetailPage = lazy(() => import('./pages/announcements/AnnouncementDetailPage'))
@@ -416,6 +418,23 @@ export default function App() {
               element={
                 <ProtectedRoute requiredPermission="forum:view">
                   <ForumPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Moderation queue: every admin role can review reports (gated like the forum). */}
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute requiredPermission="forum:view">
+                  <ReportsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reports/:id"
+              element={
+                <ProtectedRoute requiredPermission="forum:view">
+                  <ReportDetailPage />
                 </ProtectedRoute>
               }
             />

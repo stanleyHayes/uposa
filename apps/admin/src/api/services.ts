@@ -1,5 +1,5 @@
 import client from './client'
-import type { ApiJob } from '../types'
+import type { ApiJob, ResolveReportInput } from '../types'
 
 // Generic response types
 interface ApiResponse<T = unknown> {
@@ -426,4 +426,16 @@ export interface AdminAnnouncementInput {
   audience: 'ALL' | 'MEMBERS' | 'EXECUTIVES'
   /** ISO timestamp, or '' to clear. */
   expiresAt: string
+}
+
+// Content reports (moderation queue)
+export const adminReportsApi = {
+  /** status: OPEN | ACTIONED | DISMISSED | ALL; targetType: FORUM_POST | FORUM_COMMENT | JOB | MEMBER. */
+  list: (params?: Params) =>
+    client.get<PaginatedResponse & { pagination: { openCount?: number } }>('/admin/reports', { params }),
+  getById: (id: string) =>
+    client.get<ApiResponse>(`/admin/reports/${id}`),
+  /** Resolves every open report on the same target. SUSPEND_AUTHOR is ADMIN/SUPER_ADMIN only. */
+  resolve: (id: string, data: ResolveReportInput) =>
+    client.put<ApiResponse>(`/admin/reports/${id}`, data),
 }

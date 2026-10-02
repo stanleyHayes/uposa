@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   BarChart3,
@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronsLeft,
   ChevronsRight,
+  Flag,
   Crown,
   FolderKanban,
   Globe,
@@ -35,6 +36,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '../../utils/cn'
 import { usePermission } from '../../hooks/usePermission'
 import { useNotificationStore } from '../../stores/notification.store'
+import { useReportsStore } from '../../stores/reports.store'
 import { useUIStore } from '../../stores/ui.store'
 import type { Permission } from '../../types'
 
@@ -44,6 +46,8 @@ interface NavItem {
   icon: React.ElementType
   permission?: Permission
   notifTypes?: string[]
+  /** Badge from a live count instead of unread notifications. */
+  countKey?: 'openReports'
 }
 
 interface NavSection {
@@ -76,6 +80,7 @@ const navSections: NavSection[] = [
     title: 'Community',
     items: [
       { label: 'Forum', to: '/forum', icon: MessageSquare, permission: 'forum:view', notifTypes: ['NEW_FORUM_POST'] },
+      { label: 'Reports', to: '/reports', icon: Flag, permission: 'forum:view', countKey: 'openReports' },
       { label: 'Polls', to: '/polls', icon: BarChart3, permission: 'polls:view' },
       { label: 'Elections', to: '/elections', icon: Vote, permission: 'elections:view', notifTypes: ['ELECTION_STARTED'] },
     ],
@@ -116,11 +121,24 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, onCloseMobile }: SidebarProps) {
   const { can } = usePermission()
   const notifications = useNotificationStore((s) => s.notifications)
+  const openReports = useReportsStore((s) => s.openCount)
+  const fetchOpenReports = useReportsStore((s) => s.fetchOpenCount)
+  const canSeeReports = can('forum:view')
   const { setSidebarCollapsed } = useUIStore()
   const location = useLocation()
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
 
-  const getBadgeCount = (types?: string[]): number => {
+  // Keep the Reports badge fresh (same cadence as the topbar's unread poll).
+  useEffect(() => {
+    if (!canSeeReports) return
+    fetchOpenReports()
+    const interval = setInterval(fetchOpenReports, 60_000)
+    return () => clearInterval(interval)
+  }, [canSeeReports, fetchOpenReports])
+
+  const getBadgeCount = (item: NavItem): number => {
+    if (item.countKey === 'openReports') return openReports
+    const types = item.notifTypes
     if (!types || types.length === 0) return 0
     return notifications.filter((n) => !n.isRead && types.includes(n.type)).length
   }
@@ -242,7 +260,7 @@ export default function Sidebar({ collapsed, onCloseMobile }: SidebarProps) {
                   >
                     <div className={cn('space-y-1', !collapsed && 'relative ml-3 border-l border-[#D4AF37]/18 pl-3')}>
                       {visibleItems.map((item) => {
-                        const badge = getBadgeCount(item.notifTypes)
+                        const badge = getBadgeCount(item)
                         return (
                           <NavLink
                             key={item.to}

@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Clock,
   FileText,
+  Flag,
   FolderKanban,
   HandCoins,
   Handshake,
@@ -34,6 +35,8 @@ import {
 import RoleGate from '../../components/auth/RoleGate'
 import { useAuth } from '../../hooks/useAuth'
 import { useActivityStore } from '../../stores/activity.store'
+import { useReportsStore } from '../../stores/reports.store'
+import { usePermission } from '../../hooks/usePermission'
 import { ROLES } from '../../constants/roles'
 import { formatTimeAgo } from '../../utils/formatters'
 import { Skeleton } from '../../components/ui/Skeleton'
@@ -437,6 +440,10 @@ export default function DashboardPage() {
   const navigate = useNavigate()
   const { currentUser } = useAuth()
   const { entries } = useActivityStore()
+  const { can } = usePermission()
+  const openReports = useReportsStore((s) => s.openCount)
+  const fetchOpenReports = useReportsStore((s) => s.fetchOpenCount)
+  const canSeeReports = can('forum:view')
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -462,6 +469,10 @@ export default function DashboardPage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (canSeeReports) fetchOpenReports()
+  }, [canSeeReports, fetchOpenReports])
+
   if (loading) return <DashboardSkeleton />
 
   const o = data?.overview ?? emptyOverview
@@ -474,7 +485,7 @@ export default function DashboardPage() {
   const recentActivity = entries.slice(0, 5)
   const activeRate = percent(o.activeMembers, o.totalMembers)
   const projectFundingRate = percent(o.projectFundingRaised, o.projectFundingGoal)
-  const openWorkCount = o.pendingApprovals + o.unreadMessagesCount + o.pendingJobs + o.pendingMentorshipRequests + o.pendingDonationsCount + o.pendingDuesCount + o.overdueDuesCount + o.pendingTranscriptRequestsCount
+  const openWorkCount = o.pendingApprovals + o.unreadMessagesCount + o.pendingJobs + o.pendingMentorshipRequests + o.pendingDonationsCount + o.pendingDuesCount + o.overdueDuesCount + o.pendingTranscriptRequestsCount + (canSeeReports ? openReports : 0)
   const engagementTotal = o.totalForumPosts + o.totalForumComments + o.eventRsvpCount + o.pollVoteCount + o.electionVoteCount + o.totalJobApplications
   const contentTotal = o.publishedNewsCount + o.upcomingEventsCount + o.activeProjectsCount + o.galleryItemCount
   const today = new Date().toLocaleDateString('en-GH', { weekday: 'long', month: 'short', day: 'numeric' })
@@ -525,6 +536,7 @@ export default function DashboardPage() {
     { label: 'Job posts to review', value: o.pendingJobs, detail: 'Submitted opportunities not yet approved', icon: Briefcase, path: '/jobs', permission: 'jobs:view', tone: o.pendingJobs > 0 ? 'warning' : 'neutral' },
     { label: 'Mentorship requests', value: o.pendingMentorshipRequests, detail: 'Relationship requests waiting on response', icon: Handshake, path: '/members', permission: 'members:view', tone: o.pendingMentorshipRequests > 0 ? 'warning' : 'neutral' },
     { label: 'Pending donations', value: o.pendingDonationsCount, detail: 'Manual or provider gifts to reconcile', icon: WalletCards, path: '/donations', permission: 'donations:view', tone: o.pendingDonationsCount > 0 ? 'warning' : 'neutral' },
+    { label: 'Reported content', value: openReports, detail: 'Member reports awaiting moderation', icon: Flag, path: '/reports', permission: 'forum:view', tone: openReports > 0 ? 'danger' : 'neutral' },
     { label: 'Transcript requests', value: o.pendingTranscriptRequestsCount, detail: 'Service desk requests still open', icon: FileText, path: '/contact-messages', permission: 'contact:view', tone: o.pendingTranscriptRequestsCount > 0 ? 'warning' : 'neutral' },
   ]
 
