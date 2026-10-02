@@ -5,6 +5,7 @@ import type {
   MentorshipRequest, ForumPost, ForumComment, Poll, Election, ContactMessage,
   PaymentMethod, GalleryItem, GalleryCategory, Executive, SchoolLeader,
   YearGroupRepsByYear, Announcement, MemberPreferences,
+  ReportTargetType, ReportReason, BlockedMember,
 } from '../types'
 
 // Auth
@@ -215,6 +216,21 @@ export const paymentsApi = {
     client.get<ApiResponse>(`/payments/status/${reference}`),
   platformFeePreview: (amount: number) =>
     client.get<ApiResponse<{ amount: number; platformFee: number; totalAmount: number; percent: number; fixed: number; enabled: boolean }>>(`/payments/platform-fee?amount=${amount}`),
+}
+
+// Content reports and member blocks (Apple 1.2 / Google Play UGC policy)
+export const reportsApi = {
+  create: (data: { targetType: ReportTargetType; targetId: string; reason: ReportReason; details?: string }) =>
+    client.post<ApiResponse>('/reports', data),
+}
+
+export const blocksApi = {
+  list: () =>
+    client.get<ApiResponse<BlockedMember[]>>('/members/blocks'),
+  block: (memberId: string) =>
+    client.post<ApiResponse>('/members/blocks', { memberId }),
+  unblock: (memberId: string) =>
+    client.delete<ApiResponse>(`/members/blocks/${memberId}`),
 }
 
 // Announcements (published, audience ALL/MEMBERS, not expired)

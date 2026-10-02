@@ -49,15 +49,15 @@ Stripe or Coinbase) in the device browser. The app never sees card numbers.
 | Physical address | Residential address, city, region, country (profile) | Optional |
 | Photos | Profile photo (picked from the library, uploaded to Cloudinary) | Optional |
 | User ID | Account ID issued by the API, stored in the session | Required |
-| Other user content | Forum posts and comments, job applications (cover letter), mentorship messages, contact and transcript requests | Optional |
+| Other user content | Forum posts and comments, job applications (cover letter), mentorship messages, contact and transcript requests, content reports and member blocks | Optional |
 | Purchase history | Dues and donation records (amount, reference, channel) | Optional |
 | Other profile data | Date of birth, gender, marital status, year group, programme, house, employment, expertise, emergency contact and next of kin, volunteering preferences | Optional |
 | Consents | Terms accepted, 18+ confirmed, directory and news-email opt-ins (with timestamps) | Required (terms, 18+) |
 
 On the device: the access and refresh tokens are kept in the iOS Keychain or
-Android Keystore (expo-secure-store). A cached copy of the member profile and
-theme or notification preferences sit in app storage. Android `allowBackup` is
-`false`.
+Android Keystore (expo-secure-store). A cached copy of the member profile, the
+theme preference and dismissed announcement IDs sit in app storage. Android
+`allowBackup` is `false`.
 
 Service providers that process data for UPOSA, which does not count as
 "sharing" in either store's definition: Render (API hosting), MongoDB (database),
@@ -144,12 +144,22 @@ or profanity is provided by the developer.
 - No location sharing, and no unrestricted web browser inside the app.
 - Expect a rating of Teen or 12+ purely because of user interaction.
 
-**User-generated content (Apple 1.2 / Play UGC policy):** admins can edit,
-pin, lock and delete forum posts and delete comments from the admin dashboard;
-members can delete their own posts and comments.
-Apple also expects members to be able to **report** objectionable content and
-**block** abusive users. Those two features do not exist yet. Build them, or be
-ready for App Review to ask.
+### User-generated content moderation (Apple 1.2 / Google Play UGC policy)
+
+Members create forum posts and comments, job adverts (web portal) and member
+profiles. Both apps and the API provide all four safeguards Apple 1.2 asks for.
+
+| Safeguard | How it works | Where |
+|---|---|---|
+| **Filter objectionable content** | Forum posts, comments and job adverts (create and edit) are checked server-side. Posts with offensive language are rejected with "Please remove offensive language before posting.", shown inline on the form. | API content filter |
+| **Report** | **⋯ → Report** on every forum post, comment, job advert and member profile. Not shown on your own content. Plain-language reasons: spam or scam, harassment, hate, sexual content, violence or threats, false or misleading, something else. Optional details. Confirmation: "Thanks. Our moderators will review this within 24 hours." | Mobile: ⋯ button, or long-press a comment. Web: ⋯ menu. |
+| **Block** | **⋯ → Block \<name\>** on posts, comments and profiles, after a confirmation. The blocked member's posts, comments and jobs disappear for the blocker immediately, and they no longer appear in the blocker's directory. | Unblock in **Settings → Privacy & data → Blocked members** |
+| **Act on reports** | Moderators review reports in the admin dashboard within **24 hours**. They can hide or delete the content, or suspend the account. Forum posts and comments reported by **3 different members are hidden automatically** until reviewed. Job adverts are already admin-approved before they appear. | Admin dashboard |
+| **Published policy** | The Terms of Use state zero tolerance for objectionable content and abusive members (https://www.uposa.org/terms#conduct). Every member accepts them at registration. | Registration, Terms |
+
+Before submitting, make sure someone is actually assigned to clear the reports
+queue every day. The 24-hour commitment is in the Terms and in the in-app
+confirmation.
 
 **App Review notes** (paste into App Store Connect and adapt for Play "App access"):
 
@@ -170,11 +180,43 @@ ready for App Review to ask.
 > must be an approved member account with sample dues, events and forum posts.
 >
 > **Account deletion:** Settings → Privacy & data → Delete account.
+>
+> **User-generated content:** members can post in a forum, comment, and (on
+> the web portal) advertise jobs.
+>
+> - Posts and comments containing offensive language are rejected when posted.
+> - Any post, comment, job or member can be reported from its ⋯ menu (or by
+>   long-pressing a comment).
+> - Members can block another member from a post, comment or profile. That
+>   hides the blocked member's content and removes them from the blocker's
+>   directory; unblock is under Settings → Privacy & data.
+> - Moderators review every report within 24 hours. Forum content reported by
+>   three members is hidden automatically until reviewed.
+> - The Terms of Use, accepted at sign-up, state zero tolerance for
+>   objectionable content and abusive users.
+>
+> To try it with the demo account: open Forum, open any post by another member
+> and tap ⋯ (top right of the post, or on a comment).
 
 Do not change the payment flow to an in-app WebView or SFSafariViewController.
 Dues and donation checkout must stay on `Linking.openURL` (external browser),
 as in `app/dues/index.tsx` and `app/donations/index.tsx`, for guidelines 3.1.1,
 3.1.3 and 3.2.1(vi).
+
+### 7a. Google Play — user-generated content answers
+
+In Play Console → Policy → App content, and in the content rating
+questionnaire:
+
+| Question | Answer |
+|---|---|
+| Does the app contain or allow user-generated content? | **Yes**: forum posts and comments, job adverts, member profiles. |
+| Users can interact or exchange content? | **Yes** (forum, mentorship messages). No user-to-user payments, no location sharing. |
+| Terms that prohibit objectionable content | Yes: https://www.uposa.org/terms#conduct. Members accept them at sign-up. |
+| In-app reporting of objectionable content and users | Yes: ⋯ → Report on posts, comments, jobs and profiles. |
+| In-app blocking of users | Yes: ⋯ → Block on posts, comments and profiles; manage under Settings → Privacy & data. |
+| Moderation | Server-side offensive-language filter on posting. Reports reviewed by moderators within 24 hours. Forum content with 3 reports auto-hidden pending review. Content removal and account suspension from the admin dashboard. |
+| Is UGC the primary purpose of the app? | No. It is an association members' app (dues, events, directory, news), and the forum is one feature. |
 
 ## 8. Ghana Data Protection Act, 2012 (Act 843): actions the code cannot do
 
@@ -230,6 +272,7 @@ UPOSA itself still needs to:
 9. **Play Console:**
    - Data safety (section 4), content rating questionnaire, target audience 18+;
    - App access (demo credentials), Ads: "No ads", Financial features: none;
+   - User-generated content (Policy → App content): answer as in section 7a;
    - Delete account URL;
    - Photo and video permissions: not used.
 10. Promote the Android release from internal to production after review.

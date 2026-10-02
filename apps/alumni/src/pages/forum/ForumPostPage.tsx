@@ -1,6 +1,6 @@
 import { BouncingDots } from "../../components/ui/BouncingDots";
 import { useEffect, useState, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import {
   ArrowLeft,
   ArrowRight,
@@ -21,6 +21,8 @@ import { useAuthStore } from '../../stores/auth.store'
 import { useToast } from '../../hooks/useToast'
 import { useSocketEvent, useSocketRoom } from '../../hooks/useSocket'
 import { formatEnum, timeAgo } from '../../utils/formatters'
+import ModerationMenu from '../../components/moderation/ModerationMenu'
+import { apiErrorMessage } from '../../lib/moderation'
 import type { ForumCategory, ForumComment, ForumPost } from '../../types'
 
 const categoryTone: Record<ForumCategory, string> = {
@@ -105,10 +107,12 @@ function CommentRow({
   comment,
   currentUserId,
   onDelete,
+  onBlocked,
 }: {
   comment: ForumComment
   currentUserId?: string
   onDelete: (id: string) => void
+  onBlocked: (memberId: string) => void
 }) {
   return (
     <article className="grid gap-3 border border-primary/10 bg-base-100/86 p-4 shadow-[0_10px_28px_rgba(0,27,80,0.04)] sm:grid-cols-[44px_minmax(0,1fr)] rounded-[20px_4px_20px_4px]">
@@ -119,10 +123,17 @@ function CommentRow({
             <p className="truncate text-sm font-bold">{comment.author?.fullName || 'Unknown member'}</p>
             <p className="text-xs font-semibold text-base-content/42">{timeAgo(comment.createdAt)}</p>
           </div>
-          {comment.authorId === currentUserId && (
-            <button type="button" className="btn btn-ghost btn-xs min-h-8 text-error" onClick={() => onDelete(comment.id)}>
+          {comment.authorId === currentUserId ? (
+            <button type="button" className="btn btn-ghost btn-xs min-h-8 text-error" aria-label="Delete comment" onClick={() => onDelete(comment.id)}>
               <Trash2 className="h-3.5 w-3.5" />
             </button>
+          ) : (
+            <ModerationMenu
+              targetType="FORUM_COMMENT"
+              targetId={comment.id}
+              author={comment.authorId ? { id: comment.authorId, fullName: comment.author?.fullName } : null}
+              onBlocked={onBlocked}
+            />
           )}
         </div>
         <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-base-content/68">{comment.content}</p>
@@ -138,7 +149,9 @@ export default function ForumPostPage() {
   const [loading, setLoading] = useState(true)
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [commentError, setCommentError] = useState('')
   const toast = useToast()
+  const navigate = useNavigate()
 
   const loadPost = () => {
     if (!slug) return
@@ -174,10 +187,12 @@ export default function ForumPostPage() {
     try {
       await forumApi.addComment(post.id, { content: comment.trim() })
       setComment('')
+      setCommentError('')
       toast.success('Comment added!')
       loadPost()
-    } catch {
-      toast.error('Failed to add comment')
+    } catch (err) {
+      // e.g. 422 "Please remove offensive language before posting." — shown on the form.
+      setCommentError(apiErrorMessage(err) || 'Failed to add comment')
     } finally {
       setSubmitting(false)
     }
@@ -191,6 +206,17 @@ export default function ForumPostPage() {
     } catch {
       toast.error('Failed to delete comment')
     }
+  }
+
+  // Blocking takes their content off this screen at once; the refetch then
+  // reflects the server-side filtering.
+  const handleBlocked = (memberId: string) => {
+    if (post?.authorId === memberId) {
+      navigate('/forum', { replace: true })
+      return
+    }
+    setPost((prev) => (prev ? { ...prev, comments: prev.comments?.filter((item) => item.authorId !== memberId) } : prev))
+    loadPost()
   }
 
   if (loading) return <DetailSkeleton />
@@ -218,9 +244,18 @@ export default function ForumPostPage() {
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-secondary/80 to-transparent" />
           <div className="relative grid gap-8 p-5 sm:p-7 lg:grid-cols-[minmax(0,1.08fr)_minmax(340px,0.92fr)] lg:p-8">
             <div className="min-w-0">
-              <div className="mb-4 inline-flex items-center gap-2 border border-primary-content/15 bg-primary-content/10 px-3 py-2 text-xs font-semibold text-primary-content/70 rounded-[14px_3px_14px_3px]">
-                <Sparkles className="h-4 w-4 text-secondary" />
-                Discussion thread
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="inline-flex items-center gap-2 border border-primary-content/15 bg-primary-content/10 px-3 py-2 text-xs font-semibold text-primary-content/70 rounded-[14px_3px_14px_3px]">
+                  <Sparkles className="h-4 w-4 text-secondary" />
+                  Discussion thread
+                </div>
+                <ModerationMenu
+                  targetType="FORUM_POST"
+                  targetId={post.id}
+                  author={post.authorId ? { id: post.authorId, fullName: post.author?.fullName } : null}
+                  onBlocked={handleBlocked}
+                  tone="dark"
+                />
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {post.isPinned && <Pin className="h-4 w-4 text-secondary" />}
@@ -264,14 +299,20 @@ export default function ForumPostPage() {
                     className="textarea textarea-bordered min-h-20 border-primary/10 bg-base-100 focus:border-primary"
                     placeholder="Write a comment..."
                     value={comment}
-                    onChange={(event) => setComment(event.target.value)}
+                    onChange={(event) => {
+                      setComment(event.target.value)
+                      setCommentError('')
+                    }}
                     onKeyDown={(event) => {
                       if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') handleComment()
                     }}
                   />
-                  <button className="btn btn-primary min-h-11 gap-2" onClick={handleComment} disabled={!comment.trim() || submitting}>
+                  <button className="btn btn-primary min-h-11 gap-2" aria-label="Post comment" onClick={handleComment} disabled={!comment.trim() || submitting}>
                     {submitting ? <BouncingDots /> : <Send className="h-4 w-4" />}
                   </button>
+                  {commentError && (
+                    <p role="alert" className="text-sm font-semibold text-error sm:col-span-2 sm:col-start-2">{commentError}</p>
+                  )}
                 </div>
               ) : (
                 <div className="mb-5 flex items-center gap-3 border border-primary/10 bg-base-200/45 p-4 text-sm font-semibold text-base-content/58 rounded-[18px_4px_18px_4px]">
@@ -283,7 +324,7 @@ export default function ForumPostPage() {
               {commentCount > 0 ? (
                 <div className="grid gap-3">
                   {post.comments?.map((item) => (
-                    <CommentRow key={item.id} comment={item} currentUserId={user?.id} onDelete={handleDeleteComment} />
+                    <CommentRow key={item.id} comment={item} currentUserId={user?.id} onDelete={handleDeleteComment} onBlocked={handleBlocked} />
                   ))}
                 </div>
               ) : (

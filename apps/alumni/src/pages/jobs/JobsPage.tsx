@@ -24,6 +24,7 @@ import { jobsApi } from '../../api/services'
 import { useToast } from '../../hooks/useToast'
 import { formatDate, formatEnum, timeAgo, truncate } from '../../utils/formatters'
 import type { Job, JobType } from '../../types'
+import { apiErrorMessage } from '../../lib/moderation'
 
 type JobFilter = 'ALL' | JobType
 
@@ -192,7 +193,7 @@ export default function JobsPage() {
   const [submitting, setSubmitting] = useState(false)
   const toast = useToast()
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<JobFormData>({
+  const { register, handleSubmit, reset, setError, formState: { errors } } = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
     defaultValues: { jobType: 'FULL_TIME' },
   })
@@ -234,8 +235,9 @@ export default function JobsPage() {
       toast.success('Job posted! It will be visible after admin approval.')
       setModalOpen(false)
       reset()
-    } catch {
-      toast.error('Failed to post job')
+    } catch (err) {
+      // e.g. 422 "Please remove offensive language before posting." — shown on the form.
+      setError('root', { message: apiErrorMessage(err) || 'Failed to post job' })
     } finally {
       setSubmitting(false)
     }
@@ -426,6 +428,7 @@ export default function JobsPage() {
               </label>
             </div>
 
+            {errors.root?.message && <p role="alert" className="text-sm font-semibold text-error">{errors.root.message}</p>}
             <button type="submit" className="btn btn-primary min-h-12 w-full gap-2 text-base" disabled={submitting}>
               {submitting ? (
                 <span className="h-4 w-28 animate-pulse bg-primary-content/35" />

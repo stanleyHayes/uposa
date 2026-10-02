@@ -28,6 +28,7 @@ import { useToast } from '../../hooks/useToast'
 import { useSocketEvent, useSocketRoom } from '../../hooks/useSocket'
 import { formatEnum, timeAgo, truncate } from '../../utils/formatters'
 import type { ForumCategory, ForumPost } from '../../types'
+import { apiErrorMessage } from '../../lib/moderation'
 
 type CategoryFilter = 'ALL' | ForumCategory
 
@@ -185,7 +186,7 @@ export default function ForumPage() {
   const [submitting, setSubmitting] = useState(false)
   const toast = useToast()
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, reset, setError, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { category: 'GENERAL' },
   })
@@ -247,8 +248,9 @@ export default function ForumPage() {
       setModalOpen(false)
       reset()
       loadPosts()
-    } catch {
-      toast.error('Failed to create post')
+    } catch (err) {
+      // e.g. 422 "Please remove offensive language before posting." — shown on the form.
+      setError('root', { message: apiErrorMessage(err) || 'Failed to create post' })
     } finally {
       setSubmitting(false)
     }
@@ -389,6 +391,7 @@ export default function ForumPage() {
               {errors.content && <span className="mt-2 text-xs font-semibold text-error">{errors.content.message}</span>}
             </label>
 
+            {errors.root?.message && <p role="alert" className="text-sm font-semibold text-error">{errors.root.message}</p>}
             <button type="submit" className="btn btn-primary min-h-12 w-full gap-2 text-base" disabled={submitting}>
               {submitting ? (
                 <span className="h-4 w-28 animate-pulse bg-primary-content/35" />

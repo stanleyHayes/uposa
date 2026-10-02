@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
   AlertTriangle,
-  ArrowRight,
   Bell,
   CheckCircle2,
   Download,
@@ -32,9 +31,11 @@ import ScrollReveal from '../../components/common/ScrollReveal'
 import { useAuthStore } from '../../stores/auth.store'
 import { useTheme } from '../../hooks/useTheme'
 import { useToast } from '../../hooks/useToast'
-import { authApi, membersApi } from '../../api/services'
+import { authApi, blocksApi, membersApi } from '../../api/services'
+import Avatar from '../../components/ui/Avatar'
+import { formatDate } from '../../utils/formatters'
 import { ACCOUNT_DELETION_URL, PRIVACY_URL, TERMS_URL } from '../../lib/legal'
-import type { Member, MemberPreferences } from '../../types'
+import type { BlockedMember, Member, MemberPreferences } from '../../types'
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -46,12 +47,11 @@ const passwordSchema = z.object({
 })
 
 type PasswordForm = z.infer<typeof passwordSchema>
-type TabKey = 'preferences' | 'password' | 'notifications' | 'privacy'
+type TabKey = 'preferences' | 'password' | 'privacy'
 
 const tabs: Array<{ key: TabKey; label: string; helper: string; icon: LucideIcon }> = [
   { key: 'preferences', label: 'Preferences', helper: 'Theme and region', icon: Palette },
   { key: 'password', label: 'Password', helper: 'Account security', icon: KeyRound },
-  { key: 'notifications', label: 'Notifications', helper: 'Email routing', icon: Bell },
   { key: 'privacy', label: 'Privacy & data', helper: 'Directory, data, account', icon: Shield },
 ]
 
@@ -254,6 +254,8 @@ function PrivacyDataPanel() {
   const [confirmed, setConfirmed] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+  const [blocked, setBlocked] = useState<BlockedMember[] | null>(null)
+  const [unblockingId, setUnblockingId] = useState<string | null>(null)
 
   // Same defaults as the API for accounts that predate consent records.
   const preferences: MemberPreferences = user?.preferences ?? { marketingOptIn: false, directoryOptIn: true }
@@ -273,6 +275,33 @@ function PrivacyDataPanel() {
       active = false
     }
   }, [updateUser])
+
+  useEffect(() => {
+    let active = true
+    blocksApi.list()
+      .then((res) => {
+        if (active) setBlocked(res.data.data ?? [])
+      })
+      .catch(() => {
+        if (active) setBlocked([])
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const unblock = async (member: BlockedMember) => {
+    setUnblockingId(member.id)
+    try {
+      await blocksApi.unblock(member.id)
+      setBlocked((prev) => prev?.filter((item) => item.id !== member.id) ?? prev)
+      toast.success(`${member.fullName} is unblocked`)
+    } catch (err) {
+      toast.error((await apiErrorMessage(err)) || 'Could not unblock this member. Please try again.')
+    } finally {
+      setUnblockingId(null)
+    }
+  }
 
   const setPreference = async (key: keyof MemberPreferences, value: boolean) => {
     const previous = preferences
@@ -359,6 +388,33 @@ function PrivacyDataPanel() {
             checked={preferences.marketingOptIn}
             onChange={(checked) => setPreference('marketingOptIn', checked)}
           />
+        </div>
+
+        <div className="mt-5 border border-primary/10 bg-base-100/86 p-4 rounded-[22px_4px_22px_4px]">
+          <p className="text-sm font-bold">Blocked members</p>
+          <p className="mt-1 text-xs leading-relaxed text-base-content/58">
+            You don&apos;t see their posts, comments or jobs, and they don&apos;t appear in your directory.
+          </p>
+          {blocked === null ? (
+            <p className="mt-3 text-xs text-base-content/45">Loading…</p>
+          ) : blocked.length === 0 ? (
+            <p className="mt-3 text-xs text-base-content/45">You haven&apos;t blocked anyone.</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-primary/8">
+              {blocked.map((member) => (
+                <li key={member.id} className="flex items-center gap-3 py-2.5">
+                  <Avatar src={member.photoUrl} name={member.fullName} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{member.fullName}</p>
+                    {member.blockedAt && <p className="text-xs text-base-content/45">Blocked {formatDate(member.blockedAt)}</p>}
+                  </div>
+                  <button type="button" className="btn btn-ghost btn-sm min-h-9" onClick={() => unblock(member)} disabled={unblockingId === member.id}>
+                    {unblockingId === member.id ? 'Unblocking…' : 'Unblock'}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="mt-5 flex flex-col gap-3 border border-primary/10 bg-base-200/40 p-4 sm:flex-row sm:items-center sm:justify-between rounded-[22px_4px_22px_4px]">
@@ -459,20 +515,10 @@ export default function SettingsPage() {
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
 
-  const [notifications, setNotifications] = useState({
-    emailEvents: true,
-    emailNews: true,
-    emailForum: false,
-    emailPolls: true,
-    emailDues: true,
-    emailMentorship: true,
-  })
-
   const { register, handleSubmit, reset, formState: { errors } } = useForm<PasswordForm>({
     resolver: zodResolver(passwordSchema),
   })
 
-  const enabledNotifications = Object.values(notifications).filter(Boolean).length
   const listedInDirectory = user?.preferences?.directoryOptIn ?? true
 
   const onPasswordSubmit = async (data: PasswordForm) => {
@@ -500,10 +546,6 @@ export default function SettingsPage() {
     }
   }
 
-  const handleSaveNotifications = () => {
-    toast.success('Notification preferences saved!')
-  }
-
   return (
     <PageTransition>
       <div className="relative space-y-6">
@@ -527,20 +569,20 @@ export default function SettingsPage() {
                 Tune your account without digging through menus.
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-relaxed text-primary-content/62 sm:text-base">
-                Manage theme, security, notification routing, and what other alumni can see in the directory.
+                Manage theme, security, directory visibility, news emails, your data and blocked members.
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <StatTile icon={UserCircle} label="Account" value={user?.membershipStatus || 'Member'} detail={user?.email || 'Signed in'} />
               <StatTile icon={Palette} label="Theme" value={theme === 'dark' ? 'Dark' : 'Light'} detail="Local preference" />
-              <StatTile icon={Bell} label="Alerts" value={`${enabledNotifications}/6`} detail="Email channels on" tone="bg-secondary/18 text-primary" />
+              <StatTile icon={Bell} label="News emails" value={user?.preferences?.marketingOptIn ? 'On' : 'Off'} detail="Set in Privacy & data" tone="bg-secondary/18 text-primary" />
               <StatTile icon={Shield} label="Directory" value={listedInDirectory ? 'Listed' : 'Hidden'} detail="Member directory visibility" tone="bg-success/12 text-success" />
             </div>
           </div>
         </section>
 
-        <section className="relative z-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="relative z-10 grid gap-3 sm:grid-cols-3">
           {tabs.map((item) => (
             <TabButton
               key={item.key}
@@ -710,51 +752,6 @@ export default function SettingsPage() {
                       </button>
                     </div>
                   </form>
-                </div>
-              </div>
-            </ScrollReveal>
-          )}
-
-          {tab === 'notifications' && (
-            <ScrollReveal>
-              <div className="overflow-hidden border border-primary/10 bg-base-100/92 shadow-[0_18px_50px_rgba(0,27,80,0.08)] rounded-[28px_6px_28px_6px]">
-                <div className="h-1 bg-secondary" />
-                <div className="flex min-h-[34rem] flex-col p-5 sm:p-6">
-                  <PanelHeader
-                    icon={Bell}
-                    eyebrow="Notifications"
-                    title="Email notification routing"
-                    description="Choose which association updates should reach your inbox."
-                  />
-
-                  <div className="mt-6 grid gap-3 md:grid-cols-2">
-                    {[
-                      { key: 'emailEvents', label: 'Events & gatherings', desc: 'Upcoming events and RSVP updates' },
-                      { key: 'emailNews', label: 'News & announcements', desc: 'Latest UPOSA news and notices' },
-                      { key: 'emailForum', label: 'Forum replies', desc: 'Replies to your forum posts' },
-                      { key: 'emailPolls', label: 'Polls & elections', desc: 'New votes and ballot windows' },
-                      { key: 'emailDues', label: 'Dues reminders', desc: 'Outstanding dues and payment prompts' },
-                      { key: 'emailMentorship', label: 'Mentorship requests', desc: 'Mentorship activity and responses' },
-                    ].map((item) => (
-                      <ToggleRow
-                        key={item.key}
-                        label={item.label}
-                        description={item.desc}
-                        checked={notifications[item.key as keyof typeof notifications]}
-                        onChange={(checked) => setNotifications((prev) => ({ ...prev, [item.key]: checked }))}
-                      />
-                    ))}
-                  </div>
-
-                  <div className="mt-auto flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-xs font-semibold leading-relaxed text-base-content/42">
-                      {enabledNotifications} of 6 email channels are currently enabled.
-                    </p>
-                    <button type="button" className="btn btn-primary min-h-11 gap-2 sm:min-w-48" onClick={handleSaveNotifications}>
-                      Save preferences
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-                  </div>
                 </div>
               </div>
             </ScrollReveal>

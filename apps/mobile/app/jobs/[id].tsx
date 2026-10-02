@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { Colors, Fonts } from '@/constants/theme';
+import { Brand, Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { jobsApi } from '@/lib/api';
 import type { Job } from '@/lib/types';
+import { ModerationButton, useModeration } from '@/components/moderation';
 import {
   DetailRow,
   EmptyState,
@@ -53,6 +54,9 @@ export default function JobDetailScreen() {
     load();
   }, [load]);
 
+  // Jobs can be reported; blocking is done from the poster's profile.
+  const moderation = useModeration();
+
   const onApply = async () => {
     if (!job) return;
     setSubmitting(true);
@@ -87,9 +91,22 @@ export default function JobDetailScreen() {
         body={`${job.company}${job.location ? ` · ${job.location}` : ''}`}
         icon="briefcase-outline"
       >
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
           <Pill palette={palette} tone="gold">{TYPE_LABEL[job.jobType]}</Pill>
           {job.expiresAt ? <Pill palette={palette}>Expires {formatShortDate(job.expiresAt)}</Pill> : null}
+          <View style={{ marginLeft: 'auto' }}>
+            <ModerationButton
+              target={{
+                targetType: 'JOB',
+                targetId: job.id,
+                author: job.postedById ? { id: job.postedById, fullName: job.postedBy?.fullName } : null,
+                canBlock: false,
+              }}
+              onOpen={moderation.open}
+              isOwn={moderation.isOwn}
+              color={Brand.cream}
+            />
+          </View>
         </View>
       </HeroPanel>
 
@@ -118,6 +135,7 @@ export default function JobDetailScreen() {
         />
         <PrimaryButton label="Submit application" palette={palette} onPress={onApply} loading={submitting} icon="send-outline" />
       </Surface>
+      {moderation.sheet}
     </ScreenScroll>
   );
 }

@@ -40,6 +40,7 @@ export default function ForumIndexScreen() {
   const [content, setContent] = useState('');
   const [category, setCategory] = useState<ForumCategory>('GENERAL');
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -64,6 +65,7 @@ export default function ForumIndexScreen() {
 
   const closeModal = () => {
     setModalOpen(false);
+    setSubmitError('');
     setTitle('');
     setContent('');
     setCategory('GENERAL');
@@ -89,8 +91,8 @@ export default function ForumIndexScreen() {
       }
       closeModal();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Could not create the post.';
-      Alert.alert('Post failed', msg);
+      // e.g. 422 "Please remove offensive language before posting." — shown on the form.
+      setSubmitError(err?.response?.data?.message || 'Could not create the post.');
     } finally {
       setSubmitting(false);
     }
@@ -197,6 +199,9 @@ export default function ForumIndexScreen() {
                 icon="document-text-outline"
                 multiline
               />
+              {submitError ? (
+                <Text accessibilityRole="alert" style={{ color: palette.danger, fontSize: 13, fontFamily: Fonts.body, marginBottom: 10 }}>{submitError}</Text>
+              ) : null}
               <PrimaryButton label="Create post" palette={palette} onPress={onSubmit} loading={submitting} icon="send-outline" />
             </ScrollView>
           </Surface>

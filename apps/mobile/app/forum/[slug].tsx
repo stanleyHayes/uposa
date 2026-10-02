@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { Pressable, Text, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 
-import { Colors, Fonts } from '@/constants/theme';
+import { Brand, Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { forumApi } from '@/lib/api';
 import type { ForumComment, ForumPost } from '@/lib/types';
@@ -19,6 +19,7 @@ import {
   Surface,
   formatShortDate,
 } from '@/components/mobile-ui';
+import { ModerationButton, useModeration, type ModerationTarget } from '@/components/moderation';
 
 export default function ForumDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -29,6 +30,7 @@ export default function ForumDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [commentError, setCommentError] = useState('');
 
   const load = useCallback(async () => {
     if (!slug) return;
@@ -46,6 +48,19 @@ export default function ForumDetailScreen() {
     load();
   }, [load]);
 
+  // Blocking takes their content off this screen at once; the refetch then
+  // reflects the server-side filtering.
+  const onBlocked = (memberId: string) => {
+    if (post?.authorId === memberId) {
+      if (router.canGoBack()) router.back();
+      else router.replace('/forum');
+      return;
+    }
+    setPost((prev) => (prev ? { ...prev, comments: prev.comments?.filter((item) => item.authorId !== memberId) } : prev));
+    load();
+  };
+  const moderation = useModeration(onBlocked);
+
   const onSubmit = async () => {
     if (!post) return;
     const content = comment.trim();
@@ -58,9 +73,10 @@ export default function ForumDetailScreen() {
         setPost((prev) => (prev ? { ...prev, comments: [...(prev.comments ?? []), newComment] } : prev));
       }
       setComment('');
+      setCommentError('');
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Could not post comment.';
-      Alert.alert('Error', msg);
+      // e.g. 422 "Please remove offensive language before posting." — shown under the field.
+      setCommentError(err?.response?.data?.message || 'Could not post comment.');
     } finally {
       setSubmitting(false);
     }
@@ -77,6 +93,16 @@ export default function ForumDetailScreen() {
   }
 
   const comments: ForumComment[] = post.comments ?? [];
+  const postTarget: ModerationTarget = {
+    targetType: 'FORUM_POST',
+    targetId: post.id,
+    author: post.authorId ? { id: post.authorId, fullName: post.author?.fullName } : null,
+  };
+  const commentTarget = (item: ForumComment): ModerationTarget => ({
+    targetType: 'FORUM_COMMENT',
+    targetId: item.id,
+    author: item.authorId ? { id: item.authorId, fullName: item.author?.fullName } : null,
+  });
 
   return (
     <ScreenScroll palette={palette} keyboardShouldPersistTaps="handled">
@@ -87,10 +113,13 @@ export default function ForumDetailScreen() {
         body={`${post.author?.fullName ?? 'Unknown'} · ${formatShortDate(post.createdAt)}`}
         icon="chatbubbles-outline"
       >
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
           {post.isPinned ? <Pill palette={palette} tone="gold">Pinned</Pill> : null}
           {post.isLocked ? <Pill palette={palette}>Locked</Pill> : null}
           <Pill palette={palette}>{comments.length} replies</Pill>
+          <View style={{ marginLeft: 'auto' }}>
+            <ModerationButton target={postTarget} onOpen={moderation.open} isOwn={moderation.isOwn} color={Brand.cream} />
+          </View>
         </View>
       </HeroPanel>
 
@@ -109,14 +138,19 @@ export default function ForumDetailScreen() {
       ) : (
         <View style={{ gap: 10 }}>
           {comments.map((item) => (
-            <Surface key={item.id} palette={palette} style={{ padding: 12, flexDirection: 'row', gap: 12 }}>
+            <Pressable key={item.id} onLongPress={() => moderation.open(commentTarget(item))} delayLongPress={350}>
+            <Surface palette={palette} style={{ padding: 12, flexDirection: 'row', gap: 12 }}>
               <AvatarMark palette={palette} name={item.author?.fullName ?? 'Anonymous'} photoUrl={item.author?.photoUrl} size={42} />
               <View style={{ flex: 1, gap: 4 }}>
-                <Text style={{ color: palette.text, fontSize: 14, fontFamily: Fonts.bodyBold }}>{item.author?.fullName ?? 'Anonymous'}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ flex: 1, color: palette.text, fontSize: 14, fontFamily: Fonts.bodyBold }}>{item.author?.fullName ?? 'Anonymous'}</Text>
+                  <ModerationButton target={commentTarget(item)} onOpen={moderation.open} isOwn={moderation.isOwn} color={palette.textMuted} />
+                </View>
                 <Text style={{ color: palette.text, fontSize: 14, fontFamily: Fonts.body, lineHeight: 20 }}>{item.content}</Text>
                 <Text style={{ color: palette.textMuted, fontSize: 11, fontFamily: Fonts.body }}>{formatShortDate(item.createdAt)}</Text>
               </View>
             </Surface>
+            </Pressable>
           ))}
         </View>
       )}
@@ -128,11 +162,17 @@ export default function ForumDetailScreen() {
             palette={palette}
             label="Your comment"
             value={comment}
-            onChangeText={setComment}
+            onChangeText={(value) => {
+              setComment(value);
+              setCommentError('');
+            }}
             placeholder="Share your thoughts..."
             icon="create-outline"
             multiline
           />
+          {commentError ? (
+            <Text accessibilityRole="alert" style={{ color: palette.danger, fontSize: 13, fontFamily: Fonts.body, marginBottom: 10 }}>{commentError}</Text>
+          ) : null}
           <PrimaryButton
             label="Post reply"
             palette={palette}
@@ -147,6 +187,7 @@ export default function ForumDetailScreen() {
           <Text style={{ color: palette.textMuted, fontSize: 14 }}>This discussion is locked.</Text>
         </Surface>
       )}
+      {moderation.sheet}
     </ScreenScroll>
   );
 }

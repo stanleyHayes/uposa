@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Linking, Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { Brand, Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -18,6 +18,7 @@ import {
   SectionTitle,
   Surface,
 } from '@/components/mobile-ui';
+import { ModerationButton, useModeration } from '@/components/moderation';
 
 export default function MemberDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,6 +43,12 @@ export default function MemberDetailScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // A blocked member drops out of the directory, so leave their profile.
+  const moderation = useModeration(() => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/members');
+  });
 
   if (loading) return <LoadingState palette={palette} title="Member" />;
 
@@ -70,10 +77,18 @@ export default function MemberDetailScreen() {
         body={member.mentorBio || 'Use this record to connect with classmates, old students, and professional contacts.'}
         icon={member.isAvailableAsMentor ? 'hand-left-outline' : 'person-outline'}
       >
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
           {member.yearGroup ? <Pill palette={palette} tone="gold">Class of {member.yearGroup}</Pill> : null}
           {member.house ? <Pill palette={palette} tone="navy">{member.house} House</Pill> : null}
           {member.isAvailableAsMentor ? <Pill palette={palette} tone="gold">Mentor</Pill> : null}
+          <View style={{ marginLeft: 'auto' }}>
+            <ModerationButton
+              target={{ targetType: 'MEMBER', targetId: member.id, author: { id: member.id, fullName: member.fullName } }}
+              onOpen={moderation.open}
+              isOwn={moderation.isOwn}
+              color={Brand.cream}
+            />
+          </View>
         </View>
       </HeroPanel>
 
@@ -115,6 +130,7 @@ export default function MemberDetailScreen() {
           <Text style={{ color: palette.text, fontSize: 16, fontFamily: Fonts.bodyBold, marginTop: 5 }}>{member.membershipStatus}</Text>
         </View>
       </Surface>
+      {moderation.sheet}
     </ScreenScroll>
   );
 }

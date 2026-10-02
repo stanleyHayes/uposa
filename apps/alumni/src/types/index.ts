@@ -420,3 +420,14 @@ export interface Announcement {
   publishedAt?: string
   expiresAt?: string | null
 }
+
+// User-generated content safety (Apple 1.2 / Google Play UGC)
+export type ReportTargetType = 'FORUM_POST' | 'FORUM_COMMENT' | 'JOB' | 'MEMBER'
+export type ReportReason = 'SPAM' | 'HARASSMENT' | 'HATE' | 'SEXUAL' | 'VIOLENCE' | 'MISLEADING' | 'OTHER'
+
+export interface BlockedMember {
+  id: string
+  fullName: string
+  photoUrl?: string
+  blockedAt: string
+}

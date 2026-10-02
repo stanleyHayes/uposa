@@ -5,11 +5,11 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
 import { Fonts, type Palette } from '@/constants/theme';
-import { authApi, membersApi } from '@/lib/api';
+import { authApi, blocksApi, membersApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import { ACCOUNT_DELETION_URL, PRIVACY_URL, TERMS_URL, openLegalPage } from '@/lib/legal';
-import type { Member, MemberPreferences } from '@/lib/types';
-import { Field, PrimaryButton, Surface } from '@/components/mobile-ui';
+import type { BlockedMember, Member, MemberPreferences } from '@/lib/types';
+import { AvatarMark, Field, PrimaryButton, Surface, formatShortDate } from '@/components/mobile-ui';
 
 // Same defaults as the API for accounts that predate consent records.
 const DEFAULT_PREFERENCES: MemberPreferences = { marketingOptIn: false, directoryOptIn: true };
@@ -74,6 +74,8 @@ export function PrivacyDataSection({ palette }: { palette: Palette }) {
   const [password, setPassword] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [blocked, setBlocked] = useState<BlockedMember[] | null>(null);
+  const [unblockingId, setUnblockingId] = useState<string | null>(null);
 
   const preferences = user?.preferences ?? DEFAULT_PREFERENCES;
 
@@ -93,6 +95,33 @@ export function PrivacyDataSection({ palette }: { palette: Palette }) {
       active = false;
     };
   }, [updateUser]);
+
+  useEffect(() => {
+    let active = true;
+    blocksApi
+      .list()
+      .then((res) => {
+        if (active) setBlocked(res.data.data ?? []);
+      })
+      .catch(() => {
+        if (active) setBlocked([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const unblock = async (member: BlockedMember) => {
+    setUnblockingId(member.id);
+    try {
+      await blocksApi.unblock(member.id);
+      setBlocked((prev) => prev?.filter((item) => item.id !== member.id) ?? prev);
+    } catch (err) {
+      Alert.alert('Not unblocked', errorMessage(err) || 'Could not unblock this member. Please try again.');
+    } finally {
+      setUnblockingId(null);
+    }
+  };
 
   const setPreference = async (key: keyof MemberPreferences, value: boolean) => {
     const previous = preferences;
@@ -186,6 +215,39 @@ export function PrivacyDataSection({ palette }: { palette: Palette }) {
         disabled={saving === 'marketingOptIn'}
         onValueChange={(next) => setPreference('marketingOptIn', next)}
       />
+
+      <View style={{ marginTop: 16, gap: 6 }}>
+        <Text style={{ color: palette.text, fontSize: 14, fontFamily: Fonts.bodySemiBold }}>Blocked members</Text>
+        <Text style={muted}>You don&apos;t see their posts, comments or jobs, and they don&apos;t appear in your directory.</Text>
+        {blocked === null ? (
+          <Text style={[muted, { fontSize: 12 }]}>Loading…</Text>
+        ) : blocked.length === 0 ? (
+          <Text style={[muted, { fontSize: 12 }]}>You haven&apos;t blocked anyone.</Text>
+        ) : (
+          blocked.map((member) => (
+            <View key={member.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: palette.border }}>
+              <AvatarMark palette={palette} name={member.fullName} photoUrl={member.photoUrl} size={36} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: palette.text, fontSize: 14, fontFamily: Fonts.bodySemiBold }} numberOfLines={1}>{member.fullName}</Text>
+                {member.blockedAt ? (
+                  <Text style={{ color: palette.textMuted, fontSize: 11, fontFamily: Fonts.body }}>Blocked {formatShortDate(member.blockedAt)}</Text>
+                ) : null}
+              </View>
+              <Pressable
+                onPress={() => unblock(member)}
+                disabled={unblockingId === member.id}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={`Unblock ${member.fullName}`}
+              >
+                <Text style={{ color: palette.tint, fontSize: 13, fontFamily: Fonts.bodySemiBold, opacity: unblockingId === member.id ? 0.5 : 1 }}>
+                  {unblockingId === member.id ? 'Unblocking…' : 'Unblock'}
+                </Text>
+              </Pressable>
+            </View>
+          ))
+        )}
+      </View>
 
       <View style={{ marginTop: 16, gap: 8 }}>
         <Text style={{ color: palette.text, fontSize: 14, fontFamily: Fonts.bodySemiBold }}>Download my data</Text>

@@ -19,6 +19,7 @@ import Avatar from '../../components/ui/Avatar'
 import { jobsApi } from '../../api/services'
 import { formatDate, formatEnum, timeAgo } from '../../utils/formatters'
 import type { Job } from '../../types'
+import ModerationMenu from '../../components/moderation/ModerationMenu'
 
 function DetailSkeleton() {
   return (
@@ -116,10 +117,18 @@ export default function JobDetailPage() {
           className="pointer-events-none fixed right-[-8rem] top-24 z-0 hidden h-[26rem] w-[26rem] object-contain opacity-[0.025] xl:block"
         />
 
-        <Link to="/jobs" className="btn min-h-10 border-primary/10 bg-base-100 text-primary hover:bg-base-200 rounded-[14px_3px_14px_3px]">
-          <ArrowLeft className="h-4 w-4" />
-          Back to jobs
-        </Link>
+        <div className="relative z-10 flex items-center justify-between gap-3">
+          <Link to="/jobs" className="btn min-h-10 border-primary/10 bg-base-100 text-primary hover:bg-base-200 rounded-[14px_3px_14px_3px]">
+            <ArrowLeft className="h-4 w-4" />
+            Back to jobs
+          </Link>
+          <ModerationMenu
+            targetType="JOB"
+            targetId={job.id}
+            author={job.postedById ? { id: job.postedById, fullName: job.postedBy?.fullName } : null}
+            canBlock={false}
+          />
+        </div>
 
         <section className="relative z-10 overflow-hidden bg-primary text-primary-content shadow-[0_24px_80px_rgba(0,27,80,0.18)] rounded-[28px_6px_28px_6px]">
           <img src="/logo.png" alt="" aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 object-contain opacity-[0.055]" />

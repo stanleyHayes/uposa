@@ -7,6 +7,7 @@ import type {
   Job, JobApplication, MentorshipRequest,
   ForumPost, ForumComment, Poll, Election, ContactMessage,
   PaymentMethod, GalleryItem, GalleryCategory, SiteConfig, Announcement, MemberPreferences,
+  ReportTargetType, ReportReason, BlockedMember,
 } from './types';
 import { REFRESH_TOKEN_KEY, TOKEN_KEY, getToken, removeToken, setToken } from './token-storage';
 
@@ -331,6 +332,21 @@ export const galleryApi = {
     client.get<ApiResponse<GalleryItem[]>>('/gallery', { params }),
   categories: () =>
     client.get<ApiResponse<GalleryCategory[]>>('/gallery/categories'),
+};
+
+// -------- Content reports and member blocks (Apple 1.2 / Google Play UGC) --------
+export const reportsApi = {
+  create: (data: { targetType: ReportTargetType; targetId: string; reason: ReportReason; details?: string }) =>
+    client.post<ApiResponse>('/reports', data),
+};
+
+export const blocksApi = {
+  list: () =>
+    client.get<ApiResponse<BlockedMember[]>>('/members/blocks'),
+  block: (memberId: string) =>
+    client.post<ApiResponse>('/members/blocks', { memberId }),
+  unblock: (memberId: string) =>
+    client.delete<ApiResponse>(`/members/blocks/${memberId}`),
 };
 
 // -------- Announcements (published, audience ALL/MEMBERS, not expired) --------

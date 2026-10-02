@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, Switch, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { Colors, Fonts, Radii } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -10,55 +9,6 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useThemePreference, type ThemePreference } from '@/lib/theme-context';
 import { Field, HeroPanel, PrimaryButton, ScreenHeader, ScreenScroll, Surface } from '@/components/mobile-ui';
 import { PrivacyDataSection } from '@/components/privacy-data-section';
-
-const NOTIFICATIONS_KEY = 'uposa_mobile_notifications';
-
-const NOTIFICATION_OPTIONS = [
-  { key: 'emailEvents', label: 'Events & gatherings', desc: 'Upcoming events and RSVP updates' },
-  { key: 'emailNews', label: 'News & announcements', desc: 'Latest UPOSA news and notices' },
-  { key: 'emailForum', label: 'Forum replies', desc: 'Replies to your forum posts' },
-  { key: 'emailPolls', label: 'Polls & elections', desc: 'New votes and ballot windows' },
-  { key: 'emailDues', label: 'Dues reminders', desc: 'Outstanding dues and payment prompts' },
-  { key: 'emailMentorship', label: 'Mentorship requests', desc: 'Mentorship activity and responses' },
-] as const;
-
-type ToggleMap = Record<string, boolean>;
-
-function ToggleRow({
-  palette,
-  label,
-  description,
-  value,
-  onValueChange,
-}: {
-  palette: (typeof Colors)['light'];
-  label: string;
-  description: string;
-  value: boolean;
-  onValueChange: (next: boolean) => void;
-}) {
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-        paddingVertical: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: palette.border,
-      }}
-    >
-      <View style={{ flex: 1 }}>
-        <Text style={{ color: palette.text, fontSize: 14, fontFamily: Fonts.bodySemiBold }}>{label}</Text>
-        <Text style={{ color: palette.textMuted, fontSize: 12, fontFamily: Fonts.body, lineHeight: 17, marginTop: 2 }}>
-          {description}
-        </Text>
-      </View>
-      <Switch value={value} onValueChange={onValueChange} trackColor={{ true: palette.tint }} thumbColor={value ? palette.accent : undefined} />
-    </View>
-  );
-}
 
 export default function SettingsScreen() {
   const scheme = useColorScheme() ?? 'light';
@@ -78,28 +28,6 @@ export default function SettingsScreen() {
   const [confirmPw, setConfirmPw] = useState('');
   const [visible, setVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [notifications, setNotifications] = useState<ToggleMap>(() =>
-    Object.fromEntries(NOTIFICATION_OPTIONS.map((o) => [o.key, true]))
-  );
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const savedNotifications = await AsyncStorage.getItem(NOTIFICATIONS_KEY);
-        if (savedNotifications) setNotifications((prev) => ({ ...prev, ...JSON.parse(savedNotifications) }));
-      } catch {
-        // keep defaults
-      }
-    })();
-  }, []);
-
-  const toggleNotification = (key: string, next: boolean) => {
-    setNotifications((prev) => {
-      const updated = { ...prev, [key]: next };
-      AsyncStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updated)).catch(() => {});
-      return updated;
-    });
-  };
 
   const onChangePassword = async () => {
     if (!currentPw || !newPw) {
@@ -203,23 +131,6 @@ export default function SettingsScreen() {
               );
             })}
           </View>
-        </Surface>
-
-        <Surface palette={palette} style={{ padding: 16, marginTop: 18 }}>
-          <Text style={{ color: palette.text, fontSize: 16, fontFamily: Fonts.display, marginBottom: 4 }}>Notifications</Text>
-          <Text style={{ color: palette.textMuted, fontSize: 13, fontFamily: Fonts.body, lineHeight: 19, marginBottom: 6 }}>
-            Choose which association updates should reach your inbox.
-          </Text>
-          {NOTIFICATION_OPTIONS.map((opt) => (
-            <ToggleRow
-              key={opt.key}
-              palette={palette}
-              label={opt.label}
-              description={opt.desc}
-              value={!!notifications[opt.key]}
-              onValueChange={(next) => toggleNotification(opt.key, next)}
-            />
-          ))}
         </Surface>
 
         <PrivacyDataSection palette={palette} />
